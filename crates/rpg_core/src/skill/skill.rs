@@ -216,23 +216,9 @@ impl Skill {
         let ep_cost = skill_meta.base_cost.iter().find(|c| c.id == StatId(8));
         let mp_cost = skill_meta.base_cost.iter().find(|c| c.id == StatId(12));
 
-        let hp_cost = if let Some(cost) = hp_cost {
-            Some(cost.value)
-        } else {
-            None
-        };
-
-        let ep_cost = if let Some(cost) = ep_cost {
-            Some(cost.value)
-        } else {
-            None
-        };
-
-        let mp_cost = if let Some(cost) = mp_cost {
-            Some(cost.value)
-        } else {
-            None
-        };
+        let hp_cost = hp_cost.map(|cost| cost.value);
+        let ep_cost = ep_cost.map(|cost| cost.value);
+        let mp_cost = mp_cost.map(|cost| cost.value);
 
         SkillCost {
             hp: hp_cost,

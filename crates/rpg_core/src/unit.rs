@@ -318,7 +318,7 @@ impl Unit {
                     }
                 }
                 _ if str_id == "Hp" => {
-                    println!("apply hp {}", modifier.modifier.value.to_string());
+                    println!("apply hp {}", modifier.modifier.value);
                     (self.stats.vitals.stats.get_mut("Hp").unwrap().value +=
                         modifier.modifier.value);
                     if self.stats.vitals.stats["Hp"].value > self.stats.vitals.stats["HpMax"].value
@@ -328,7 +328,7 @@ impl Unit {
                     }
                 }
                 _ if str_id == "Ep" => {
-                    println!("apply ep {}", modifier.modifier.value.to_string());
+                    println!("apply ep {}", modifier.modifier.value);
                     self.stats.vitals.stats.get_mut("Ep").unwrap().value += modifier.modifier.value;
                     if self.stats.vitals.stats["Ep"].value > self.stats.vitals.stats["EpMax"].value
                     {
@@ -337,7 +337,7 @@ impl Unit {
                     }
                 }
                 _ if str_id == "Mp" => {
-                    println!("apply mp {}", modifier.modifier.value.to_string());
+                    println!("apply mp {}", modifier.modifier.value);
                     self.stats.vitals.stats.get_mut("Mp").unwrap().value += modifier.modifier.value;
                     if self.stats.vitals.stats["Mp"].value > self.stats.vitals.stats["MpMax"].value
                     {
@@ -388,7 +388,7 @@ impl Unit {
                     continue;
                 };
 
-                self.apply_item_modifiers(metadata, &item);
+                self.apply_item_modifiers(metadata, item);
             }
         }
 
@@ -409,9 +409,8 @@ impl Unit {
                     self.passive_skill_points += 1;
 
                     return true;
-                } else {
-                    *hero_info.xp_curr.value.u64_mut() = curr_level_info.xp_end;
                 }
+                *hero_info.xp_curr.value.u64_mut() = curr_level_info.xp_end;
             }
         }
 
