@@ -3,7 +3,12 @@ use serde_derive::{Deserialize as De, Serialize as Ser};
 use fastrand::Rng;
 use ordered_float::OrderedFloat;
 
-use std::{convert::From, fmt, ops};
+use std::{
+    convert::From,
+    fmt,
+    hash::{Hash, Hasher},
+    ops,
+};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ser, De)]
 pub enum ValueKind {
@@ -13,7 +18,7 @@ pub enum ValueKind {
     F64,
 }
 
-#[derive(Debug, Copy, Clone, PartialOrd, Hash, Ser, De)]
+#[derive(Debug, Copy, Clone, PartialOrd, Ser, De)]
 pub enum Value {
     U32(u32),
     U64(u64),
@@ -33,6 +38,17 @@ impl PartialEq for Value {
 }
 
 impl Eq for Value {}
+
+impl Hash for Value {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            Self::U32(v) => v.hash(state),
+            Self::U64(v) => v.hash(state),
+            Self::F32(v) => v.hash(state),
+            Self::F64(v) => v.hash(state),
+        }
+    }
+}
 
 pub trait Sample<T, O> {
     type Out;
@@ -90,15 +106,6 @@ impl Value {
             ValueKind::U64 => Self::U64(0),
             ValueKind::F32 => Self::F32(OrderedFloat(0.)),
             ValueKind::F64 => Self::F64(OrderedFloat(0.)),
-        }
-    }
-
-    pub fn to_string(&self) -> String {
-        match self {
-            Self::U32(v) => v.to_string(),
-            Self::U64(v) => v.to_string(),
-            Self::F32(v) => v.to_string(),
-            Self::F64(v) => v.to_string(),
         }
     }
 
