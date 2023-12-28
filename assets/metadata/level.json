@@ -1,0 +1,107 @@
+{
+	"limits": {
+		"max": 20
+	},
+	"levels": {
+		"1": {
+			"level": 1,
+			"xp_begin": 0,
+			"xp_end": 59	
+		},
+		"2": {
+			"level": 2,
+			"xp_begin": 60,
+			"xp_end": 149	
+		},
+		"3": {
+			"level": 3,
+			"xp_begin": 150,
+			"xp_end": 269
+		},
+		"4": {
+			"level": 4,
+			"xp_begin": 270,
+			"xp_end": 419
+		},
+		"5": {
+			"level": 5,
+			"xp_begin": 420,
+			"xp_end": 599
+		},
+		"6": {
+			"level": 6,
+			"xp_begin": 600,
+			"xp_end": 809
+		},
+		"7": {
+			"level": 7,
+			"xp_begin": 810,
+			"xp_end": 1049
+		},
+		"8": {
+			"level": 8,
+			"xp_begin": 1050,
+			"xp_end": 1319
+		},
+		"9": {
+			"level": 9,
+			"xp_begin": 1320,
+			"xp_end": 1619
+		},
+		"10": {
+			"level": 10,
+			"xp_begin": 1620,
+			"xp_end": 1949
+		},
+		"11": {
+			"level": 11,
+			"xp_begin": 1950,
+			"xp_end": 2309
+		},
+		"12": {
+			"level": 12,
+			"xp_begin": 2310,
+			"xp_end": 2599
+		},
+		"13": {
+			"level": 13,
+			"xp_begin": 2600,
+			"xp_end": 3019
+		},
+		"14": {
+			"level": 14,
+			"xp_begin": 3020,
+			"xp_end": 3469
+		},
+		"15": {
+			"level": 15,
+			"xp_begin": 3470,
+			"xp_end": 3949
+		},
+		"16": {
+			"level": 16,
+			"xp_begin": 3950,
+			"xp_end": 4459
+		},
+		"17": {
+			"level": 17,
+			"xp_begin": 4460,
+			"xp_end": 4999
+		},
+		"18": {
+			"level": 18,
+			"xp_begin": 5000,
+			"xp_end": 5569
+		},
+		"19": {
+			"level": 19,
+			"xp_begin": 5570,
+			"xp_end": 6169
+		},
+		"20": {
+			"level": 20,
+			"xp_begin": 6170,
+			"xp_end": 6799
+		}
+	}
+}
