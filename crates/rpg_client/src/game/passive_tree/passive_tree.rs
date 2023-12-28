@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use crate::{
     assets::TextureAssets,
     game::{
@@ -746,17 +748,13 @@ pub fn display(
 
     // Set edge material to allocated material if not already set
     for (passive_connection, mut connection_material) in &mut passive_connection_q {
-        /*let connection = EdgeNodes {
-            lhs: passive_connection.lhs,
-            rhs: passive_connection.rhs,
-        };*/
-        if passive_tree.allocated_edges.iter().any(|n| {
-            // ordering does not matter, check both of the possibilities
-            *n == **passive_connection
-        }) {
-            if *connection_material != renderables.color_materials["line_allocated"] {
-                *connection_material = renderables.color_materials["line_allocated"].clone();
-            }
+        if passive_tree
+            .allocated_edges
+            .iter()
+            .any(|n| *n == **passive_connection)
+            && *connection_material != renderables.color_materials["line_allocated"]
+        {
+            *connection_material = renderables.color_materials["line_allocated"].clone();
         }
     }
 

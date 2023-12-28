@@ -1,11 +1,7 @@
 use bevy::{
     app::{App, Plugin, Startup},
-    asset::{AssetServer, Handle},
     audio::{AudioSink, AudioSource, GlobalVolume},
-    ecs::{
-        component::Component,
-        system::{Commands, Res, ResMut, Resource},
-    },
+    ecs::{component::Component, system::ResMut},
     prelude::{Deref, DerefMut},
 };
 

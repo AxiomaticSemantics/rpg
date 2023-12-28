@@ -169,13 +169,7 @@ pub struct ResizeableView;
 pub struct SliderBar;
 
 #[derive(Debug, Component, Default)]
-pub struct Slider<
-    T: std::fmt::Debug + Cast<f32>, //+ std::ops::Add<Output = T>
-                                    //+ std::ops::Mul<Output = T>
-                                    //+ Copy, //+ PartialEq, //+ PartialOrd, //+ Send
-                                    //+ Sync
-                                    //+ 'static,
-> {
+pub struct Slider<T: std::fmt::Debug + Cast<f32>> {
     pub size: Rect,
     pub bar_size: Rect,
     pub min: T,
@@ -203,13 +197,6 @@ where
         }
     }
 }
-
-/*
-impl<T> Slider<T> where
-    T: RangedValue<T> + std::fmt::Debug + Cast<f32> + Copy + PartialEq + PartialOrd
-{
-}
-*/
 
 // TODO FIXME this needs to be extended to handle arbitrary input behaviours
 #[derive(Debug, Default, PartialEq)]
@@ -272,64 +259,58 @@ pub fn edit_focus_update(
 pub fn resize_view(
     window_q: Query<&Window, With<PrimaryWindow>>,
     mut resizeable_view_q: Query<
-        (
-            &mut Style,
-            &Interaction,
-            &Transform,
-            &GlobalTransform,
-            &mut Node,
-            &Parent,
-        ),
+        (&mut Style, &Interaction, &GlobalTransform, &Node),
         (Changed<Interaction>, With<ResizeableView>),
     >,
-    parent_q: Query<(&Node, &GlobalTransform), Without<ResizeableView>>,
 ) {
     let window = window_q.single();
     let Some(cursor_position) = window.cursor_position() else {
         return;
     };
 
-    for (mut style, interaction, transform, global_transform, mut node, parent) in
-        &mut resizeable_view_q
-    {
+    for (mut style, interaction, global_transform, node) in &mut resizeable_view_q {
         if interaction == &Interaction::Hovered || interaction == &Interaction::Pressed {
             let window_size = Vec2::new(window.width(), window.height());
 
-            let (parent_node, parent_transform) = parent_q.get(parent.get()).unwrap();
+            let rect = get_node_rect(&node, &global_transform.translation());
+
+            match &mut style.height {
+                Val::Percent(ref mut height) => {
+                    if cursor_position.y > rect.min.y && cursor_position.y < rect.min.y + 8. {
+                        *height += 2.;
+                    } else if cursor_position.y > rect.max.y - 8. && cursor_position.y < rect.max.y
+                    {
+                        *height -= 2.;
+                    }
+                }
+                Val::Px(ref mut _height) => {
+                    todo!();
+                }
+                _ => {}
+            }
+
             match &mut style.width {
                 Val::Percent(ref mut width) => {
-                    let rect = get_node_rect(&node, &global_transform.translation());
-
+                    /*
                     let half_node_size = node.size() / 2.;
                     let view_width_px = window_size.x * (*width / 100.);
                     let top_left = window_size.extend(0.)
-                        - global_transform.translation()
-                        - half_node_size.extend(0.);
+                    - global_transform.translation()
+                    - half_node_size.extend(0.);
+                    */
 
-                    println!(
-                        "resize {:?} {:?} {:?}",
-                        node.size(),
-                        style.left,
-                        style.right
-                    );
-                    /*
+                    println!("resize {}", node.size(),);
+
                     if cursor_position.x > rect.min.x && cursor_position.x < rect.min.x + 8. {
-                        *width += 1.;
+                        *width += 2.;
                     } else if cursor_position.x > rect.max.x - 8. && cursor_position.x < rect.max.x
                     {
-                        *width -= 1.;
-                    } else if cursor_position.y > rect.min.y && cursor_position.y < rect.min.y + 8.
-                    {
-                        *height += 1.;
-                    } else if cursor_position.y > rect.max.y - 8. && cursor_position.y < rect.max.y
-                    {
-                        *height -= 1.;
-                    }*/
+                        *width -= 2.;
+                    }
                 }
-                _ => {
-                    println!("not yet...");
-                }
+                _ => {}
             }
+
             /* println!(
                 "style width {:?} height {:?} translation {:?} node size {:?} window_cursor {:?}",
                 style.width,
@@ -556,15 +537,14 @@ pub fn build_horizontal_bar<L: Component, B: Component>(
     let bar_style = Style {
         min_width: width,
         min_height: height,
-        //align_self: AlignSelf::Start,
-        //align_items: AlignItems::Start,
-        //justify_content: JustifyContent::Start,
         border: UiRect::all(ui_theme.border),
         margin: UiRect::all(ui_theme.margin),
         padding: UiRect::all(ui_theme.padding),
         flex_direction: FlexDirection::Row,
         ..default()
     };
+
+    build_bar_label(parent, ui_theme, label_marker);
 
     parent
         .spawn(NodeBundle {
@@ -574,9 +554,6 @@ pub fn build_horizontal_bar<L: Component, B: Component>(
             ..default()
         })
         .with_children(|p| {
-            //.with_children(|p| {
-            build_bar_label(p, ui_theme, label_marker);
-            //});
             p.spawn((
                 NodeBundle {
                     style: Style {
@@ -585,7 +562,7 @@ pub fn build_horizontal_bar<L: Component, B: Component>(
                         //padding: UiRect::all(ui_theme.style_padding),
                         width: Val::Percent(100.0),
                         height: Val::Percent(100.0),
-                        //align_self: AlignSelf::Center,
+                        align_self: AlignSelf::Center,
                         ..default()
                     },
                     background_color: fill_color.into(),
@@ -594,9 +571,6 @@ pub fn build_horizontal_bar<L: Component, B: Component>(
                 },
                 bar_marker,
             ));
-            //.with_children(|p| {
-            //    build_bar_label(p, ui_theme, label_marker);
-            //});
         });
 }
 
@@ -611,9 +585,10 @@ pub fn _build_vertical_bar<B: Component>(
     let bar_style = Style {
         width,
         height,
+        border: UiRect::all(ui_theme.border),
         margin: UiRect::all(ui_theme.margin),
-        //padding: UiRect::all(ui_theme.padding),
-        flex_direction: FlexDirection::ColumnReverse,
+        padding: UiRect::all(ui_theme.padding),
+        flex_direction: FlexDirection::Column,
         ..default()
     };
 
@@ -746,7 +721,7 @@ pub fn build_bar_label<T: Component>(
                 style: Style {
                     //justify_content: JustifyContent::Center,
                     //align_items: AlignItems::Center,
-                    //margin: UiRect::all(ui_theme.margin),
+                    margin: UiRect::all(ui_theme.margin),
                     ..default()
                 },
                 background_color: ui_theme.frame_background_color,

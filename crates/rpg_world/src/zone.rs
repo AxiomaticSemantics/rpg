@@ -237,12 +237,9 @@ impl Zone {
         let mut path_iter = tile_route.iter_mut().enumerate().peekable();
         while let Some((index, position)) = path_iter.next() {
             if index == 0 {
-                match self.connections[0].kind {
-                    ConnectionKind::Edge(edge) => {
-                        let tile = self.get_tile_from_position_mut(position);
-                        tile.set_edge_flag(edge, EdgeFlags::Open);
-                    }
-                    _ => {}
+                if let ConnectionKind::Edge(edge) = self.connections[0].kind {
+                    let tile = self.get_tile_from_position_mut(position);
+                    tile.set_edge_flag(edge, EdgeFlags::Open);
                 }
             } else if index == len - 1 {
                 let edge = match self.connections[1].kind {

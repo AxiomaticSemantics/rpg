@@ -158,15 +158,13 @@ pub(crate) fn hover_storage(
                     //cursor_item.item = None;
                     //background.0 = Color::GRAY;
                     //}
-                } else {
-                    if let Some(_) = &slot.item {
-                        cursor_item.item = Some(StorageSlot(RpgStorageSlot {
-                            storage_index: node.storage_index,
-                            slot_index: node.slot_index,
-                        }));
+                } else if let Some(_) = &slot.item {
+                    cursor_item.item = Some(StorageSlot(RpgStorageSlot {
+                        storage_index: node.storage_index,
+                        slot_index: node.slot_index,
+                    }));
 
-                        background.0 = Color::RED;
-                    }
+                    background.0 = Color::RED;
                 }
             }
             Interaction::None => {
@@ -175,10 +173,8 @@ pub(crate) fn hover_storage(
                     if border.0 != Color::RED {
                         border.0 = Color::RED;
                     }
-                } else {
-                    if border.0 != Color::DARK_GRAY {
-                        border.0 = Color::DARK_GRAY;
-                    }
+                } else if border.0 != Color::DARK_GRAY {
+                    border.0 = Color::DARK_GRAY;
                 }
             }
         }

@@ -5,13 +5,12 @@ use util::cleanup::CleanupStrategy;
 
 use bevy::{
     app::{App, Plugin, Update},
-    core_pipeline::core_2d::Camera2dBundle,
     ecs::{
         component::Component,
         entity::Entity,
         query::With,
         schedule::{common_conditions::in_state, IntoSystemConfigs, NextState, OnEnter, OnExit},
-        system::{Commands, ParamSet, Query, Res, ResMut},
+        system::{Commands, Query, Res, ResMut},
     },
     hierarchy::{BuildChildren, DespawnRecursiveExt},
     input::{keyboard::KeyCode, ButtonInput},
@@ -318,12 +317,6 @@ fn setup_splash_screen(
     let bevy_logo = texture_assets.bevy_logo.clone_weak();
 
     let window = window_q.single();
-
-    /*commands.spawn((
-        SplashScreenCamera,
-        CleanupStrategy::Despawn,
-        Camera2dBundle::default(),
-    ));*/
 
     let bevy_logo_entity = commands
         .spawn((

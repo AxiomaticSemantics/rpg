@@ -137,6 +137,7 @@ fn build_zone(
     let room_world_size = zone.zone.size_info.room_world_size();
     let world_offset = zone.zone.size_info.zone_world_offset();
 
+    /*
     let tile_edge_debug_mesh = meshes.add(
         Quad {
             size: vec2(zone.zone.size_info.tile_size.x as f32, 0.5),
@@ -144,16 +145,18 @@ fn build_zone(
         }
         .into(),
     );
+    */
 
     let mut room_plane = Mesh::from(Quad {
         size: room_world_size.as_vec2(),
         ..default()
     });
 
-    room_plane.generate_tangents();
+    room_plane.generate_tangents().unwrap();
 
     let room_plane = meshes.add(room_plane);
 
+    /*
     let tile_debug_mesh = meshes.add(
         Quad {
             size: zone.zone.size_info.tile_size.as_vec2() * 0.66,
@@ -161,6 +164,7 @@ fn build_zone(
         }
         .into(),
     );
+    */
 
     match zone.zone.kind {
         Kind::Overworld => {
@@ -315,7 +319,6 @@ fn build_zone(
                             ));
                         }
                     }
-                    */
 
                     let key = if zone
                         .zone
@@ -335,7 +338,7 @@ fn build_zone(
                         "tile_orange"
                     };
 
-                    /* commands.spawn((
+                    commands.spawn((
                         GameSessionCleanup,
                         CleanupStrategy::Despawn,
                         TileNode,

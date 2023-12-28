@@ -1,17 +1,16 @@
 use crate::{plugin::UiFont, widgets::ImageButton};
 
 use bevy::{
-    asset::{AssetServer, Handle},
+    asset::Handle,
     ecs::{
         component::Component,
         query::{Changed, Or, With},
         system::{Query, Res, ResMut, Resource},
-        world::{FromWorld, World},
     },
     render::color::Color,
     text::{Font, TextStyle},
     ui::{
-        widget::Button, AlignContent, AlignItems, AlignSelf, BackgroundColor, BorderColor, Display,
+        widget::Button, AlignItems, AlignSelf, BackgroundColor, BorderColor, Display,
         FlexDirection, Interaction, JustifyContent, Overflow, OverflowAxis, PositionType, Style,
         UiRect, Val,
     },
