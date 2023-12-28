@@ -1,0 +1,84 @@
+[package]
+resolver = "2"
+name = "rpg_client"
+version = "0.1.0"
+description = "A prototype Action RPG"
+license = "MIT OR Apache-2.0"
+authors.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[package.'cfg(target_os = "windows")']
+build = "windows-build.rs"
+
+[features]
+default = ["gizmos"]
+gizmos = ["bevy/bevy_gizmos"]
+
+[dependencies]
+rpg_core = { path = "../rpg_core" }
+rpg_world = { path = "../rpg_world" }
+
+# bevy plugins
+util = { path = "../util" }
+ui_util = { path = "../ui_util" }
+audio_manager = { path = "../audio_manager" }
+
+petgraph = { workspace = true }
+serde = { workspace = true }
+serde_derive = { workspace = true }
+serde_json = { workspace = true }
+
+image = { version = "0.24", features = ["png"], default-features = false }
+winit = { version = "0.29", features = ["x11"], default-features = false }
+clap = { version = "4.2.7", features = ["std", "derive"], default-features = false }
+#ab_glyph = "0.2.21"
+thiserror = "1.0"
+fastrand = "2.0.1"
+
+[dependencies.interpolation]
+version = "0.2"
+default-features = false
+
+[dependencies.bevy]
+git = "https://github.com/AxiomaticSemantics/bevy"
+features = [
+  "bevy_asset",
+  "bevy_audio",
+  "bevy_winit",
+  "bevy_pbr",
+  "bevy_core_pipeline",
+#  "bevy_sprite",  
+  "bevy_text",
+  "bevy_ui",
+  "bevy_scene",
+  "bevy_gltf",
+  "vorbis",
+  "basis-universal",
+  "png",
+  "x11",
+  "hdr",
+#  "zlib",
+#  "zstd",
+  "tonemapping_luts",
+  "subpixel_glyph_atlas",
+  "animation",
+  "multi-threaded",
+  "dynamic_linking"
+]
+optional = false
+default-features = false
+
+[dependencies.bevy_tweening]
+git = "https://github.com/AxiomaticSemantics/bevy_tweening"
+features = [
+  "bevy_sprite",
+  "bevy_text"
+]
+optional = false
+default-features = false
+
+[target.'cfg(target_os = "windows")'.build-dependencies]
+embed-resource = { version = "1.7" }

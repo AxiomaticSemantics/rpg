@@ -1,0 +1,53 @@
+[workspace]
+resolver = "2"
+members = [ "crates/util", "crates/audio_manager", "crates/ui_util", "crates/rpg_world", "crates/rpg_core", "crates/rpg_client" ]
+
+[workspace.package]
+description = "A prototype of an Action RPG"
+authors = [ "AxiomaticSemantics <oh@no.no>" ]
+edition = "2021"
+#publish = false
+
+[workspace.lints.clippy]
+type_complexity = "allow"
+doc_markdown = "warn"
+manual_let_else = "warn"
+undocumented_unsafe_blocks = "warn"
+redundant_else = "warn"
+match_same_arms = "warn"
+semicolon_if_nothing_returned = "warn"
+map_flatten = "warn"
+
+[lints]
+workspace = true
+
+[workspace.dependencies.serde]
+version = "1"
+features = ["derive", "std"]
+
+[workspace.dependencies.serde_derive]
+version = "1"
+
+[workspace.dependencies.serde_json]
+version = "1"
+
+[workspace.dependencies.petgraph]
+version = "0.6"
+features = ["serde-1"]
+
+[workspace.dependencies.glam]
+version = "0.24"
+
+[workspace.target.'cfg(target_os = "windows")'.build-dependencies]
+embed-resource = "1.7"
+
+[profile.release]
+lto = "thin"
+
+[profile.dev]
+opt-level = 'z'
+debug = 1
+
+[profile.dev.package."*"]
+opt-level = 'z'
+debug = 0

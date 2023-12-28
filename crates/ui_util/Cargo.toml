@@ -1,0 +1,23 @@
+[package]
+resolver = "2"
+name = "ui_util"
+version = "0.1.0"
+description = "A small utility library for bevy_ui"
+license = "MIT OR Apache-2.0"
+authors.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies.bevy]
+git = "https://github.com/AxiomaticSemantics/bevy"
+features = [
+  "bevy_asset",
+#  "bevy_sprite",  
+  "bevy_text",
+  "bevy_ui",
+  "subpixel_glyph_atlas",
+]
+optional = false
+default-features = false

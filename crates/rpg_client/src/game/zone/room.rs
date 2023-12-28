@@ -1,0 +1,116 @@
+use super::zone::Zone;
+
+use crate::{
+    game::{assets::RenderResources, prop::prop},
+    random::Random,
+};
+
+use bevy::{
+    ecs::system::Commands,
+    math::{uvec2, Quat, UVec2, Vec3},
+};
+
+use rpg_world::{
+    edge::{Edge, EdgeFlags},
+    neighbour::Neighbour,
+    position_index::IndexedPosition,
+    room::Room,
+    tile::Tile,
+    zone::Connection,
+};
+
+use fastrand::Rng;
+
+pub trait RoomSpawn {
+    fn spawn_wall_section(
+        &self,
+        commands: &mut Commands,
+        zone: &Zone,
+        renderables: &RenderResources,
+        tile: u8,
+    ) -> usize;
+
+    fn spawn_random_prop(
+        &self,
+        commands: &mut Commands,
+        renderables: &RenderResources,
+        zone: &mut Zone,
+        random: &mut Random,
+    );
+}
+
+impl RoomSpawn for Room {
+    fn spawn_wall_section(
+        &self,
+        commands: &mut Commands,
+        zone: &Zone,
+        renderables: &RenderResources,
+        tile: u8,
+    ) -> usize {
+        let tile = &self.tiles[tile as usize];
+        let tile_position = tile.position();
+
+        let room_world_size = zone.zone.size_info.room_world_size();
+        let tile_offset =
+            self.position * room_world_size + zone.zone.size_info.tile_size * tile_position;
+        let world_offset = zone.zone.size_info.zone_world_offset();
+
+        //println!("room pos {} world_off {world_offset} room_world_size {room_world_size} tile_off {tile_offset}", self.position);
+
+        let mut count = 0;
+        for edge in [Edge::Top, Edge::Bottom, Edge::Left, Edge::Right] {
+            if tile.get_edge(edge).has_edge_flag(EdgeFlags::Barrier) {
+                let rotation = match edge {
+                    Edge::Top | Edge::Bottom => None,
+                    _ => Some(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
+                };
+
+                let pos = world_offset
+                    + match edge {
+                        Edge::Top => (tile_offset + uvec2(2, 0)).as_vec2(),
+                        Edge::Bottom => (tile_offset + uvec2(2, 4)).as_vec2(),
+                        Edge::Left => (tile_offset + uvec2(0, 2)).as_vec2(),
+                        Edge::Right => (tile_offset + uvec2(4, 2)).as_vec2(),
+                    };
+
+                count += 1;
+                //println!("spawn wall at {x} {y}");
+                prop::spawn(
+                    commands,
+                    renderables,
+                    "wall_hedge_1",
+                    Vec3::new(pos.x, 0., pos.y),
+                    rotation,
+                );
+            }
+        }
+
+        count
+    }
+
+    fn spawn_random_prop(
+        &self,
+        commands: &mut Commands,
+        renderables: &RenderResources,
+        zone: &mut Zone,
+        rng: &mut Random,
+    ) {
+        use std::f32::consts;
+
+        /*
+        let key = rng.usize(0..2);
+        let key = match key {
+            0 => "rock_1",
+            _ => "ground_lamp_1",
+        };*/
+        let rot_y = consts::TAU * (0.5 - rng.f32());
+
+        prop::spawn(
+            commands,
+            renderables,
+            "rock_1",
+            zone.zone.generate_position(&self),
+            Some(Quat::from_rotation_y(rot_y)),
+        );
+    }
+}

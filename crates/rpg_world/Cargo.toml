@@ -1,0 +1,18 @@
+[package]
+resolver = "2"
+name = "rpg_world"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_derive = { workspace = true }
+glam = { workspace = true, features = ["serde"] }
+num_enum = "0.7.1"
+fastrand = "2.0.1"

@@ -1,0 +1,23 @@
+[package]
+resolver = "2"
+name = "audio_manager"
+version = "0.1.0"
+description = "What would have been a game someday."
+license = "MIT OR Apache-2.0"
+authors.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies.bevy]
+#version = "0.12" 
+git = "https://github.com/AxiomaticSemantics/bevy"
+features = [
+ # "bevy_asset",
+  "bevy_audio",
+ # "vorbis",
+#  "dynamic_linking"
+]
+optional = false
+default-features = false
