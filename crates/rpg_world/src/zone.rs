@@ -126,7 +126,7 @@ impl Zone {
         let room_size_vec = self.size_info.extent;
         for y in 0..room_size_vec.y {
             for x in 0..room_size_vec.x {
-                let room = Room::new(&self, uvec2(x, y), 2);
+                let room = Room::new(self, uvec2(x, y), 2);
                 self.rooms.push(room);
             }
         }
@@ -239,7 +239,7 @@ impl Zone {
             if index == 0 {
                 match self.connections[0].kind {
                     ConnectionKind::Edge(edge) => {
-                        let tile = self.get_tile_from_position_mut(&position);
+                        let tile = self.get_tile_from_position_mut(position);
                         tile.set_edge_flag(edge, EdgeFlags::Open);
                     }
                     _ => {}
@@ -247,7 +247,7 @@ impl Zone {
             } else if index == len - 1 {
                 let edge = match self.connections[1].kind {
                     ConnectionKind::Edge(edge) => {
-                        let tile = self.get_tile_from_position_mut(&position);
+                        let tile = self.get_tile_from_position_mut(position);
                         let tile_edge = tile.get_edge_mut(edge);
 
                         if !tile_edge.edge_flags_empty() {

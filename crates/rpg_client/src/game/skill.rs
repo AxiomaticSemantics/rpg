@@ -51,11 +51,9 @@ use rpg_core::{
             ChainData, DotData, EffectData, EffectInfo, EffectInstance, KnockbackData, PierceData,
             SplitData,
         },
-        skill::{
-            AreaInstance, DirectInstance, OrbitData, Origin, ProjectileInstance, ProjectileShape,
-            Skill, SkillId, SkillInfo, SkillInstance,
-        },
         skill_tables::SkillTableEntry,
+        AreaInstance, DirectInstance, OrbitData, Origin, ProjectileInstance, ProjectileShape,
+        Skill, SkillId, SkillInfo, SkillInstance,
     },
     unit::UnitKind,
 };
@@ -293,24 +291,22 @@ pub(crate) fn handle_contact(
             _ => {}
         }
 
-        match &mut instance.tickable {
-            Some(tickable) => tickable.can_damage = false,
-            _ => {}
+        if let Some(tickable) = &mut instance.tickable {
+            tickable.can_damage = false;
         }
 
-        if defender.is_alive() {
-            if !instance.effects.is_empty()
-                && handle_effects(
-                    &game_time,
-                    &mut random,
-                    &mut instance,
-                    &mut s_transform,
-                    &mut d_actions,
-                )
-            {
-                // println!("Despawning skill");
-                commands.entity(event.entity).despawn_recursive();
-            }
+        if defender.is_alive()
+            && !instance.effects.is_empty()
+            && handle_effects(
+                &game_time,
+                &mut random,
+                &mut instance,
+                &mut s_transform,
+                &mut d_actions,
+            )
+        {
+            // println!("Despawning skill");
+            commands.entity(event.entity).despawn_recursive();
         }
     }
 }
@@ -379,8 +375,7 @@ pub(crate) fn update_skill(
                         panic!("expected orbit info");
                     };
 
-                    target.translation =
-                        target.translation + target.forward() * (orbit_info.range as f32 / 100.);
+                    target.translation += target.forward() * (orbit_info.range as f32 / 100.);
                     target.rotate_x(dt.sin());
 
                     transform.translation = target.translation;
@@ -420,13 +415,10 @@ pub(crate) fn collide_skills(
     unit_q: Query<(Entity, &Transform, &Aabb, &Unit), Without<CorpseTimer>>,
 ) {
     for (s_entity, s_transform, s_aabb, invulnerability, instance) in &mut skill_q {
-        match &instance.tickable {
-            Some(tickable) => {
-                if !tickable.can_damage {
-                    continue;
-                }
+        if let Some(tickable) = &instance.tickable {
+            if !tickable.can_damage {
+                continue;
             }
-            _ => {}
         }
 
         for (u_entity, u_transform, u_aabb, unit) in &unit_q {
@@ -517,7 +509,7 @@ pub(crate) fn prepare_skill(
         SkillInfo::Direct(_) => {
             origin.y = 1.2;
 
-            let aabb = renderables.aabbs["direct_attack"].clone();
+            let aabb = renderables.aabbs["direct_attack"];
             let SkillInfo::Direct(info) = &skill.info else {
                 panic!("Expected direct attack")
             };
@@ -535,14 +527,10 @@ pub(crate) fn prepare_skill(
         SkillInfo::Projectile(info) => {
             //println!("spawn {speed} {duration} {size}");
 
-            let tickable = if let Some(tick_rate) = &info.tick_rate {
-                Some(Tickable {
-                    timer: Timer::from_seconds(*tick_rate, TimerMode::Repeating),
-                    can_damage: true,
-                })
-            } else {
-                None
-            };
+            let tickable = info.tick_rate.as_ref().map(|tr| Tickable {
+                timer: Timer::from_seconds(*tr, TimerMode::Repeating),
+                can_damage: true,
+            });
 
             let (mesh_handle, aabb) = if info.shape == ProjectileShape::Box {
                 let handle = renderables.props["bolt_01"].handle.clone();
@@ -551,7 +539,7 @@ pub(crate) fn prepare_skill(
                 } else {
                     let aabb =
                         Aabb::from_min_max(Vec3::new(-0.1, -0.1, -0.25), Vec3::new(0.1, 0.1, 0.25));
-                    renderables.aabbs.insert("bolt_01".into(), aabb.clone());
+                    renderables.aabbs.insert("bolt_01".into(), aabb);
                     aabb
                 };
 
@@ -572,7 +560,7 @@ pub(crate) fn prepare_skill(
                     })
                     .unwrap();
 
-                    let _ = mesh.generate_tangents().unwrap();
+                    mesh.generate_tangents().unwrap();
                     let aabb = mesh.compute_aabb().unwrap();
                     let handle = meshes.add(mesh);
 
@@ -639,14 +627,10 @@ pub(crate) fn prepare_skill(
                 start_time: game_time.watch.elapsed_secs(),
             });
 
-            let tickable = if let Some(tick_rate) = &info.tick_rate {
-                Some(Tickable {
-                    timer: Timer::from_seconds(*tick_rate, TimerMode::Repeating),
-                    can_damage: true,
-                })
-            } else {
-                None
-            };
+            let tickable = info.tick_rate.as_ref().map(|tr| Tickable {
+                timer: Timer::from_seconds(*tr, TimerMode::Repeating),
+                can_damage: true,
+            });
 
             let transform = Transform::from_translation(origin + Vec3::new(0.0, 0.01, 0.0))
                 .looking_to(Vec3::NEG_Y, Vec3::Y);

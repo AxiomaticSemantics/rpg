@@ -3,9 +3,9 @@ use crate::{
     metadata::Metadata,
     stat::{
         modifier::Operation,
-        stat::{Stat, StatId, StatModifier},
         stat_list::StatList,
         value::{Value, ValueKind},
+        Stat, StatId, StatModifier,
     },
 };
 

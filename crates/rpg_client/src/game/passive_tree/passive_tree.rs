@@ -11,7 +11,7 @@ use crate::{
 
 use rpg_core::{
     class::Class,
-    passive_tree::{EdgeNodes, HexGrid, HexPosition, Node, NodeId, NodeKind, PassiveSkillGraph},
+    passive_tree::{EdgeNodes, Node, NodeId, NodeKind, PassiveSkillGraph},
     stat::value::ValueKind,
 };
 use ui_util::style::UiTheme;
@@ -54,14 +54,7 @@ use bevy::{
     window::{PrimaryWindow, Window},
 };
 
-use std::borrow::Cow;
-use std::collections::HashMap;
-
-use petgraph::{
-    algo,
-    graph::{EdgeIndex, Graph, NodeIndex},
-    Undirected,
-};
+use petgraph::algo;
 
 #[derive(Resource, Deref, DerefMut)]
 pub struct PassiveTree(pub PassiveSkillGraph);
@@ -69,11 +62,8 @@ pub struct PassiveTree(pub PassiveSkillGraph);
 #[derive(Component)]
 pub struct PassiveTreeCamera;
 
-#[derive(Component)]
-pub struct PassiveTreeConnection {
-    pub lhs: NodeId,
-    pub rhs: NodeId,
-}
+#[derive(Deref, DerefMut, Component)]
+pub struct PassiveTreeConnection(pub EdgeNodes);
 
 pub enum PassiveNodeState {
     Normal,
@@ -460,10 +450,10 @@ pub(crate) fn setup(
                 GameSessionCleanup,
                 CleanupStrategy::Despawn,
                 first_pass_layer,
-                PassiveTreeConnection {
+                PassiveTreeConnection(EdgeNodes {
                     lhs: node.id,
                     rhs: *connection,
-                },
+                }),
                 MaterialMesh2dBundle {
                     transform: line_transform,
                     mesh: Mesh2dHandle(line_mesh.clone()),
@@ -531,7 +521,6 @@ pub(crate) fn setup(
         Camera2dBundle {
             camera_2d: Camera2d {
                 clear_color: ClearColorConfig::Custom(Color::rgb(0.05, 0.04, 0.04)),
-                ..default()
             },
             camera: Camera {
                 order: -1,
@@ -604,7 +593,6 @@ pub(crate) fn setup(
                         sections: vec![TextSection::new("", ui_theme.text_style_regular.clone())],
                         justify: JustifyText::Center,
                         linebreak_behavior: BreakLineOn::WordBoundary,
-                        ..default()
                     },
                     ..default()
                 },
@@ -749,7 +737,7 @@ pub fn display(
     let Some(position) = window.cursor_position() else {
         return;
     };
-    let Some(point) = camera_passive.viewport_to_world_2d(&global_transform, position) else {
+    let Some(point) = camera_passive.viewport_to_world_2d(global_transform, position) else {
         println!("could not convert viewport position to world");
         return;
     };
@@ -758,14 +746,13 @@ pub fn display(
 
     // Set edge material to allocated material if not already set
     for (passive_connection, mut connection_material) in &mut passive_connection_q {
-        let connection = EdgeNodes {
+        /*let connection = EdgeNodes {
             lhs: passive_connection.lhs,
             rhs: passive_connection.rhs,
-        };
+        };*/
         if passive_tree.allocated_edges.iter().any(|n| {
             // ordering does not matter, check both of the possibilities
-            (n.lhs == connection.lhs && n.rhs == connection.rhs)
-                || (n.lhs == connection.rhs && n.rhs == connection.lhs)
+            *n == **passive_connection
         }) {
             if *connection_material != renderables.color_materials["line_allocated"] {
                 *connection_material = renderables.color_materials["line_allocated"].clone();
@@ -843,8 +830,7 @@ pub fn display(
                         .stat
                         .stats
                         .values()
-                        .filter(|s| s.id == stat.id)
-                        .next()
+                        .find(|s| s.id == stat.id)
                         .unwrap();
 
                     let is_percent = stat_descriptor.value_kind == ValueKind::F32;
@@ -907,10 +893,8 @@ pub fn display(
         }
     }
 
-    if !popup_visibile {
-        if popup_frame.display != Display::None {
-            popup_frame.display = Display::None;
-        }
+    if !popup_visibile && popup_frame.display != Display::None {
+        popup_frame.display = Display::None;
     }
 }
 

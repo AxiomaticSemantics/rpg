@@ -1,5 +1,5 @@
 use crate::{
-    stat::stat::{StatId, StatModifier},
+    stat::{StatId, StatModifier},
     uid::Uid,
 };
 
@@ -92,8 +92,8 @@ pub mod generation {
         metadata::Metadata,
         stat::{
             modifier::{Affix, Modifier, ModifierFormat, ModifierId, ModifierKind, Operation},
-            stat::StatModifier,
             value::{Sample, Value, ValueKind},
+            StatModifier,
         },
         uid::NextUid,
     };

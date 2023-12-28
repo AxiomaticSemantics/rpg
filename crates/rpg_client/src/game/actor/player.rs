@@ -102,7 +102,7 @@ pub fn input_actions(
         let skill_id = unit.active_skills.primary.skill.unwrap();
 
         let (origin, target) =
-            get_skill_origin(&metadata, &transform, cursor_position.ground, skill_id);
+            get_skill_origin(&metadata, transform, cursor_position.ground, skill_id);
 
         if actions.attack.is_none() && actions.knockback.is_none() {
             actions.request(Action::new(
@@ -124,7 +124,7 @@ pub fn input_actions(
     if controls.mouse_secondary.pressed {
         actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
     } else if controls.mouse_secondary.just_released {
-        actions.request(Action::new(ActionData::MoveEnd, None, true))
+        actions.request(Action::new(ActionData::MoveEnd, None, true));
     }
 
     let look_point = cursor_position.ground;

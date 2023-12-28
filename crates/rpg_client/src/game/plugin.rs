@@ -28,7 +28,7 @@ use bevy::{
     app::{App, Plugin, PostUpdate, PreUpdate, Update},
     audio::{AudioBundle, AudioSink, PlaybackSettings},
     core_pipeline::{
-        bloom::BloomSettings, clear_color::ClearColor, core_2d::Camera2d, core_3d::Camera3dBundle,
+        bloom::BloomSettings, clear_color::ClearColor, core_3d::Camera3dBundle,
         tonemapping::Tonemapping,
     },
     ecs::prelude::*,

@@ -175,20 +175,15 @@ fn build_zone(
                     world_offset.y + room_world_pos.y as f32,
                 );
 
+                /*
                 let connections: Vec<_> = zone
                     .zone
                     .connections
                     .iter()
-                    .filter_map(|v| {
-                        if v.position / 4 == room.position {
-                            Some(v)
-                        } else {
-                            None
-                        }
-                    })
+                    .filter(|v| v.position / 4 == room.position)
                     .collect();
 
-                /*
+
                 if !connections.is_empty() {
                     println!("room has connection: {connections:?} {}", room.position);
 
@@ -239,9 +234,9 @@ fn build_zone(
                         mesh: room_plane.clone(),
                         material: renderables.materials["tile"].clone_weak(),
                         transform: Transform::from_translation(Vec3::new(
-                            room_world_float.x as f32,
+                            room_world_float.x,
                             0.001,
-                            room_world_float.y as f32,
+                            room_world_float.y,
                         ))
                         .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
                         ..default()
@@ -363,7 +358,7 @@ fn build_zone(
 
             for room in &zone.zone.rooms {
                 for tile in &room.tiles {
-                    count += room.spawn_wall_section(commands, &zone, &renderables, tile.index);
+                    count += room.spawn_wall_section(commands, zone, renderables, tile.index);
                 }
                 for _ in 0..room.props {
                     //room.spawn_random_prop(commands, &renderables, zone, rng);

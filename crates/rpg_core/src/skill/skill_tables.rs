@@ -1,10 +1,7 @@
 use crate::{
     damage::Damage,
-    skill::{
-        effect::EffectInfo,
-        skill::{Origin, SkillId, SkillInfo},
-    },
-    stat::stat::Stat,
+    skill::{effect::EffectInfo, Origin, SkillId, SkillInfo},
+    stat::Stat,
 };
 
 use std::collections::HashMap;

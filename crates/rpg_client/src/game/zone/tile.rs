@@ -1,4 +1,4 @@
-use bevy::{ecs::component::Component, math::UVec2, utils::default};
+use bevy::ecs::component::Component;
 
 #[derive(Component)]
 pub struct TileNode;

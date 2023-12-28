@@ -1,7 +1,7 @@
 use super::{
     modifier::{Affix, ModifierId, ModifierKind},
-    stat::StatId,
     value::Value,
+    StatId,
 };
 
 use serde_derive::{Deserialize as De, Serialize as Ser};

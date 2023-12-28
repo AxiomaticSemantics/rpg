@@ -1,4 +1,4 @@
-use crate::{class::Class, skill::skill::SkillId, villain::VillainId};
+use crate::{class::Class, skill::SkillId, villain::VillainId};
 
 use std::borrow::Cow;
 use std::collections::HashMap;

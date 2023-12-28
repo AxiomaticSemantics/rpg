@@ -1,7 +1,5 @@
-use crate::{
-    item::{Item, ItemUid},
-    storage::{equipment::*, inventory::*},
-};
+use super::{equipment::*, inventory::*};
+use crate::item::Item;
 
 use serde_derive::{Deserialize as De, Serialize as Ser};
 

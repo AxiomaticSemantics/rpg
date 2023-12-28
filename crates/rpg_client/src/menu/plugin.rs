@@ -1,6 +1,5 @@
 use crate::{
     assets::TextureAssets,
-    game::passive_tree::passive_tree::PassiveTreeCamera,
     loader::plugin::OutOfGameCamera,
     menu::{
         self, create::CreateRoot, credits::CreditsRoot, load::LoadRoot, main::MainRoot,
@@ -39,9 +38,6 @@ use bevy::{
     },
     utils::default,
 };
-
-#[derive(Component)]
-pub struct MenuCamera;
 
 pub struct MenuPlugin;
 

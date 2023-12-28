@@ -17,8 +17,9 @@ use crate::game::{
 use rpg_core::{
     item::Rarity,
     storage::{
+        self,
         inventory::{HERO_INVENTORY_COLUMNS, HERO_INVENTORY_ROWS},
-        storage::{self, SlotIndex, Storage, StorageIndex, StorageSlot as RpgStorageSlot},
+        SlotIndex, Storage, StorageIndex, StorageSlot as RpgStorageSlot,
     },
 };
 use ui_util::style::UiTheme;
@@ -549,7 +550,7 @@ pub(crate) fn setup(
                     ..default()
                 },
                 border_color: ui_theme.border_color,
-                background_color: ui_theme.frame_background_color.into(),
+                background_color: ui_theme.frame_background_color,
                 ..default()
             })
             .with_children(|p| {

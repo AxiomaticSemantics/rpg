@@ -5,14 +5,12 @@ use std::marker::PhantomData;
 
 #[derive(Default)]
 pub struct JsonAssetLoader<A> {
-    extensions: [&'static str; 1],
     _marker: PhantomData<A>,
 }
 
 impl<A> JsonAssetLoader<A> {
-    pub fn new(name: &'static str) -> Self {
+    pub fn new() -> Self {
         Self {
-           extensions: [ name ],
            _marker: PhantomData,
         }
     }
@@ -23,7 +21,7 @@ impl<A> JsonAssetLoader<A> {
 #[derive(Debug, Error)]
 pub enum JsonAssetLoaderError {
     /// An [IO](std::io) Error
-    #[error("Could load shader: {0}")]
+    #[error("Could load json: {0}")]
     Io(#[from] std::io::Error),
     // /// A [RON](ron) Error
     //#[error("Could not parse RON: {0}")]
@@ -36,7 +34,6 @@ pub struct JsonSource(pub Vec<u8>);
 impl<A> AssetLoader for JsonAssetLoader<A>
 where
     A: Asset
-    //for<'de> A: De<'de> + Asset,
 {
     type Asset = JsonSource;
     type Settings = ();
@@ -46,7 +43,7 @@ where
         &'a self,
         reader: &'a mut Reader,
         _settings: &'a Self::Settings,
-        load_context: &'a mut LoadContext,
+        _load_context: &'a mut LoadContext,
     ) -> BoxedFuture<'a, Result<Self::Asset, Self::Error>> {
         Box::pin(async move {
             let mut bytes = Vec::new();

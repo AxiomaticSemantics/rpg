@@ -3,7 +3,7 @@ use super::effect::EffectInfo;
 use crate::{
     damage::Damage,
     metadata::Metadata,
-    stat::{stat::StatId, value::Value},
+    stat::{value::Value, StatId},
 };
 
 use glam::Vec3;

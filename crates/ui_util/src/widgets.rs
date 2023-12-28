@@ -387,8 +387,8 @@ pub fn slider_update(
                 let window = window_q.single();
                 let mouse_position = window.cursor_position().unwrap_or_default();
 
-                let node_rect = get_node_rect(&node, &transform.translation());
-                let parent_rect = get_node_rect(&parent_node, &parent_transform.translation());
+                let node_rect = get_node_rect(node, &transform.translation());
+                let parent_rect = get_node_rect(parent_node, &parent_transform.translation());
 
                 if mouse_position.x >= parent_rect.min.x && mouse_position.x <= parent_rect.max.x {
                     let target_pos = parent_size.x - (parent_rect.max.x - mouse_position.x);

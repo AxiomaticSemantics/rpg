@@ -5,14 +5,14 @@ use crate::{
     item::{Item, ItemId, ItemUid, Rarity},
     metadata::Metadata,
     passive_tree::PassiveSkillGraph,
-    skill::skill::{ActiveSkills, Skill, SkillId, SkillSlotId, SkillUseResult},
+    skill::{ActiveSkills, Skill, SkillId, SkillSlotId, SkillUseResult},
     stat::{
         modifier::{Modifier, ModifierFormat, ModifierId, ModifierKind, Operation},
-        stat::{Stat, StatId, StatModifier},
         stat_system::Stats,
         value::{Value, ValueKind},
+        Stat, StatId, StatModifier,
     },
-    storage::storage::{self, StorageIndex, UnitStorage},
+    storage::{StorageIndex, UnitStorage, STORAGE_INVENTORY, STORAGE_STASH},
     uid::{NextUid, Uid},
     unit_tables::VillainsTableEntry,
     villain::VillainId,
@@ -303,7 +303,7 @@ impl Unit {
         let mut gained_level = false;
 
         for modifier in item.modifiers.iter() {
-            let (str_id, descriptor) = metadata
+            let (str_id, _) = metadata
                 .stat
                 .stats
                 .iter()
@@ -377,8 +377,8 @@ impl Unit {
         self.stats.clear_item_stats();
 
         for node in storage.storage.iter() {
-            if node.index == StorageIndex(storage::STORAGE_INVENTORY)
-                || node.index == StorageIndex(storage::STORAGE_STASH)
+            if node.index == StorageIndex(STORAGE_INVENTORY)
+                || node.index == StorageIndex(STORAGE_STASH)
             {
                 continue;
             }
