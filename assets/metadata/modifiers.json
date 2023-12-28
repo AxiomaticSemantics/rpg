@@ -1,0 +1,122 @@
+{
+	"prefix_ids": {
+		"begin": 0,
+		"end": 2
+	},
+	"suffix_ids": {
+		"begin": 32256,
+		"end": 32258
+	},
+	"prefix_attack_ids": {
+		"begin": 0,
+		"end": 1
+	},
+	"prefix_defense_ids": {
+		"begin": 16128,
+		"end": 16128
+	},
+	"suffix_attack_ids": {
+		"begin": 32256,
+		"end": 32256
+	},
+	"suffix_defense_ids": {
+		"begin": 48384,
+		"end": 48384
+	},
+	"reward_ids": {
+		"begin": 64512,
+		"end": 64515
+	},
+	"modifiers": {
+		"0": {
+			"id": 0,
+			"name": "Hp",
+			"stat_id": 4,
+			"kind": "Normal",
+			"affix": "Prefix",
+			"min": { "U32": 1 },
+			"max": { "U32": 8 }
+		},
+		"1": {
+			"id": 1,
+			"name": "Ep",
+			"stat_id": 8,
+			"kind": "Normal",
+			"affix": "Prefix",
+			"min": { "U32": 1 },
+			"max": { "U32": 8 }
+		},
+		"2": {
+			"id": 2,
+			"name": "Mp",
+			"stat_id": 12,
+			"kind": "Normal",
+			"affix": "Prefix",
+			"min": { "U32": 1 },
+			"max": { "U32": 8 }
+		},	
+		"32256": {
+			"id": 32256,
+			"name": "Str",
+			"stat_id": 0,
+			"kind": "Normal",
+			"affix": "Suffix",
+			"min": { "U32": 1 },
+			"max": { "U32": 5 }
+		},
+		"32257": {
+			"id": 32257,
+			"name": "Dex",
+			"stat_id": 1,
+			"kind": "Normal",
+			"affix": "Suffix",
+			"min": { "U32": 1 },
+			"max": { "U32": 5 }
+		},
+		"32258": {
+			"id": 32258,
+			"name": "Dex",
+			"stat_id": 1,
+			"kind": "Normal",
+			"affix": "Suffix",
+			"min": { "U32": 1 },
+			"max": { "U32": 5 }
+		},
+		"64512": {
+			"id": 64512,
+			"name": "Xp",
+			"stat_id": 23,
+			"kind": "Normal",
+			"affix": "Suffix",
+			"min": { "U64": 8 },
+			"max": { "U64": 16 }
+		},
+		"64513": {
+			"id": 64513,
+			"name": "Hp",
+			"stat_id": 4,
+			"kind": "Normal",
+			"affix": "Suffix",
+			"min": { "U32": 8 },
+			"max": { "U32": 12 }
+		},
+		"64514": {
+			"id": 64514,
+			"name": "Ep",
+			"stat_id": 8,
+			"kind": "Normal",
+			"affix": "Suffix",
+			"min": { "U32": 8 },
+			"max": { "U32": 12 }
+		},
+		"64515": {
+			"id": 64515,
+			"name": "Mp",
+			"stat_id": 12,
+			"kind": "Normal",
+			"affix": "Suffix",
+			"min": { "U32": 8 },
+			"max": { "U32": 12 }
+		}
+	}
+}
