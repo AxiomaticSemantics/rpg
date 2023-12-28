@@ -250,7 +250,7 @@ pub mod generation {
                     println!("generated {rarity:?} item");
                 }
 
-                assert!(modifiers.len() > 0);
+                assert!(!modifiers.is_empty());
             }
         }
 
