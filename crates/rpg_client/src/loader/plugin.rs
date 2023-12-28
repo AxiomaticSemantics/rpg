@@ -139,8 +139,12 @@ fn transition_game_asset_load(mut state: ResMut<NextState<AppState>>) {
 fn set_window_icon(windows: NonSend<WinitWindows>, window_q: Query<Entity, With<PrimaryWindow>>) {
     let entity = window_q.single();
     let primary = windows.get_window(entity).unwrap();
-    let icon_buf = std::io::Cursor::new(include_bytes!("../../assets/textures/app_icon.png"));
+    let path = format!(
+        "{}/textures/app_icon.png",
+        std::env::var("BEVY_ASSET_ROOT").unwrap()
+    );
 
+    let icon_buf = std::io::Cursor::new(path.as_str());
     let Ok(image) = image::load(icon_buf, image::ImageFormat::Png) else {
         println!("Failed to set window icon");
         return;
