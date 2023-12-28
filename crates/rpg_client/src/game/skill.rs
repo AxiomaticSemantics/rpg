@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use bevy::{
     animation::RepeatAnimation,
     asset::{Assets, Handle},
@@ -238,8 +240,7 @@ pub(crate) fn handle_contact(
                         if instance
                             .effects
                             .iter()
-                            .find(|e| matches!(e.info, EffectInfo::Pierce(_)))
-                            .is_some()
+                            .any(|e| matches!(e.info, EffectInfo::Pierce(_)))
                         {
                             invulnerability.push(InvulnerabilityTimer {
                                 entity: d_entity,
@@ -352,13 +353,9 @@ pub(crate) fn clean_skills(
     }
 }
 
-pub(crate) fn update_skill(
-    mut commands: Commands,
-    time: Res<Time>,
-    mut skill_q: Query<(Entity, &mut Transform, &mut SkillUse)>,
-) {
+pub(crate) fn update_skill(time: Res<Time>, mut skill_q: Query<(&mut Transform, &mut SkillUse)>) {
     let dt = time.delta_seconds();
-    for (entity, mut transform, mut skill_use) in &mut skill_q {
+    for (mut transform, mut skill_use) in &mut skill_q {
         match &mut skill_use.info {
             SkillInstance::Projectile(info) => {
                 // The skill would have been destroyed if it was expired, advance it
@@ -381,7 +378,7 @@ pub(crate) fn update_skill(
                     transform.translation = target.translation;
                     transform.rotate_y(dt.cos());
                     transform.rotate_z(dt.sin());
-                } else if let Some(_) = &info.info.aerial {
+                } else if let Some(_aerial) = &info.info.aerial {
                     transform.translation = transform.translation
                         + transform.forward() * dt * (info.info.speed as f32 / 100.);
                 } else {
@@ -422,12 +419,11 @@ pub(crate) fn collide_skills(
         }
 
         for (u_entity, u_transform, u_aabb, unit) in &unit_q {
-            if !unit.is_alive() || unit.kind == instance.owner_kind || u_entity == instance.owner {
-                continue;
-            }
-
-            let invulnerable = invulnerability.iter().find(|i| i.entity == u_entity);
-            if let Some(_) = invulnerable {
+            if !unit.is_alive()
+                || unit.kind == instance.owner_kind
+                || u_entity == instance.owner
+                || invulnerability.iter().any(|i| i.entity == u_entity)
+            {
                 continue;
             }
 

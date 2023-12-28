@@ -59,13 +59,9 @@ impl ActorInfo {
 
 pub fn get_hero_actor_key(class: Class) -> &'static str {
     match class {
-        Class::Str => "swordsman",
-        Class::Dex => "archer",
-        Class::Int => "wizard",
-        Class::StrDex => "archer",
-        Class::DexInt => "archer",
-        Class::IntStr => "wizard",
-        Class::StrDexInt => "swordsman",
+        Class::Str | Class::StrDexInt => "swordsman",
+        Class::Dex | Class::StrDex | Class::DexInt => "archer",
+        Class::Int | Class::IntStr => "wizard",
     }
 }
 

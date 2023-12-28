@@ -121,6 +121,7 @@ pub struct Unit {
 }
 
 impl Unit {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         uid: Uid,
         class: Class,

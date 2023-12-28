@@ -12,14 +12,8 @@ use bevy::{
 
 use rpg_world::{
     edge::{Edge, EdgeFlags},
-    neighbour::Neighbour,
-    position_index::IndexedPosition,
     room::Room,
-    tile::Tile,
-    zone::Connection,
 };
-
-use fastrand::Rng;
 
 pub trait RoomSpawn {
     fn spawn_wall_section(
@@ -97,18 +91,16 @@ impl RoomSpawn for Room {
     ) {
         use std::f32::consts;
 
-        /*
-        let key = rng.usize(0..2);
-        let key = match key {
+        let key = match rng.usize(0..2) {
             0 => "rock_1",
             _ => "ground_lamp_1",
-        };*/
+        };
         let rot_y = consts::TAU * (0.5 - rng.f32());
 
         prop::spawn(
             commands,
             renderables,
-            "rock_1",
+            key,
             zone.zone.generate_position(self),
             Some(Quat::from_rotation_y(rot_y)),
         );
