@@ -24,8 +24,8 @@ use crate::{
 use audio_manager::plugin::AudioActions;
 use rpg_core::{
     metadata::Metadata,
-    skill::skill::{SkillInfo, SkillSlotId, SkillUseResult},
-    storage::storage::Storage,
+    skill::{SkillInfo, SkillSlotId, SkillUseResult},
+    storage::Storage,
     uid::NextUid,
     unit::UnitKind,
 };
@@ -390,7 +390,7 @@ pub(crate) fn action(
                 State::Pending => {
                     let distance = (attack.user.distance(attack.target) * 100.).round() as u32;
                     match unit.can_use_skill(&metadata.rpg, attack.skill_id, distance) {
-                        SkillUseResult::Blocked => {
+                        SkillUseResult::Blocked | SkillUseResult::InsufficientResources => {
                             action.state = State::Completed;
                             //println!("skill use blocked {:?}", unit.skills);
                             continue;
@@ -398,10 +398,6 @@ pub(crate) fn action(
                         SkillUseResult::Ok => {}
                         SkillUseResult::OutOfRange => {
                             println!("out of range {distance}");
-                            action.state = State::Completed;
-                            continue;
-                        }
-                        SkillUseResult::InsufficientResources => {
                             action.state = State::Completed;
                             continue;
                         }
@@ -626,7 +622,7 @@ pub(crate) fn villain_think(
 
                 let (origin, target) = skill::get_skill_origin(
                     &metadata,
-                    &transform,
+                    transform,
                     hero_transform.translation,
                     skill_id,
                 );
@@ -679,8 +675,7 @@ fn spawn_villain(
 
     let mut spawn_transform = Transform::from_translation(*origin);
     spawn_transform.rotate_y(dir_roll);
-    spawn_transform.translation =
-        spawn_transform.translation + spawn_transform.forward() * distance;
+    spawn_transform.translation += spawn_transform.forward() * distance;
 
     let bar = HealthBar::spawn_bars(commands, renderables, spawn_transform);
 

@@ -20,12 +20,8 @@ impl TileEdge {
     pub fn new(edge: Edge, edge_flags: EdgeFlags) -> Self {
         Self {
             edge,
-            flags: match edge {
-                edge => 1 << edge as u8,
-            },
-            edge_flags: match edge_flags {
-                edge => edge as u8,
-            },
+            flags: 1 << edge as u8,
+            edge_flags: edge_flags as u8,
         }
         //println!("flags: {flags:#010b}");
     }

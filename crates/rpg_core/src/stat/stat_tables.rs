@@ -1,7 +1,4 @@
-use super::{
-    stat::{StatDescriptor, StatId},
-    value::Value,
-};
+use super::{value::Value, StatDescriptor};
 
 use std::borrow::Cow;
 use std::collections::HashMap;

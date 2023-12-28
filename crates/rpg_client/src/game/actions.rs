@@ -1,6 +1,6 @@
 use super::actor::unit::Unit;
 
-use rpg_core::skill::skill::SkillId;
+use rpg_core::skill::SkillId;
 
 use bevy::{
     ecs::{
@@ -162,11 +162,11 @@ impl Actions {
     }
 
     pub fn is_inactive(&self) -> bool {
-        matches!(self.movement, None)
-            && matches!(self.movement_end, None)
-            && matches!(self.look, None)
-            && matches!(self.attack, None)
-            && matches!(self.knockback, None)
+        self.movement.is_none()
+            && self.movement_end.is_none()
+            && self.look.is_none()
+            && self.attack.is_none()
+            && self.knockback.is_none()
     }
 
     pub fn clear_completed(&mut self) {

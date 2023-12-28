@@ -6,9 +6,9 @@ use crate::random::Random;
 
 use audio_manager::plugin::AudioActions;
 use rpg_core::{
-    item::{Item, ItemInfo, ItemKind, ItemUid},
+    item::{Item, ItemInfo, ItemKind},
     metadata::Metadata,
-    storage::storage::{
+    storage::{
         SlotIndex, StorageIndex, StorageSlot as RpgStorageSlot, UnitStorage as RpgUnitStorage,
     },
 };
@@ -211,7 +211,7 @@ fn spawn_item(
     // println!("Spawning item at {position:?}");
     let item_info = &metadata.item.items[&item.id];
 
-    let key = get_prop_key(&metadata, &item_info.info);
+    let key = get_prop_key(metadata, &item_info.info);
 
     let PropHandle::Scene(handle) = &renderables.props[&*key].handle else {
         panic!("bad handle");
@@ -225,7 +225,7 @@ fn spawn_item(
 
     let mut transform = Transform::from_xyz(position.x, 0.8, position.z);
     transform.rotate_y(dir);
-    transform.translation = transform.translation + transform.forward() * 0.5;
+    transform.translation += transform.forward() * 0.5;
 
     let id = commands
         .spawn((

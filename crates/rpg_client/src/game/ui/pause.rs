@@ -88,11 +88,8 @@ pub(crate) fn save_button_pressed(
         return;
     };
 
-    match interaction {
-        Interaction::Hovered => {
-            save_event_writer.send(SaveGame);
-        }
-        _ => {}
+    if interaction == &Interaction::Pressed {
+        save_event_writer.send(SaveGame);
     }
 }
 

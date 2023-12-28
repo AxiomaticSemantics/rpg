@@ -1,8 +1,4 @@
-use crate::{
-    class::Class,
-    metadata::Metadata,
-    stat::{stat::Stat, value::Value},
-};
+use crate::{class::Class, metadata::Metadata, stat::Stat};
 use std::{borrow::Cow, collections::HashMap, fmt};
 
 use glam::Vec2;

@@ -7,7 +7,7 @@ use crate::{
 
 use bevy::{
     ecs::system::Commands,
-    math::{uvec2, Quat, UVec2, Vec3},
+    math::{uvec2, Quat, Vec3},
 };
 
 use rpg_world::{
@@ -109,7 +109,7 @@ impl RoomSpawn for Room {
             commands,
             renderables,
             "rock_1",
-            zone.zone.generate_position(&self),
+            zone.zone.generate_position(self),
             Some(Quat::from_rotation_y(rot_y)),
         );
     }

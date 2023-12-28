@@ -1,3 +1,4 @@
 pub mod effect;
-pub mod skill;
+mod skill_internal;
 pub mod skill_tables;
+pub use skill_internal::*;
