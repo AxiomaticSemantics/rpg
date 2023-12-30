@@ -10,9 +10,8 @@ use bevy::{
     render::color::Color,
     text::{Font, TextStyle},
     ui::{
-        widget::Button, AlignItems, AlignSelf, BackgroundColor, BorderColor, Display,
-        FlexDirection, Interaction, JustifyContent, Overflow, OverflowAxis, PositionType, Style,
-        UiRect, Val,
+        widget::Button, AlignItems, AlignSelf, BackgroundColor, BorderColor, FlexDirection,
+        Interaction, JustifyContent, Overflow, OverflowAxis, PositionType, Style, UiRect, Val,
     },
     utils::default,
 };

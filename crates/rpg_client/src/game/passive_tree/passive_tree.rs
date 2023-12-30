@@ -58,7 +58,7 @@ use bevy::{
 
 use petgraph::algo;
 
-#[derive(Resource, Deref, DerefMut)]
+#[derive(Component, Deref, DerefMut)]
 pub struct PassiveTree(pub PassiveSkillGraph);
 
 #[derive(Component)]
@@ -90,12 +90,6 @@ pub struct PassiveTreePopupBody;
 
 #[derive(Component)]
 pub struct PassiveTreePopupFlavour;
-
-#[derive(SystemParam)]
-pub struct PassiveResources<'w> {
-    pub passive_tree: ResMut<'w, PassiveTree>,
-    pub metadata: Res<'w, MetadataResources>,
-}
 
 pub(crate) fn setup(
     mut commands: Commands,
@@ -499,11 +493,6 @@ pub(crate) fn setup(
         }
     } */
 
-    let passive_tree = PassiveTree(PassiveSkillGraph {
-        allocated_nodes: vec![class_root],
-        allocated_edges: vec![],
-    });
-
     let root_pos = metadata
         .rpg
         .passive_tree
@@ -513,7 +502,13 @@ pub(crate) fn setup(
         .unwrap()
         .position;
 
+    /*
+    let passive_tree = PassiveTree(PassiveSkillGraph {
+        allocated_nodes: vec![class_root],
+        allocated_edges: vec![],
+    });
     commands.insert_resource(passive_tree);
+    */
 
     commands.spawn((
         GameSessionCleanup,
@@ -710,11 +705,10 @@ pub fn update_legend(
 pub fn display(
     renderables: Res<RenderResources>,
     metadata: Res<MetadataResources>,
-    mut passive_tree: ResMut<PassiveTree>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mouse_input: Res<ButtonInput<MouseButton>>,
     window_q: Query<&Window, With<PrimaryWindow>>,
-    mut player_q: Query<&mut Unit, With<Player>>,
+    mut player_q: Query<(&mut Unit, &mut PassiveTree), With<Player>>,
     mut camera_passive_q: Query<(&GlobalTransform, &mut Camera), With<PassiveTreeCamera>>,
     mut passive_node_q: Query<(&PassiveTreeNode, &mut Handle<ColorMaterial>)>,
     mut passive_connection_q: Query<
@@ -744,7 +738,7 @@ pub fn display(
         return;
     };
 
-    let mut player = player_q.single_mut();
+    let (mut player, mut passive_tree) = player_q.single_mut();
 
     // Set edge material to allocated material if not already set
     for (passive_connection, mut connection_material) in &mut passive_connection_q {

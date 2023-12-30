@@ -126,8 +126,7 @@ pub fn save_character(
     mut state: ResMut<NextState<AppState>>,
     mut save_event: EventReader<SaveGame>,
     mut game_state: ResMut<GameState>,
-    passive_tree: Res<PassiveTree>,
-    player_q: Query<(&Unit, &UnitStorage), With<Player>>,
+    player_q: Query<(&Unit, &UnitStorage, &PassiveTree), With<Player>>,
 ) {
     if save_event.is_empty() {
         return;
@@ -135,7 +134,7 @@ pub fn save_character(
 
     save_event.clear();
 
-    let (unit, storage) = player_q.single();
+    let (unit, storage, passive_tree) = player_q.single();
 
     let root = env::var("RPG_SAVE_ROOT").unwrap();
 

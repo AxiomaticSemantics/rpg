@@ -217,13 +217,13 @@ impl PassiveTreeTable {
     }
 }
 
-#[derive(Ser, De, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Ser, De, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct EdgeNodes {
     pub lhs: NodeId,
     pub rhs: NodeId,
 }
 
-#[derive(Ser, De, Debug)]
+#[derive(Ser, De, Default, Clone, Debug)]
 pub struct PassiveSkillGraph {
     pub allocated_nodes: Vec<NodeId>,
     pub allocated_edges: Vec<EdgeNodes>,

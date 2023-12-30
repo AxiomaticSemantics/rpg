@@ -28,7 +28,7 @@ pub enum UnitKind {
     Villain,
 }
 
-#[derive(Ser, De, Debug)]
+#[derive(Ser, De, Clone, Debug)]
 pub struct HeroInfo {
     pub xp_curr: Stat,
 }
@@ -56,7 +56,7 @@ impl VillainInfo {
     }
 }
 
-#[derive(Ser, De, Debug)]
+#[derive(Ser, De, Clone, Debug)]
 pub enum UnitInfo {
     Hero(HeroInfo),
     Villain(VillainInfo),
@@ -106,7 +106,7 @@ impl UnitInfo {
     }
 }
 
-#[derive(Ser, De, Debug)]
+#[derive(Ser, De, Clone, Debug)]
 pub struct Unit {
     pub uid: Uid,
     pub kind: UnitKind,

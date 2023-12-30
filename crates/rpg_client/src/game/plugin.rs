@@ -159,7 +159,8 @@ impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         println!("Initializing game client plugin.");
 
-        app.add_event::<state_saver::SaveGame>()
+        app.add_event::<state_saver::LoadCharacter>()
+            .add_event::<state_saver::SaveGame>()
             .add_event::<SkillEvent>()
             .init_resource::<Controls>()
             .init_resource::<CursorPosition>()
