@@ -1,6 +1,6 @@
 use super::{
-    actor::actor::{ActorHandle, ActorInfo},
-    prop::prop::{PropHandle, PropInfo},
+    actor::{ActorHandle, ActorInfo},
+    prop::{PropHandle, PropInfo},
 };
 
 use bevy::{

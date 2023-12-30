@@ -1,7 +1,7 @@
 use super::zone::Zone;
 
 use crate::{
-    game::{assets::RenderResources, prop::prop},
+    game::{assets::RenderResources, prop},
     random::Random,
 };
 

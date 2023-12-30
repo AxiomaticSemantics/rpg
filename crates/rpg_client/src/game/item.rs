@@ -1,6 +1,6 @@
 use super::{
     actor::unit::Unit, assets::RenderResources, controls::CursorPosition,
-    metadata::MetadataResources, plugin::GameSessionCleanup, prop::prop::PropHandle,
+    metadata::MetadataResources, plugin::GameSessionCleanup, prop::PropHandle,
 };
 use crate::random::Random;
 
@@ -8,9 +8,7 @@ use audio_manager::plugin::AudioActions;
 use rpg_core::{
     item::{Item, ItemInfo, ItemKind},
     metadata::Metadata,
-    storage::{
-        SlotIndex, StorageIndex, StorageSlot as RpgStorageSlot, UnitStorage as RpgUnitStorage,
-    },
+    storage::{StorageSlot as RpgStorageSlot, UnitStorage as RpgUnitStorage},
 };
 use util::cleanup::CleanupStrategy;
 
@@ -22,7 +20,6 @@ use bevy::{
         query::With,
         system::{Commands, Query, Res, ResMut, Resource},
     },
-    hierarchy::Children,
     input::{mouse::MouseButton, ButtonInput},
     math::Vec3,
     prelude::{default, Deref, DerefMut},

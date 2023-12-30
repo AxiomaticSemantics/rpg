@@ -11,7 +11,7 @@ use crate::game::{
     },
     metadata::MetadataResources,
     plugin::{GameConfig, GameSessionCleanup},
-    prop::prop::PropHandle,
+    prop::PropHandle,
 };
 
 use rpg_core::{
@@ -26,7 +26,7 @@ use ui_util::style::UiTheme;
 use util::cleanup::CleanupStrategy;
 
 use bevy::{
-    ecs::{change_detection::Ref, prelude::*},
+    ecs::prelude::*,
     hierarchy::{BuildChildren, ChildBuilder, Children},
     input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
     math::Vec3,

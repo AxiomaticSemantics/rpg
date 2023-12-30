@@ -40,7 +40,7 @@ use super::{
     item::{GroundItemDrop, GroundItemDrops},
     metadata::MetadataResources,
     plugin::{GameOverState, GameSessionCleanup, GameState, GameTime, PlayState},
-    prop::prop::{PropHandle, PropInfo},
+    prop::{PropHandle, PropInfo},
 };
 use crate::random::Random;
 
