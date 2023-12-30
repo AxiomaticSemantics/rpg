@@ -1,2 +1,4 @@
-pub(crate) mod metadata;
-pub(crate) mod prop;
+pub mod metadata;
+mod prop_internal;
+
+pub use prop_internal::*;

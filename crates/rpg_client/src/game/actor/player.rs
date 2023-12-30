@@ -1,50 +1,47 @@
 use crate::game::{
     actions::{Action, ActionData, Actions, AttackData},
     actor::{
-        actor::{
-            get_hero_actor_key, ActorBasicBundle, ActorHandle, ActorKey, ActorMeshBundle,
-            ActorSceneBundle,
-        },
-        unit::{CorpseTimer, Hero, Unit, UnitBundle, Villain},
+        self,
+        unit::{CorpseTimer, Hero, Unit, Villain},
     },
     assets::RenderResources,
     controls::{Controls, CursorPosition},
-    health_bar::HealthBar,
-    item::UnitStorage,
     metadata::MetadataResources,
-    plugin::{GameCamera, GameConfig, GameSessionCleanup, GameState},
+    plugin::{GameCamera, GameConfig, GameState},
     skill::get_skill_origin,
     world::zone::Zone,
 };
 
-use rpg_core::unit::{HeroInfo, UnitInfo, UnitKind};
-use util::cleanup::CleanupStrategy;
+use rpg_core::unit::{HeroInfo, Unit as RpgUnit, UnitInfo, UnitKind};
 
 use bevy::{
-    ecs::prelude::*,
-    gizmos::{gizmos::Gizmos, AabbGizmo},
+    ecs::{
+        bundle::Bundle,
+        component::Component,
+        query::{With, Without},
+        system::{Commands, Query, Res, ResMut},
+    },
+    gizmos::gizmos::Gizmos,
     math::Vec3,
     pbr::SpotLight,
-    render::{prelude::*, primitives::Aabb},
-    scene::SceneBundle,
-    time::{Time, Timer, TimerMode},
+    render::color::Color,
+    time::Time,
     transform::components::Transform,
-    utils::default,
 };
 
 #[derive(Component)]
-pub(crate) struct Player;
+pub struct Player;
 
 #[derive(Bundle)]
-pub(crate) struct PlayerBundle {
+pub struct PlayerBundle {
     pub player: Player,
     pub hero: Hero,
 }
 
 #[derive(Component)]
-pub(crate) struct Nearest;
+pub struct Nearest;
 
-pub(crate) fn update_debug_lines(
+pub fn update_debug_lines(
     mut gizmos: Gizmos,
     player_q: Query<&Transform, (With<Player>, Without<Villain>)>,
     villain_q: Query<&Transform, (With<Villain>, Without<CorpseTimer>, Without<Player>)>,
@@ -190,7 +187,7 @@ pub(crate) fn spawn_player(
 
     let player_config = &game_config.player_config.as_ref().unwrap();
 
-    let mut unit = rpg_core::unit::Unit::new(
+    let mut unit = RpgUnit::new(
         game_state.next_uid.0,
         player_config.class,
         UnitKind::Hero,
@@ -208,47 +205,5 @@ pub(crate) fn spawn_player(
 
     unit.add_default_skills(&metadata.rpg);
 
-    let body_aabb = Aabb::from_min_max(Vec3::new(-0.3, 0., -0.25), Vec3::new(0.3, 1.8, 0.25));
-
-    let mut inv_timer = Timer::from_seconds(0.25, TimerMode::Once);
-    inv_timer.pause();
-
-    let actor_key = get_hero_actor_key(unit.class);
-    let (actor, actor_key) = (
-        renderables.actors[actor_key].actor.clone(),
-        ActorKey(actor_key),
-    );
-
-    let bar = HealthBar::spawn_bars(&mut commands, &renderables, Transform::default());
-
-    let actor_bundle = match actor {
-        ActorHandle::Mesh(handle) => {
-            todo!()
-        }
-        ActorHandle::Scene(handle) => ActorSceneBundle {
-            basic: ActorBasicBundle {
-                health_bar: HealthBar::new(bar, 0.8),
-                actor_key,
-                aabb: body_aabb,
-                ..default()
-            },
-            scene: SceneBundle {
-                scene: handle,
-                ..default()
-            },
-        },
-    };
-
-    commands.spawn((
-        GameSessionCleanup,
-        CleanupStrategy::DespawnRecursive,
-        PlayerBundle {
-            player: Player,
-            hero: Hero,
-        },
-        UnitBundle::new(Unit(unit)),
-        UnitStorage::default(),
-        actor_bundle,
-        //AabbGizmo::default(),
-    ));
+    actor::spawn_actor(&mut commands, &metadata, &renderables, unit, None);
 }

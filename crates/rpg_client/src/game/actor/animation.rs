@@ -1,4 +1,4 @@
-use super::actor::ActorKey;
+use super::ActorKey;
 use crate::game::assets::RenderResources;
 
 use bevy::{
@@ -13,7 +13,7 @@ use bevy::{
 };
 
 #[derive(Component, Default, Debug, PartialEq, Copy, Clone)]
-pub(crate) struct AnimationState {
+pub struct AnimationState {
     pub repeat: RepeatAnimation,
     pub paused: bool,
     pub index: usize,
@@ -30,8 +30,7 @@ impl AnimationState {
     }
 }
 
-// TODO FIXME move to actor
-pub(crate) fn animator(
+pub fn animator(
     renderables: Res<RenderResources>,
     actor_q: Query<(Entity, &AnimationState, &ActorKey), Changed<AnimationState>>,
     child_q: Query<&Children>,
@@ -55,7 +54,11 @@ pub(crate) fn animator(
 
             //if curr.index != before.index {
             if !anim.paused {
-                player.play(clip_handles[anim.index].clone());
+                if anim.repeat == RepeatAnimation::Never {
+                    player.start(clip_handles[anim.index].clone());
+                } else {
+                    player.play(clip_handles[anim.index].clone());
+                }
             }
         }
 

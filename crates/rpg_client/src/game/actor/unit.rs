@@ -3,19 +3,12 @@
 use crate::{
     game::{
         actions::{Action, ActionData, Actions, AttackData, State},
-        actor::{
-            actor::{
-                get_villain_actor_key, ActorBasicBundle, ActorHandle, ActorKey, ActorMeshBundle,
-                ActorSceneBundle,
-            },
-            animation::AnimationState,
-            player::Player,
-        },
+        actor::{self, animation::AnimationState, player::Player},
         assets::RenderResources,
         health_bar::{HealthBar, HealthBarFrame, HealthBarRect},
         item::{GroundItem, ResourceItem, StorableItem, UnitStorage},
         metadata::MetadataResources,
-        plugin::{GameCamera, GameSessionCleanup, GameState, GameTime},
+        plugin::{GameCamera, GameState, GameTime},
         skill,
     },
     random::Random,
@@ -23,13 +16,12 @@ use crate::{
 
 use audio_manager::plugin::AudioActions;
 use rpg_core::{
-    metadata::Metadata,
-    skill::{SkillInfo, SkillSlotId, SkillUseResult},
+    skill::{SkillInfo, SkillUseResult},
     storage::Storage,
     uid::NextUid,
     unit::UnitKind,
 };
-use util::{cleanup::CleanupStrategy, math::intersect_aabb};
+use util::math::intersect_aabb;
 
 use bevy::{
     animation::RepeatAnimation,
@@ -41,21 +33,18 @@ use bevy::{
         query::{With, Without},
         system::{Commands, ParamSet, Query, Res, ResMut, Resource},
     },
-    gizmos::AabbGizmo,
     hierarchy::{Children, DespawnRecursiveExt},
     input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
-    log::warn,
     math::Vec3,
     prelude::{Deref, DerefMut},
     render::{mesh::Mesh, primitives::Aabb},
-    scene::SceneBundle,
     time::{Time, Timer, TimerMode},
     transform::components::Transform,
-    utils::{default, Duration},
+    utils::Duration,
 };
 
 #[derive(Component, Default, Debug, Deref, DerefMut)]
-pub struct ThinkTimer(Timer);
+pub struct ThinkTimer(pub Timer);
 
 #[derive(Component, Default, Debug, Deref, DerefMut)]
 pub struct CorpseTimer(pub Timer);
@@ -137,7 +126,7 @@ pub(crate) fn spawner(
             &mut commands,
             &mut state.next_uid,
             &hero_transform.translation,
-            &metadata.rpg,
+            &metadata,
             &renderables,
             &mut random,
         );
@@ -648,70 +637,20 @@ fn spawn_villain(
     commands: &mut Commands,
     next_uid: &mut NextUid,
     origin: &Vec3,
-    metadata: &Metadata,
+    metadata: &MetadataResources,
     renderables: &RenderResources,
     rng: &mut Random,
 ) {
-    let mut unit = rpg_core::unit::generation::generate(&mut rng.0, metadata, next_uid, 1);
+    let mut unit = rpg_core::unit::generation::generate(&mut rng.0, &metadata.rpg, next_uid, 1);
 
-    let unit_info = unit.info.villain();
-    let villain_info = &metadata.unit.villains.villains[&unit_info.id];
-    let think_timer = ThinkTimer(Timer::from_seconds(
-        villain_info.think_cooldown,
-        TimerMode::Repeating,
-    ));
-
-    unit.add_default_skills(metadata);
+    unit.add_default_skills(&metadata.rpg);
 
     let dir_roll = std::f32::consts::TAU * (0.5 - rng.f32());
     let distance = 14_f32;
 
-    let body_aabb = Aabb::from_min_max(Vec3::new(-0.3, 0., -0.25), Vec3::new(0.3, 1.8, 0.25));
+    let mut transform = Transform::from_translation(*origin);
+    transform.rotate_y(dir_roll);
+    transform.translation += transform.forward() * distance;
 
-    let actor_key = get_villain_actor_key(unit.info.villain().id);
-    let (actor, actor_key) = (
-        renderables.actors[actor_key].actor.clone(),
-        ActorKey(actor_key),
-    );
-
-    let mut spawn_transform = Transform::from_translation(*origin);
-    spawn_transform.rotate_y(dir_roll);
-    spawn_transform.translation += spawn_transform.forward() * distance;
-
-    let bar = HealthBar::spawn_bars(commands, renderables, spawn_transform);
-
-    let actor_basic = ActorBasicBundle {
-        health_bar: HealthBar::new(bar, 0.8),
-        actor_key,
-        aabb: body_aabb,
-        ..default()
-    };
-
-    let ActorHandle::Scene(handle) = actor else {
-        panic!("Expected an `ActorSceneBundle`");
-    };
-
-    let actor_bundle = ActorSceneBundle {
-        basic: actor_basic,
-        scene: SceneBundle {
-            scene: handle,
-            transform: spawn_transform,
-            ..default()
-        },
-    };
-
-    commands.spawn((
-        GameSessionCleanup,
-        CleanupStrategy::DespawnRecursive,
-        VillainBundle {
-            villain: Villain {
-                look_target: None,
-                moving: false,
-            },
-            think_timer,
-        },
-        actor_bundle,
-        UnitBundle::new(Unit(unit)),
-        //AabbGizmo::default(),
-    ));
+    actor::spawn_actor(commands, metadata, renderables, unit, Some(transform));
 }
