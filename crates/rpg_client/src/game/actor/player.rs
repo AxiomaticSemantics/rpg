@@ -223,10 +223,11 @@ pub(crate) fn spawn_player(
 
         unit.add_default_skills(&metadata.rpg);
 
+        let class = unit.class;
         (
             unit,
             RpgUnitStorage::default(),
-            PassiveSkillGraph::default(),
+            PassiveSkillGraph::new(class),
         )
     };
 
