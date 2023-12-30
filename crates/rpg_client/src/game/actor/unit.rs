@@ -270,7 +270,8 @@ pub(crate) fn pick_storable_items(
 
         let distance = u_transform.translation.distance(i_ground);
         if key_input.pressed(KeyCode::ControlLeft)
-            && key_input.just_pressed(KeyCode::Space)
+            && (key_input.just_pressed(KeyCode::Space)
+                || mouse_input.just_pressed(MouseButton::Left))
             && distance < 0.5
         {
             let Some(slot) = u_storage.get_empty_slot_mut() else {

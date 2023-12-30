@@ -272,7 +272,7 @@ pub fn resize_view(
         if interaction == &Interaction::Hovered || interaction == &Interaction::Pressed {
             let window_size = Vec2::new(window.width(), window.height());
 
-            let rect = get_node_rect(&node, &global_transform.translation());
+            let rect = get_node_rect(node, &global_transform.translation());
 
             match &mut style.height {
                 Val::Percent(ref mut height) => {
@@ -283,9 +283,7 @@ pub fn resize_view(
                         *height -= 2.;
                     }
                 }
-                Val::Px(ref mut _height) => {
-                    todo!();
-                }
+                Val::Px(ref mut _height) => todo!(),
                 _ => {}
             }
 
@@ -308,6 +306,7 @@ pub fn resize_view(
                         *width -= 2.;
                     }
                 }
+                Val::Px(ref mut _height) => todo!(),
                 _ => {}
             }
 
@@ -719,8 +718,7 @@ pub fn build_bar_label<T: Component>(
                     },
                 ),
                 style: Style {
-                    //justify_content: JustifyContent::Center,
-                    //align_items: AlignItems::Center,
+                    align_items: AlignItems::Center,
                     margin: UiRect::all(ui_theme.margin),
                     ..default()
                 },

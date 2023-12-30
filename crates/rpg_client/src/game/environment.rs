@@ -1,4 +1,4 @@
-use super::zone::zone::Zone;
+use super::world::zone::Zone;
 use crate::game::plugin::GameSessionCleanup;
 
 use bevy::{

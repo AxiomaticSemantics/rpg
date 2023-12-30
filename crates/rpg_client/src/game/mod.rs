@@ -9,7 +9,7 @@ pub(crate) mod state_saver;
 
 pub(crate) mod environment;
 pub(crate) mod passive_tree;
-pub(crate) mod zone;
+pub(crate) mod world;
 
 pub(crate) mod item;
 pub(crate) mod prop;

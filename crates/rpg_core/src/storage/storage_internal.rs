@@ -61,6 +61,12 @@ pub struct UnitStorage {
     pub storage: Vec<StorageNode>,
 }
 
+impl Default for UnitStorage {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Storage for UnitStorage {
     fn set_slot_item(&mut self, storage_index: StorageIndex, slot_index: SlotIndex, item: Item) {
         let storage = &mut self

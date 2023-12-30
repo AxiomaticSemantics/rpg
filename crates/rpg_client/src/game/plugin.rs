@@ -17,7 +17,7 @@ use super::{
     metadata::MetadataResources,
     passive_tree,
     skill::{self, SkillEvent},
-    state_saver, ui, zone,
+    state_saver, ui, world,
 };
 
 use audio_manager::plugin::AudioActions;
@@ -184,14 +184,14 @@ impl Plugin for GamePlugin {
                 timer: Timer::from_seconds(10., TimerMode::Repeating),
             })
             .init_resource::<GameTime>()
-            // Load Enter
+            // GameSpawn
             .add_systems(
                 OnEnter(AppState::GameSpawn),
                 (
                     (
                         setup,
                         setup_audio,
-                        zone::zone::setup,
+                        world::zone::setup,
                         environment::setup,
                         actor::player::spawn_player,
                     )
@@ -207,14 +207,15 @@ impl Plugin for GamePlugin {
                         .after(actor::player::spawn_player),
                 ),
             )
-            /*.add_systems(
-                First,
-                actor::actor::replace_actor_materials.run_if(in_state(AppState::Game)),
-            )*/
             .add_systems(
                 Update,
                 spawn_to_game_transition.run_if(in_state(AppState::GameSpawn)),
             )
+            // Game
+            /*.add_systems(
+                First,
+                actor::actor::replace_actor_materials.run_if(in_state(AppState::Game)),
+            )*/
             .add_systems(
                 Update,
                 (
@@ -249,8 +250,8 @@ impl Plugin for GamePlugin {
                             .after(player::update_camera),
                     ),
                     (
-                        ui::inventory::hover_storage,
                         ui::inventory::inventory_update,
+                        ui::inventory::hover_storage,
                         item::hover_ground_item,
                         ui::inventory::update_cursor_item,
                         ui::inventory::update,
@@ -280,9 +281,15 @@ impl Plugin for GamePlugin {
                     item::spawn_ground_items,
                     item::animate_ground_items,
                     ui::hud::update,
-                    ui::game_over::game_over_transition,
                 )
                     .run_if(in_state(AppState::Game).and_then(is_playing)),
+            )
+            // This system is special and transitions from Game to GameOver when the player dies.
+            .add_systems(
+                PostUpdate,
+                (ui::hud::update, ui::game_over::game_over_transition)
+                    .chain()
+                    .run_if(in_state(AppState::Game).and_then(is_game_over)),
             )
             .add_systems(
                 PreUpdate,
@@ -299,7 +306,7 @@ impl Plugin for GamePlugin {
                     .run_if(in_state(AppState::Game).and_then(is_playing)),
             )
             .add_systems(OnEnter(AppState::Game), stopwatch_restart)
-            // Exit
+            // GameOver
             .add_systems(
                 OnExit(AppState::GameOver),
                 (
@@ -313,6 +320,7 @@ impl Plugin for GamePlugin {
                 (actor::animation::animator, ui::game_over::game_over)
                     .run_if(in_state(AppState::GameOver)),
             )
+            // GameCleanup
             .add_systems(
                 OnEnter(AppState::GameCleanup),
                 (
@@ -385,16 +393,9 @@ fn is_paused(game_state: Res<GameState>) -> bool {
     game_state.state.paused()
 }
 
-/*fn is_passive_tree_displayed(game_state: Res<GameState>) -> bool {
-    game_state.state.passive_tree()
-}*/
-
-/*
-pub(crate) fn game_over(game_state: Res<GameState>, mut state: ResMut<NextState<AppState>>) {
-    if let PlayState::GameOver(_) = game_state.state {
-        println!("game_over transition ");
-    }
-}*/
+fn is_game_over(game_state: Res<GameState>) -> bool {
+    game_state.state.game_over()
+}
 
 /*
 fn _calculate_normals(indices: &Vec<u32>, vertices: &[[f32; 3]], normals: &mut [[f32; 3]]) {
@@ -407,7 +408,7 @@ fn _calculate_normals(indices: &Vec<u32>, vertices: &[[f32; 3]], normals: &mut [
             - Vec3::from_array(vertices[indices[i] as usize]);
         let face_normal = v1.cross(v2).normalize();
 
-        // Add the face normal to the 3 vertices normal touching this face
+        // Add the face normal to the 3 vertex normals that are touching this face
         normals[indices[i] as usize] =
             (Vec3::from_array(normals[indices[i] as usize]) + face_normal).to_array();
         normals[indices[i + 1] as usize] =
