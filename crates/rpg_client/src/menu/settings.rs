@@ -10,24 +10,22 @@ use bevy::{
     utils::default,
 };
 
-use util::cleanup::CleanupStrategy;
+#[derive(Component)]
+pub struct SettingsRoot;
 
 #[derive(Component)]
-pub(crate) struct SettingsRoot;
+pub struct CancelButton;
 
 #[derive(Component)]
-pub(crate) struct CancelButton;
+pub struct ControlsButton;
 
 #[derive(Component)]
-pub(crate) struct ControlsButton;
+pub struct AudioButton;
 
 #[derive(Component)]
-pub(crate) struct AudioButton;
+pub struct VideoButton;
 
-#[derive(Component)]
-pub(crate) struct VideoButton;
-
-pub(crate) fn spawn_settings(
+pub fn spawn_settings(
     builder: &mut ChildBuilder,
     ui_theme: &UiTheme,
     button: &ButtonBundle,
@@ -92,7 +90,7 @@ pub(crate) fn spawn_settings(
         });
 }
 
-pub(crate) fn cancel_button(
+pub fn cancel_button(
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<CancelButton>)>,
     mut menu_set: ParamSet<(
         Query<&mut Style, With<MainRoot>>,
@@ -106,7 +104,7 @@ pub(crate) fn cancel_button(
     }
 }
 
-pub(crate) fn controls_button(
+pub fn controls_button(
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<ControlsButton>)>,
     mut menu_set: ParamSet<(
         Query<&mut Style, With<MainRoot>>,
@@ -120,7 +118,7 @@ pub(crate) fn controls_button(
     }
 }
 
-pub(crate) fn audio_button(
+pub fn audio_button(
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<AudioButton>)>,
     mut menu_set: ParamSet<(
         Query<&mut Style, With<MainRoot>>,

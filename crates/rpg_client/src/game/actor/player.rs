@@ -7,7 +7,7 @@ use crate::game::{
     assets::RenderResources,
     controls::{Controls, CursorPosition},
     metadata::MetadataResources,
-    plugin::{GameCamera, GameConfig, GameState},
+    plugin::{GameCamera, GameState},
     skill::get_skill_origin,
     world::zone::Zone,
 };
@@ -179,13 +179,12 @@ pub(crate) fn update_camera(
 pub(crate) fn spawn_player(
     mut commands: Commands,
     mut game_state: ResMut<GameState>,
-    game_config: Res<GameConfig>,
     metadata: Res<MetadataResources>,
     renderables: Res<RenderResources>,
 ) {
     println!("spawn_player");
 
-    let player_config = &game_config.player_config.as_ref().unwrap();
+    let player_config = &game_state.player_config.as_ref().unwrap();
 
     let mut unit = RpgUnit::new(
         game_state.next_uid.0,

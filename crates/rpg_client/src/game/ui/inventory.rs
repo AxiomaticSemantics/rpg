@@ -10,7 +10,7 @@ use crate::game::{
         StorableItem, StorageSlot, UnitStorage,
     },
     metadata::MetadataResources,
-    plugin::{GameConfig, GameSessionCleanup},
+    plugin::{GameSessionCleanup, GameState},
     prop::PropHandle,
 };
 
@@ -320,13 +320,13 @@ pub(crate) fn update(
 
 pub(crate) fn setup(
     mut commands: Commands,
-    game_config: Res<GameConfig>,
+    game_state: Res<GameState>,
     ui_theme: Res<UiTheme>,
     textures: Res<TextureAssets>,
 ) {
     println!("game::ui::inventory::setup");
 
-    let player_name = game_config.player_config.as_ref().unwrap().name.clone();
+    let player_name = game_state.player_config.as_ref().unwrap().name.clone();
 
     let vertical_spacing = NodeBundle {
         style: ui_theme.vertical_spacer.clone(),

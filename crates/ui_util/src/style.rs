@@ -40,6 +40,7 @@ pub struct UiTheme {
     pub vertical_spacer: Style,
     pub horizontal_spacer: Style,
     pub container_absolute_max: Style,
+    pub frame_row_style: Style,
     pub frame_col_style: Style,
     pub row_style: Style,
     pub col_style: Style,
@@ -120,11 +121,20 @@ pub fn insert_theme(mut ui_theme: ResMut<UiTheme>, ui_font: Res<UiFont>) {
         justify_content: JustifyContent::Center,
         margin: UiRect::all(margin),
         border: UiRect::all(border),
-        //padding: UiRect::all(style_padding),
         ..default()
     };
 
-    let text_color_dark = Color::rgb(0.35, 0.35, 0.40);
+    let frame_row_style = Style {
+        flex_direction: FlexDirection::Row,
+        align_items: AlignItems::Center,
+        align_self: AlignSelf::Center,
+        justify_content: JustifyContent::Center,
+        margin: UiRect::all(margin),
+        border: UiRect::all(border),
+        ..default()
+    };
+
+    let text_color_dark = Color::rgb(0.25, 0.25, 0.30);
     let text_color_light = Color::rgb_u8(248, 248, 242);
 
     let font = ui_font.prime.clone_weak();
@@ -156,6 +166,7 @@ pub fn insert_theme(mut ui_theme: ResMut<UiTheme>, ui_font: Res<UiFont>) {
             font_size: font_size_regular,
         },
         container_absolute_max: container_style,
+        frame_row_style,
         frame_col_style,
         row_style,
         col_style,

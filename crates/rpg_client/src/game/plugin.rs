@@ -145,16 +145,12 @@ pub struct GameState {
     pub session_stats: SessionStats,
     pub next_uid: NextUid,
     pub state: PlayState,
+    pub player_config: Option<PlayerOptions>,
 }
 
 #[derive(Debug, Resource, Default)]
 pub struct GameTime {
     pub watch: Stopwatch,
-}
-
-#[derive(Debug, Resource, Default)]
-pub struct GameConfig {
-    pub player_config: Option<PlayerOptions>,
 }
 
 pub struct GamePlugin;
@@ -168,7 +164,6 @@ impl Plugin for GamePlugin {
             .init_resource::<Controls>()
             .init_resource::<CursorPosition>()
             .init_resource::<CursorItem>()
-            .init_resource::<GameConfig>()
             .init_resource::<GroundItemDrops>()
             .insert_resource(ClearColor(Color::BLACK))
             .insert_resource(DirectionalLightShadowMap { size: 2048 })
@@ -582,11 +577,7 @@ pub(crate) fn setup(
     println!("game spawn complete");
 }
 
-fn cleanup(
-    mut game_config: ResMut<GameConfig>,
-    mut game_state: ResMut<GameState>,
-    mut controls: ResMut<Controls>,
-) {
+fn cleanup(mut game_state: ResMut<GameState>, mut controls: ResMut<Controls>) {
     println!("cleanup");
 
     println!("resetting controls");
@@ -598,10 +589,9 @@ fn cleanup(
         }
         PlayState::GameOver(GameOverState::Exit) => {
             *game_state = GameState::default();
-            game_config.player_config = None;
         }
         _ => {
-            panic!("Should not get here. {game_state:?} {game_config:?}");
+            panic!("Should not get here. {game_state:?}");
         }
     }
 }

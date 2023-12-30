@@ -2,10 +2,7 @@
 
 use crate::{assets::TextureAssets, state::AppState};
 
-use crate::game::plugin::{
-    GameConfig, GameOverState, GameSessionCleanup, GameState, GameTime, PlayState, PlayerOptions,
-    SessionStats,
-};
+use crate::game::plugin::{GameOverState, GameSessionCleanup, GameState, PlayState, SessionStats};
 
 use ui_util::style::UiTheme;
 use util::cleanup::CleanupStrategy;
@@ -105,7 +102,7 @@ pub(crate) fn game_over(
 
 pub(crate) fn setup(
     mut commands: Commands,
-    game_config: Res<GameConfig>,
+    game_state: Res<GameState>,
     ui_theme: Res<UiTheme>,
     _textures: Res<TextureAssets>,
 ) {
@@ -116,6 +113,11 @@ pub(crate) fn setup(
 
     let vertical_spacing = NodeBundle {
         style: ui_theme.vertical_spacer.clone(),
+        ..default()
+    };
+
+    let horizontal_spacing = NodeBundle {
+        style: ui_theme.horizontal_spacer.clone(),
         ..default()
     };
 
@@ -132,7 +134,14 @@ pub(crate) fn setup(
     let frame_col_node = NodeBundle {
         style: ui_theme.frame_col_style.clone(),
         border_color: ui_theme.border_color,
-        background_color: ui_theme.frame_background_color.0.with_a(0.98).into(),
+        background_color: ui_theme.frame_background_color,
+        ..default()
+    };
+
+    let frame_row_node = NodeBundle {
+        style: ui_theme.frame_row_style.clone(),
+        border_color: ui_theme.border_color,
+        background_color: ui_theme.frame_background_color,
         ..default()
     };
 
@@ -149,85 +158,72 @@ pub(crate) fn setup(
         ))
         .with_children(|p| {
             p.spawn(frame_col_node.clone()).with_children(|p| {
-                p.spawn(col_node.clone()).with_children(|p| {
-                    p.spawn(TextBundle {
-                        text: Text::from_section("Game Over", ui_theme.text_style_regular.clone()),
-                        style: Style {
-                            justify_content: JustifyContent::Center,
-                            align_self: AlignSelf::Center,
-                            ..default()
-                        },
+                p.spawn(TextBundle {
+                    text: Text::from_section("Game Over", ui_theme.text_style_regular.clone()),
+                    style: Style {
+                        justify_content: JustifyContent::Center,
+                        align_self: AlignSelf::Center,
                         ..default()
-                    });
-
-                    p.spawn(vertical_spacing.clone());
-
-                    p.spawn((
-                        GameOverStats,
-                        TextBundle {
-                            text: Text::from_section("", ui_theme.text_style_regular.clone()),
-                            //style: Style { ..default() },
-                            ..default()
-                        },
-                    ));
-
-                    p.spawn(vertical_spacing.clone());
-
-                    p.spawn(col_node.clone()).with_children(|p| {
-                        p.spawn(frame_col_node.clone()).with_children(|p| {
-                            p.spawn(col_node.clone()).with_children(|p| {
-                                p.spawn((
-                                    RestartGame,
-                                    ButtonBundle {
-                                        style: ui_theme.button_theme.style.clone(),
-                                        background_color: ui_theme
-                                            .button_theme
-                                            .normal_background_color,
-                                        ..default()
-                                    },
-                                ))
-                                .with_children(|p| {
-                                    p.spawn(TextBundle {
-                                        text: Text::from_section(
-                                            "Restart",
-                                            ui_theme.text_style_regular.clone(),
-                                        ),
-                                        style: ui_theme.button_theme.style.clone(),
-                                        //background_color: ui_theme.menu_background_color,
-                                        ..default()
-                                    });
-                                });
-                            });
-                        });
-
-                        p.spawn(vertical_spacing.clone());
-
-                        p.spawn(frame_col_node.clone()).with_children(|p| {
-                            p.spawn(col_node.clone()).with_children(|p| {
-                                p.spawn((
-                                    ReturnToMenu,
-                                    ButtonBundle {
-                                        style: ui_theme.button_theme.style.clone(),
-                                        ..default()
-                                    },
-                                ))
-                                .with_children(|p| {
-                                    p.spawn(TextBundle {
-                                        text: Text::from_section(
-                                            "Return to Menu",
-                                            ui_theme.text_style_regular.clone(),
-                                        ),
-                                        style: ui_theme.button_theme.style.clone(),
-                                        //background_color: ui_theme.menu_background_color,
-                                        ..default()
-                                    });
-                                });
-                            });
-                        });
-                    });
-
-                    p.spawn(vertical_spacing.clone());
+                    },
+                    ..default()
                 });
+
+                p.spawn(vertical_spacing.clone());
+
+                p.spawn((
+                    GameOverStats,
+                    TextBundle {
+                        text: Text::from_section("", ui_theme.text_style_regular.clone()),
+                        ..default()
+                    },
+                ));
+
+                p.spawn(vertical_spacing.clone());
+
+                p.spawn(row_node.clone()).with_children(|p| {
+                    p.spawn(frame_row_node.clone()).with_children(|p| {
+                        p.spawn((
+                            RestartGame,
+                            ButtonBundle {
+                                style: ui_theme.button_theme.style.clone(),
+                                background_color: ui_theme.button_theme.normal_background_color,
+                                ..default()
+                            },
+                        ))
+                        .with_children(|p| {
+                            p.spawn(TextBundle {
+                                text: Text::from_section(
+                                    "Restart",
+                                    ui_theme.text_style_regular.clone(),
+                                ),
+                                ..default()
+                            });
+                        });
+                    });
+
+                    p.spawn(horizontal_spacing.clone());
+
+                    p.spawn(frame_row_node.clone()).with_children(|p| {
+                        p.spawn((
+                            ReturnToMenu,
+                            ButtonBundle {
+                                style: ui_theme.button_theme.style.clone(),
+                                ..default()
+                            },
+                        ))
+                        .with_children(|p| {
+                            p.spawn(TextBundle {
+                                text: Text::from_section(
+                                    "Return to Menu",
+                                    ui_theme.text_style_regular.clone(),
+                                ),
+                                ..default()
+                            });
+                        });
+                    });
+                });
+
+                p.spawn(vertical_spacing.clone());
             });
         });
 }

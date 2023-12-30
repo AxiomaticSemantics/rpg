@@ -1,5 +1,6 @@
 use crate::{
     assets::TextureAssets,
+    game::state_saver::SaveSlots,
     loader::plugin::OutOfGameCamera,
     menu::{
         self, create::CreateRoot, credits::CreditsRoot, load::LoadRoot, main::MainRoot,
@@ -24,12 +25,11 @@ use bevy::{
     app::{App, Plugin, Update},
     core_pipeline::core_2d::Camera2d,
     ecs::{
-        component::Component,
-        query::{With, Without},
+        query::With,
         schedule::{common_conditions::in_state, IntoSystemConfigs, NextState, OnEnter},
         system::{Commands, ParamSet, Query, Res, ResMut},
     },
-    hierarchy::{BuildChildren, DespawnRecursiveExt},
+    hierarchy::BuildChildren,
     render::{camera::Camera, color::Color},
     text::TextStyle,
     ui::{
@@ -44,7 +44,8 @@ pub struct MenuPlugin;
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
         println!("Initializing menu plugin.");
-        app.add_systems(OnEnter(AppState::MenuLoad), spawn)
+        app.init_resource::<menu::load::SelectedSaveSlot>()
+            .add_systems(OnEnter(AppState::MenuLoad), spawn)
             .add_systems(OnEnter(AppState::Menu), display_menu)
             .add_systems(
                 Update,
@@ -57,6 +58,8 @@ impl Plugin for MenuPlugin {
                     menu::create::cancel_button,
                     menu::create::create_class,
                     menu::load::cancel_button,
+                    menu::load::select_save_slot,
+                    menu::load::load_button,
                     menu::settings::cancel_button,
                     menu::settings::controls_button,
                     menu::settings::audio_button,
@@ -95,6 +98,7 @@ fn display_menu(
 fn spawn(
     mut commands: Commands,
     mut state: ResMut<NextState<AppState>>,
+    save_slots: Res<SaveSlots>,
     ui_theme: Res<UiTheme>,
     textures: Res<TextureAssets>,
     //mut console: ResMut<Console>,
@@ -149,6 +153,7 @@ fn spawn(
     // root node
     commands
         .spawn((
+            CleanupStrategy::DespawnRecursive,
             NodeBundle {
                 style: ui_container_style,
                 ..default()
@@ -174,6 +179,7 @@ fn spawn(
                 &text_style,
             );
             super::load::spawn_load(
+                &save_slots,
                 p,
                 &ui_theme,
                 &button_bundle,
