@@ -90,8 +90,7 @@ pub(crate) fn hover_ground_item(
     metadata: Res<MetadataResources>,
     ground_item_q: Query<(&Transform, &GroundItem)>,
     mut ground_hover_q: Query<&mut Style, With<GroundItemHover>>,
-    mut ground_item_stats_q: Query<&Children, With<GroundItemStats>>,
-    mut text_q: Query<&mut Text>,
+    mut ground_item_ui_q: Query<&mut Text, With<GroundItemStats>>,
 ) {
     let mut style = ground_hover_q.single_mut();
     for (transform, item) in &ground_item_q {
@@ -101,19 +100,18 @@ pub(crate) fn hover_ground_item(
         item_ground_pos.y = 0.;
         let distance = item_ground_pos.distance(cursor_position.ground);
         if distance < 0.25 {
-            if input.just_pressed(MouseButton::Left) {
-                // pick item
-            }
+            /* TODO decide if this is handled here or not
+            input.just_pressed(MouseButton::Left) { // pick item }
+            */
 
-            let children = ground_item_stats_q.single_mut();
-            let mut text = text_q.get_mut(*children.first().unwrap()).unwrap();
+            let mut text = ground_item_ui_q.single_mut();
             text.sections[0].value = make_item_stat_string(item, &metadata.rpg);
 
             if style.display != Display::Flex {
                 style.display = Display::Flex;
             }
 
-            // Just show the first item in range
+            // Only show the first item in range
             return;
         }
     }

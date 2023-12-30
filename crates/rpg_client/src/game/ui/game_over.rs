@@ -57,7 +57,7 @@ pub(crate) fn game_over_transition(
     mut gameover_view_q: Query<&mut Style, With<GameOverView>>,
     mut gameover_stats_q: Query<&mut Text, With<GameOverStats>>,
 ) {
-    if let PlayState::GameOver(_) = game_state.state {
+    if game_state.state.game_over() {
         println!("game_over_transition");
         let mut stats = gameover_stats_q.single_mut();
         stats.sections[0].value = build_stats_string(&game_state.session_stats);
@@ -111,8 +111,6 @@ pub(crate) fn setup(
 ) {
     println!("setup game::ui::game_over");
 
-    let player_name = game_config.player_config.as_ref().unwrap().name.clone();
-
     let mut container_hidden_style = ui_theme.container_absolute_max.clone();
     container_hidden_style.display = Display::None;
 
@@ -137,13 +135,6 @@ pub(crate) fn setup(
         background_color: ui_theme.frame_background_color.0.with_a(0.98).into(),
         ..default()
     };
-
-    /*
-    let frame_row_node = NodeBundle {
-        style: ui_theme.frame_row_style.clone(),
-        background_color: ui_theme.menu_background_color,
-        ..default()
-    };*/
 
     // Game Over view
     commands

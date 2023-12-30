@@ -32,12 +32,12 @@ use bevy::{
     math::Vec3,
     render::{color::Color, primitives::Aabb},
     scene::SceneBundle,
-    text::{Text, TextStyle},
+    text::Text,
     transform::components::Transform,
     ui::{
         node_bundles::{ImageBundle, NodeBundle, TextBundle},
         AlignItems, AlignSelf, BackgroundColor, BorderColor, Display, FlexDirection, Interaction,
-        JustifyContent, PositionType, Style, UiImage, UiRect, Val, ZIndex,
+        JustifyContent, Style, UiImage, UiRect, Val, ZIndex,
     },
     utils::default,
 };
@@ -78,16 +78,15 @@ pub(crate) fn hover_storage(
     mut item_node_q: Query<
         (
             &mut StorageSlot,
-            Ref<Interaction>,
+            &Interaction,
             &mut BorderColor,
             &mut BackgroundColor,
         ),
-        /*Changed<Interaction>,*/
+        Changed<Interaction>,
     >,
-    mut storage_q: Query<(&mut Unit, &mut UnitStorage)>,
+    mut storage_q: Query<(&mut Unit, &mut UnitStorage), With<Player>>,
     mut item_popup_q: Query<&mut Style, With<ItemPopup>>,
-    mut item_stats_q: Query<&Children, With<ItemStats>>,
-    mut text_q: Query<&mut Text>,
+    mut text_q: Query<&mut Text, With<ItemStats>>,
 ) {
     let (mut unit, mut storage) = storage_q.single_mut();
 
@@ -100,8 +99,7 @@ pub(crate) fn hover_storage(
 
         match *interaction {
             Interaction::Hovered => {
-                let children = item_stats_q.single_mut();
-                let mut text = text_q.get_mut(*children.first().unwrap()).unwrap();
+                let mut text = text_q.single_mut();
 
                 if border.0 != Color::INDIGO {
                     border.0 = Color::INDIGO;
@@ -122,12 +120,10 @@ pub(crate) fn hover_storage(
                         popup_style.display = Display::None;
                     }
                 }
+
+                continue;
             }
             Interaction::Pressed => {
-                if !interaction.is_changed() {
-                    continue;
-                }
-
                 if border.0 != Color::AZURE {
                     border.0 = Color::AZURE;
                 }
@@ -146,7 +142,6 @@ pub(crate) fn hover_storage(
                             background.0 = Color::GRAY;
 
                             unit.apply_item_stats(&metadata.rpg, &storage.0);
-                            // update stats
                         }
                     } else {
                         storage.0.swap_slot(item.0, node.0);
@@ -154,10 +149,6 @@ pub(crate) fn hover_storage(
 
                         unit.apply_item_stats(&metadata.rpg, &storage.0);
                     }
-                    //if node.0 != item.0 {
-                    //cursor_item.item = None;
-                    //background.0 = Color::GRAY;
-                    //}
                 } else if let Some(_) = &slot.item {
                     cursor_item.item = Some(StorageSlot(RpgStorageSlot {
                         storage_index: node.storage_index,
@@ -166,17 +157,16 @@ pub(crate) fn hover_storage(
 
                     background.0 = Color::RED;
                 }
+
+                continue;
             }
-            Interaction::None => {
-                if slot.item.is_some() {
-                    //println!("node {node:?} slot {slot:?}");
-                    if border.0 != Color::RED {
-                        border.0 = Color::RED;
-                    }
-                } else if border.0 != Color::DARK_GRAY {
-                    border.0 = Color::DARK_GRAY;
-                }
-            }
+            _ => {}
+        }
+
+        if slot.item.is_some() && border.0 != Color::RED {
+            border.0 = Color::RED;
+        } else if border.0 != Color::DARK_GRAY {
+            border.0 = Color::DARK_GRAY;
         }
     }
 }
@@ -266,11 +256,9 @@ pub(crate) fn update_cursor_item(
 
 pub(crate) fn inventory_update(
     mut item_node_q: Query<(&StorageSlot, &mut BackgroundColor)>,
-    storage_q: Query<&UnitStorage, Changed<UnitStorage>>,
+    storage_q: Query<&UnitStorage, With<Player>>,
 ) {
-    let Ok(storage) = storage_q.get_single() else {
-        return;
-    };
+    let storage = storage_q.single();
 
     for (node, mut background) in &mut item_node_q {
         let Some(slot) = storage.slot_from_index(node.storage_index, node.slot_index) else {
@@ -278,28 +266,33 @@ pub(crate) fn inventory_update(
         };
 
         let Some(item) = &slot.item else {
-            background.0 = Color::GRAY;
+            if background.0 != Color::GRAY {
+                background.0 = Color::GRAY;
+            }
             continue;
         };
 
-        background.0 = match item.rarity {
+        let rarity_color = match item.rarity {
             Rarity::Normal => RARITY_COLOR_NORMAL,
             Rarity::Magic => RARITY_COLOR_MAGIC,
             Rarity::Rare => RARITY_COLOR_RARE,
             Rarity::Legendary => RARITY_COLOR_LEGENDARY,
             Rarity::Unique => RARITY_COLOR_UNIQUE,
         };
+
+        if background.0 != rarity_color {
+            background.0 = rarity_color;
+        }
     }
 }
 
 pub(crate) fn update(
-    metadata: Res<MetadataResources>,
+    _metadata: Res<MetadataResources>,
     input: Res<ButtonInput<KeyCode>>,
-    player_q: Query<&Unit, With<Player>>,
+    _player_q: Query<&Unit, With<Player>>,
     mut style_set: ParamSet<(
         Query<&mut Style, With<InventoryRoot>>,
-        //Query<&mut Style, With<HeroRoot>>,
-        //Query<&mut Style, With<Health>>,
+        Query<&mut Style, With<Health>>,
         Query<&mut Style, With<ItemPopup>>,
     )>,
 ) {
@@ -308,29 +301,21 @@ pub(crate) fn update(
             style_set.p0().single_mut().display = Display::Flex;
         } else {
             style_set.p0().single_mut().display = Display::None;
-            style_set.p1().single_mut().display = Display::None;
+            style_set.p2().single_mut().display = Display::None;
         }
     }
 
-    //let unit = player_q.single();
-
-    // TODO optimize to avoid change detection
-    /*style_set.p1().single_mut().width = Val::Percent(
-        (100.0
-            * (*unit.stats.vitals.hp.value.u32() as f32
-                / *unit.stats.vitals.hp_max.value.u32() as f32))
-            .round(),
-    );*/
-
-    //let hero_info = unit.info.hero();
-    //let level_info = &metadata.rpg.level.levels[&unit.level];
-
     /*
+    let unit = player_q.single();
+    let hero_info = unit.info.hero();
+    let level_info = &metadata.rpg.level.levels[&unit.level];
+
     text_set.p0().single_mut().sections[0].value = format!(
         "HP {}/{}",
         unit.stats.vitals.hp.value.u32(),
         unit.stats.vitals.hp_max.value.u32()
-    );*/
+    );
+    */
 }
 
 pub(crate) fn setup(
@@ -383,13 +368,10 @@ pub(crate) fn setup(
                     ui_theme.text_style_regular.clone(),
                 ));
 
-                p.spawn((GroundItemStats, NodeBundle::default()))
-                    .with_children(|p| {
-                        p.spawn(TextBundle::from_section(
-                            "",
-                            ui_theme.text_style_regular.clone(),
-                        ));
-                    });
+                p.spawn((
+                    GroundItemStats,
+                    TextBundle::from_section("", ui_theme.text_style_regular.clone()),
+                ));
             });
         });
 
@@ -417,13 +399,10 @@ pub(crate) fn setup(
                     ui_theme.text_style_regular.clone(),
                 ));
 
-                p.spawn((ItemStats, NodeBundle::default()))
-                    .with_children(|p| {
-                        p.spawn(TextBundle::from_section(
-                            "",
-                            ui_theme.text_style_regular.clone(),
-                        ));
-                    });
+                p.spawn((
+                    ItemStats,
+                    TextBundle::from_section("", ui_theme.text_style_regular.clone()),
+                ));
             });
         });
 
@@ -463,18 +442,9 @@ pub(crate) fn setup(
 
     let row_style = Style {
         flex_direction: FlexDirection::Row,
-        align_items: AlignItems::Center,
+        //align_items: AlignItems::Center,
         //align_content: AlignContent::SpaceEvenly,
         justify_content: JustifyContent::Center,
-        ..default()
-    };
-
-    let frame_row_style = Style {
-        flex_direction: FlexDirection::Row,
-        align_items: AlignItems::Center,
-        //align_content: AlignContent::SpaceEvenly,
-        justify_content: JustifyContent::Center,
-        border: UiRect::all(ui_theme.border),
         ..default()
     };
 
@@ -710,8 +680,8 @@ pub(crate) fn setup(
                     });
 
                     let mut wide = vertical_spacing.clone();
-                    //wide.style.width *= 2.0;
-                    p.spawn(wide.clone());
+                    wide.style.width *= 2.0;
+                    p.spawn(wide);
 
                     p.spawn(NodeBundle {
                         style: row_style.clone(),

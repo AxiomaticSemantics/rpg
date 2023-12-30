@@ -14,7 +14,7 @@ use crate::game::{
     metadata::MetadataResources,
     plugin::{GameCamera, GameConfig, GameSessionCleanup, GameState},
     skill::get_skill_origin,
-    zone::zone::Zone,
+    world::zone::Zone,
 };
 
 use rpg_core::unit::{HeroInfo, UnitInfo, UnitKind};
@@ -116,7 +116,7 @@ pub fn input_actions(
                 true,
             ));
 
-            // No other actions can happen while attacking
+            // No other user actions can happen while attacking
             return;
         }
     }
