@@ -14,12 +14,12 @@ use bevy::{
 };
 
 #[derive(Component)]
-pub(crate) struct CreditsRoot;
+pub struct CreditsRoot;
 
 #[derive(Component)]
-pub(crate) struct CancelButton;
+pub struct CancelButton;
 
-pub(crate) fn spawn_credits(
+pub fn spawn_credits(
     builder: &mut ChildBuilder,
     ui_theme: &UiTheme,
     button: &ButtonBundle,
@@ -44,8 +44,7 @@ pub(crate) fn spawn_credits(
 
             p.spawn(TextBundle::from_section(
                 "UnknownSurvivalRPG\nCopyright (c) 2023\n\n\
-                Powered by Bevy Engine - https://bevyengine.org\n\
-                ",
+                Powered by Bevy Engine - https://bevyengine.org\n",
                 text_style.clone(),
             ));
 
@@ -55,7 +54,7 @@ pub(crate) fn spawn_credits(
         });
 }
 
-pub(crate) fn cancel_button(
+pub fn cancel_button(
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<CancelButton>)>,
     mut menu_set: ParamSet<(
         Query<&mut Style, With<MainRoot>>,

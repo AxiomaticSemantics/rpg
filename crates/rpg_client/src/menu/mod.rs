@@ -1,7 +1,7 @@
-pub(crate) mod create;
-pub(crate) mod credits;
-pub(crate) mod load;
-pub(crate) mod main;
-pub(crate) mod settings;
+pub mod create;
+pub mod credits;
+pub mod load;
+pub mod main;
+pub mod settings;
 
-pub(crate) mod plugin;
+pub mod plugin;

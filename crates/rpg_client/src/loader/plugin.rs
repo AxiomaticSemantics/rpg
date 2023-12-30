@@ -1,6 +1,6 @@
 use crate::{
     assets::{AudioAssets, FontAssets, JsonAssets, TextureAssets},
-    game::plugin::GamePlugin,
+    game::{self, plugin::GamePlugin, state_saver},
     menu::plugin::MenuPlugin,
     splash::plugin::SplashScreenPlugin,
     state::AppState,
@@ -92,6 +92,7 @@ impl Plugin for LoaderPlugin {
             .init_resource::<TextureAssets>()
             .init_resource::<AudioAssets>()
             .init_resource::<UiTheme>()
+            .init_resource::<state_saver::SaveSlots>()
             // External plugins
             .add_plugins(TweeningPlugin)
             .add_plugins(UiUtilPlugin)
@@ -103,7 +104,7 @@ impl Plugin for LoaderPlugin {
             .add_plugins(GamePlugin)
             .add_systems(
                 OnEnter(AppState::LoadGameAssets),
-                crate::game::plugin::load_assets,
+                (game::plugin::load_assets, state_saver::load_save_slots),
             )
             .add_systems(
                 Update,

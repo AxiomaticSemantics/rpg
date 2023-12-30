@@ -1,5 +1,5 @@
 use crate::{
-    game::plugin::{GameConfig, PlayerOptions},
+    game::plugin::{GameState, PlayerOptions},
     menu::main::MainRoot,
     state::AppState,
 };
@@ -20,18 +20,18 @@ use bevy::{
 };
 
 #[derive(Component)]
-pub(crate) struct CreateRoot;
+pub struct CreateRoot;
 
 #[derive(Component)]
-pub(crate) struct CreateButton;
+pub struct CreateButton;
 
 #[derive(Component)]
-pub(crate) struct CreatePlayerClass(Class);
+pub struct CreatePlayerClass(Class);
 
 #[derive(Component)]
-pub(crate) struct CancelCreateButton;
+pub struct CancelCreateButton;
 
-pub(crate) fn spawn_create(
+pub fn spawn_create(
     builder: &mut ChildBuilder,
     ui_theme: &UiTheme,
     button: &ButtonBundle,
@@ -75,7 +75,7 @@ pub(crate) fn spawn_create(
         });
 }
 
-pub(crate) fn cancel_button(
+pub fn cancel_button(
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<CancelCreateButton>)>,
     mut menu_set: ParamSet<(
         Query<&mut Style, With<MainRoot>>,
@@ -89,9 +89,9 @@ pub(crate) fn cancel_button(
     }
 }
 
-pub(crate) fn create_class(
+pub fn create_class(
     mut state: ResMut<NextState<AppState>>,
-    mut game_config: ResMut<GameConfig>,
+    mut game_state: ResMut<GameState>,
     interaction_q: Query<
         (&Interaction, &CreatePlayerClass),
         (Changed<Interaction>, With<CreatePlayerClass>),
@@ -99,7 +99,7 @@ pub(crate) fn create_class(
     mut menu_root_q: Query<&mut Style, With<UiRoot>>,
 ) {
     if let Ok((Interaction::Pressed, create_class)) = interaction_q.get_single() {
-        game_config.player_config = Some(PlayerOptions {
+        game_state.player_config = Some(PlayerOptions {
             name: "Player".to_string(),
             class: create_class.0,
         });

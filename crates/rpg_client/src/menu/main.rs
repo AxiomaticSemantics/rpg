@@ -9,27 +9,42 @@ use ui_util::{
     widgets::{ImageButton, ImageButtonBundle},
 };
 
-use bevy::{ecs::prelude::*, hierarchy::prelude::*, prelude::*};
+use bevy::{
+    ecs::{
+        component::Component,
+        query::{Changed, With},
+        schedule::NextState,
+        system::{ParamSet, Query, ResMut},
+    },
+    hierarchy::{BuildChildren, ChildBuilder},
+    render::color::Color,
+    text::TextStyle,
+    ui::{
+        node_bundles::{ButtonBundle, ImageBundle, NodeBundle, TextBundle},
+        Display, Interaction, Style, UiImage, UiRect, Val,
+    },
+    utils::default,
+};
 
 #[derive(Component)]
-pub(crate) struct MainRoot;
+pub struct MainRoot;
 
 #[derive(Component)]
-pub(crate) struct ExitButton;
+pub struct ExitButton;
 
 #[derive(Component)]
-pub(crate) struct CreateButton;
+pub struct CreateButton;
 
 #[derive(Component)]
-pub(crate) struct LoadButton;
+pub struct LoadButton;
 
 #[derive(Component)]
-pub(crate) struct SettingsButton;
+pub struct SettingsButton;
 
 #[derive(Component)]
-pub(crate) struct CreditsButton;
+pub struct CreditsButton;
 
-pub(crate) fn spawn_main(
+pub fn spawn_main(
     builder: &mut ChildBuilder,
     textures: &TextureAssets,
     ui_theme: &UiTheme,
@@ -40,6 +55,11 @@ pub(crate) fn spawn_main(
 ) {
     let frame_image = UiImage {
         texture: textures.icons["frame"].clone_weak(),
+        ..default()
+    };
+
+    let vertical_spacer = NodeBundle {
+        style: ui_theme.vertical_spacer.clone(),
         ..default()
     };
 
@@ -119,7 +139,7 @@ pub(crate) fn spawn_main(
             });
 
             p.spawn((
-                CreateButton,
+                LoadButton,
                 ImageButtonBundle {
                     marker: ImageButton,
                     image: ImageBundle {
@@ -236,7 +256,7 @@ pub(crate) fn spawn_main(
         });
 }
 
-pub(crate) fn exit_button(
+pub fn exit_button(
     mut state: ResMut<NextState<AppState>>,
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<ExitButton>)>,
 ) {
@@ -246,7 +266,7 @@ pub(crate) fn exit_button(
     }
 }
 
-pub(crate) fn create_button(
+pub fn create_button(
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<CreateButton>)>,
     mut menu_set: ParamSet<(
         Query<&mut Style, With<MainRoot>>,
@@ -260,7 +280,7 @@ pub(crate) fn create_button(
     }
 }
 
-pub(crate) fn load_button(
+pub fn load_button(
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<LoadButton>)>,
     mut menu_set: ParamSet<(
         Query<&mut Style, With<MainRoot>>,
@@ -274,7 +294,7 @@ pub(crate) fn load_button(
     }
 }
 
-pub(crate) fn settings_button(
+pub fn settings_button(
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<SettingsButton>)>,
     mut menu_set: ParamSet<(
         Query<&mut Style, With<MainRoot>>,
@@ -288,7 +308,7 @@ pub(crate) fn settings_button(
     }
 }
 
-pub(crate) fn credits_button(
+pub fn credits_button(
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<CreditsButton>)>,
     mut menu_set: ParamSet<(
         Query<&mut Style, With<MainRoot>>,

@@ -5,7 +5,7 @@ use crate::assets::TextureAssets;
 use crate::game::{
     actor::{player::Player, unit::Unit},
     metadata::MetadataResources,
-    plugin::{GameConfig, GameSessionCleanup, PlayerOptions},
+    plugin::{GameSessionCleanup, GameState, PlayerOptions},
 };
 
 use ui_util::{style::UiTheme, widgets};
@@ -123,13 +123,13 @@ pub(crate) fn update(
 
 pub(crate) fn setup(
     mut commands: Commands,
-    game_config: Res<GameConfig>,
+    game_state: Res<GameState>,
     ui_theme: Res<UiTheme>,
     _textures: Res<TextureAssets>,
 ) {
     println!("game::ui::hero::setup");
 
-    let player_name = game_config.player_config.as_ref().unwrap().name.clone();
+    let player_name = game_state.player_config.as_ref().unwrap().name.clone();
 
     let mut container_hidden_style = ui_theme.container_absolute_max.clone();
     container_hidden_style.display = Display::None;
