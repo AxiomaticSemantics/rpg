@@ -5,8 +5,7 @@ use super::{
 };
 use crate::game::{
     actions::Actions, assets::RenderResources, health_bar::HealthBar, item::UnitStorage,
-    metadata::MetadataResources, passive_tree::passive_tree::PassiveTree,
-    plugin::GameSessionCleanup,
+    metadata::MetadataResources, passive_tree::PassiveTree, plugin::GameSessionCleanup,
 };
 
 use audio_manager::plugin::AudioActions;
