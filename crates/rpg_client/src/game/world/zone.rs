@@ -7,6 +7,7 @@ use crate::{
 
 use rpg_world::{
     edge::{Edge, EdgeFlags},
+    room::Room,
     tile::Tile,
     zone::{self, Connection, ConnectionKind, Kind, SizeInfo},
 };
@@ -230,36 +231,20 @@ fn build_zone(
                 let tile_size = zone.zone.size_info.tile_size;
 
                 /*
+                spawn_debug_tiles(
+                    &mut commands,
+                    &renderables,
+                    tile,
+                    &tile_spawn,
+                    &world_offset,
+                );
+                */
+
+                /*
                 for tile in &room.tiles {
                     let tile_position = tile.position();
                     let tile_spawn = room_world_offset + tile_position * tile_size;
                     //println!("room world {room_world_offset} {tile_position} {tile_spawn}");
-
-                    spawn_debug_tiles(
-                        &mut commands,
-                        &renderables,
-                        tile,
-                        &tile_spawn,
-                        &world_offset,
-                    );
-
-                    let key = if zone
-                        .zone
-                        .connections
-                        .iter()
-                        .any(|v| v.position == room_world_offset / 4 + tile_position)
-                    {
-                        "tile_red"
-                    } else if zone
-                        .zone
-                        .tile_route
-                        .iter()
-                        .any(|pos| *pos == room_world_offset / 4 + tile_position)
-                    {
-                        "tile_purple"
-                    } else {
-                        "tile_orange"
-                    };
 
                     commands.spawn((
                         GameSessionCleanup,
@@ -300,77 +285,99 @@ fn build_zone(
 fn spawn_debug_tiles(
     commands: &mut Commands,
     renderables: &RenderResources,
-    tile: &Tile,
+    zone: &Zone,
+    room: &Room,
     tile_spawn: &UVec2,
+    room_world_offset: &UVec2,
+    tile_position: &UVec2,
     world_offset: &Vec2,
 ) {
-    for edge in tile.edges {
-        //println!("edge {edge:?}");
+    for tile in &room.tiles {
+        for edge in tile.edges {
+            //println!("edge {edge:?}");
 
-        let key = if edge.edge_flags & EdgeFlags::Open as u8 != 0 {
-            "tile_green"
-        } else if edge.edge_flags & EdgeFlags::Barrier as u8 != 0 {
-            "tile_red"
-        } else {
-            continue;
-        };
+            let key = if edge.edge_flags & EdgeFlags::Open as u8 != 0 {
+                "tile_green"
+            } else if edge.edge_flags & EdgeFlags::Barrier as u8 != 0 {
+                "tile_red"
+            } else {
+                continue;
+            };
 
-        let y = if key == "tile_green" { 0.004 } else { 0.005 };
+            let y = if key == "tile_green" { 0.004 } else { 0.005 };
 
-        let edge_info = if edge.edge == Edge::Top {
-            let pos = Vec3::new(
-                world_offset.x + tile_spawn.x as f32 + 2.,
-                y,
-                world_offset.y + tile_spawn.y as f32 + 0.25,
-            );
+            let edge_info = if edge.edge == Edge::Top {
+                let pos = Vec3::new(
+                    world_offset.x + tile_spawn.x as f32 + 2.,
+                    y,
+                    world_offset.y + tile_spawn.y as f32 + 0.25,
+                );
 
-            Some((key, pos, PI))
-        } else if edge.edge == Edge::Bottom {
-            let pos = Vec3::new(
-                world_offset.x + tile_spawn.x as f32 + 2.,
-                y,
-                world_offset.y + tile_spawn.y as f32 + 3.75,
-            );
+                Some((key, pos, PI))
+            } else if edge.edge == Edge::Bottom {
+                let pos = Vec3::new(
+                    world_offset.x + tile_spawn.x as f32 + 2.,
+                    y,
+                    world_offset.y + tile_spawn.y as f32 + 3.75,
+                );
 
-            Some((key, pos, PI))
-        } else if edge.edge == Edge::Left {
-            let pos = Vec3::new(
-                world_offset.x + tile_spawn.x as f32 + 0.25,
-                y,
-                world_offset.y + tile_spawn.y as f32 + 2.,
-            );
+                Some((key, pos, PI))
+            } else if edge.edge == Edge::Left {
+                let pos = Vec3::new(
+                    world_offset.x + tile_spawn.x as f32 + 0.25,
+                    y,
+                    world_offset.y + tile_spawn.y as f32 + 2.,
+                );
 
-            Some((key, pos, FRAC_PI_2))
-        } else if edge.edge == Edge::Right {
-            let pos = Vec3::new(
-                world_offset.x + tile_spawn.x as f32 + 3.75,
-                y,
-                world_offset.y + tile_spawn.y as f32 + 2.,
-            );
+                Some((key, pos, FRAC_PI_2))
+            } else if edge.edge == Edge::Right {
+                let pos = Vec3::new(
+                    world_offset.x + tile_spawn.x as f32 + 3.75,
+                    y,
+                    world_offset.y + tile_spawn.y as f32 + 2.,
+                );
 
-            Some((key, pos, FRAC_PI_2))
-        } else {
-            None
-        };
+                Some((key, pos, FRAC_PI_2))
+            } else {
+                None
+            };
 
-        if let Some((key, pos, rot)) = edge_info {
-            let mut transform = Transform::from_translation(pos);
-            transform.rotate_x(-FRAC_PI_2);
-            transform.rotate_y(rot);
+            if let Some((key, pos, rot)) = edge_info {
+                let mut transform = Transform::from_translation(pos);
+                transform.rotate_x(-FRAC_PI_2);
+                transform.rotate_y(rot);
 
-            /*
-            commands.spawn((
-                GameSessionCleanup,
-                CleanupStrategy::Despawn,
-                TileNode,
-                PbrBundle {
-                    mesh: tile_edge.clone(),
-                    material: renderables.materials[key].clone_weak(),
-                    //material: renderables.materials["aura_red"].clone_weak(),
-                    transform,
-                    ..default()
-                },
-            ));*/
+                /*
+                commands.spawn((
+                    GameSessionCleanup,
+                    CleanupStrategy::Despawn,
+                    TileNode,
+                    PbrBundle {
+                        mesh: tile_edge.clone(),
+                        material: renderables.materials[key].clone_weak(),
+                        //material: renderables.materials["aura_red"].clone_weak(),
+                        transform,
+                        ..default()
+                    },
+                ));*/
+            }
         }
+        let key = if zone
+            .zone
+            .connections
+            .iter()
+            .any(|v| v.position == *room_world_offset / 4 + *tile_position)
+        {
+            "tile_red"
+        } else if zone
+            .zone
+            .tile_route
+            .iter()
+            .any(|pos| *pos == *room_world_offset / 4 + *tile_position)
+        {
+            "tile_purple"
+        } else {
+            "tile_orange"
+        };
     }
 }
