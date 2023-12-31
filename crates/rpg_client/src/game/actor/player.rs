@@ -9,15 +9,21 @@ use crate::game::{
     metadata::MetadataResources,
     plugin::{GameCamera, GameState},
     skill::get_skill_origin,
+    state_saver::{LoadCharacter, SaveSlots},
     world::zone::Zone,
 };
 
-use rpg_core::unit::{HeroInfo, Unit as RpgUnit, UnitInfo, UnitKind};
+use rpg_core::{
+    passive_tree::{PassiveSkillGraph, PassiveTreeTable},
+    storage::UnitStorage as RpgUnitStorage,
+    unit::{HeroInfo, Unit as RpgUnit, UnitInfo, UnitKind},
+};
 
 use bevy::{
     ecs::{
         bundle::Bundle,
         component::Component,
+        event::EventReader,
         query::{With, Without},
         system::{Commands, Query, Res, ResMut},
     },
@@ -181,28 +187,57 @@ pub(crate) fn spawn_player(
     mut game_state: ResMut<GameState>,
     metadata: Res<MetadataResources>,
     renderables: Res<RenderResources>,
+    save_slots: Res<SaveSlots>,
+    mut load_event: EventReader<LoadCharacter>,
 ) {
     println!("spawn_player");
 
     let player_config = &game_state.player_config.as_ref().unwrap();
 
-    let mut unit = RpgUnit::new(
-        game_state.next_uid.0,
-        player_config.class,
-        UnitKind::Hero,
-        UnitInfo::Hero(HeroInfo::new(&metadata.rpg)),
-        1,
-        player_config.name.clone(),
+    let (unit, storage, passive_tree) = if !load_event.is_empty() {
+        let slot_id = load_event.read().last().unwrap();
+
+        let slot = &save_slots.slots[slot_id.0 as usize];
+        let state = slot.state.as_ref().unwrap();
+        (
+            state.unit.clone(),
+            state.storage.clone(),
+            state.passive_tree.clone(),
+        )
+    } else {
+        let mut unit = RpgUnit::new(
+            game_state.next_uid.0,
+            player_config.class,
+            UnitKind::Hero,
+            UnitInfo::Hero(HeroInfo::new(&metadata.rpg)),
+            1,
+            player_config.name.clone(),
+            None,
+            &metadata.rpg,
+        );
+
+        // FIXME remove after testing
+        unit.passive_skill_points = 10;
+
+        game_state.next_uid.next();
+
+        unit.add_default_skills(&metadata.rpg);
+
+        let class = unit.class;
+        (
+            unit,
+            RpgUnitStorage::default(),
+            PassiveSkillGraph::new(class),
+        )
+    };
+
+    actor::spawn_actor(
+        &mut commands,
+        &metadata,
+        &renderables,
+        unit,
+        Some(storage),
+        Some(passive_tree),
         None,
-        &metadata.rpg,
     );
-
-    // FIXME remove after testing
-    unit.passive_skill_points = 10;
-
-    game_state.next_uid.next();
-
-    unit.add_default_skills(&metadata.rpg);
-
-    actor::spawn_actor(&mut commands, &metadata, &renderables, unit, None);
 }

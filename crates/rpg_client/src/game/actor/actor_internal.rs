@@ -5,7 +5,8 @@ use super::{
 };
 use crate::game::{
     actions::Actions, assets::RenderResources, health_bar::HealthBar, item::UnitStorage,
-    metadata::MetadataResources, plugin::GameSessionCleanup,
+    metadata::MetadataResources, passive_tree::passive_tree::PassiveTree,
+    plugin::GameSessionCleanup,
 };
 
 use audio_manager::plugin::AudioActions;
@@ -26,6 +27,8 @@ use bevy::{
 
 use rpg_core::{
     class::Class,
+    passive_tree::PassiveSkillGraph,
+    storage::UnitStorage as RpgUnitStorage,
     unit::{Unit as RpgUnit, UnitKind},
     villain::VillainId,
 };
@@ -96,27 +99,29 @@ pub(crate) fn spawn_actor(
     metadata: &MetadataResources,
     renderables: &RenderResources,
     unit: RpgUnit,
+    storage: Option<RpgUnitStorage>,
+    passive_tree: Option<PassiveSkillGraph>,
     transform: Option<Transform>,
 ) {
     let body_aabb = Aabb::from_min_max(Vec3::new(-0.3, 0., -0.25), Vec3::new(0.3, 1.8, 0.25));
 
-    let actor_key = get_hero_actor_key(unit.class);
-    let (actor, actor_key) = (
-        renderables.actors[actor_key].actor.clone(),
-        ActorKey(actor_key),
-    );
-
     let bar = HealthBar::spawn_bars(commands, renderables, Transform::default());
+
+    let actor_key = match unit.kind {
+        UnitKind::Hero => get_hero_actor_key(unit.class),
+        UnitKind::Villain => get_villain_actor_key(unit.info.villain().id),
+    };
 
     let actor_basic_bundle = ActorBasicBundle {
         health_bar: HealthBar::new(bar, 0.8),
-        actor_key,
+        actor_key: ActorKey(actor_key),
         aabb: body_aabb,
         ..default()
     };
 
     match unit.kind {
         UnitKind::Hero => {
+            let actor = renderables.actors[actor_key].actor.clone();
             let actor_player_bundle = (
                 GameSessionCleanup,
                 CleanupStrategy::DespawnRecursive,
@@ -125,7 +130,8 @@ pub(crate) fn spawn_actor(
                     hero: Hero,
                 },
                 UnitBundle::new(Unit(unit)),
-                UnitStorage::default(),
+                UnitStorage(storage.unwrap()),
+                PassiveTree(passive_tree.unwrap()),
                 //AabbGizmo::default(),
             );
 
@@ -160,11 +166,7 @@ pub(crate) fn spawn_actor(
             let unit_info = unit.info.villain();
             let villain_info = &metadata.rpg.unit.villains.villains[&unit_info.id];
 
-            let actor_key = get_villain_actor_key(unit.info.villain().id);
-            let (actor, actor_key) = (
-                renderables.actors[actor_key].actor.clone(),
-                ActorKey(actor_key),
-            );
+            let actor = renderables.actors[actor_key].actor.clone();
 
             let think_timer = ThinkTimer(Timer::from_seconds(
                 villain_info.think_cooldown,

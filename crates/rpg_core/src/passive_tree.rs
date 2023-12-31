@@ -206,7 +206,6 @@ impl PassiveTreeTable {
                 let lhs = node.id.min(*connection);
                 let rhs = node.id.max(*connection);
                 graph.add_edge(graph_indices[&lhs], graph_indices[&rhs], 1);
-
                 //edge_indices.insert(EdgeNodes { lhs, rhs }, connection_index);
             }
         }
@@ -217,14 +216,35 @@ impl PassiveTreeTable {
     }
 }
 
-#[derive(Ser, De, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Ser, De, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct EdgeNodes {
     pub lhs: NodeId,
     pub rhs: NodeId,
 }
 
-#[derive(Ser, De, Debug)]
+#[derive(Ser, De, Clone, Debug)]
 pub struct PassiveSkillGraph {
     pub allocated_nodes: Vec<NodeId>,
     pub allocated_edges: Vec<EdgeNodes>,
+}
+
+impl PassiveSkillGraph {
+    pub fn get_class_root(class: Class) -> NodeId {
+        match class {
+            Class::Str => NodeId(48),
+            Class::StrDex => NodeId(440),
+            Class::Dex => NodeId(832),
+            Class::DexInt => NodeId(1224),
+            Class::Int => NodeId(1616),
+            Class::IntStr => NodeId(2008),
+            Class::StrDexInt => NodeId(2400),
+        }
+    }
+
+    pub fn new(class: Class) -> Self {
+        Self {
+            allocated_nodes: vec![Self::get_class_root(class)],
+            allocated_edges: vec![],
+        }
+    }
 }

@@ -24,13 +24,13 @@ pub struct StorageIndex(pub u32);
 pub struct SlotIndex(pub u32);
 
 /// An item storage slot
-#[derive(Ser, De, Debug, Default)]
+#[derive(Ser, De, Clone, Debug, Default)]
 pub struct Slot {
     pub index: SlotIndex,
     pub item: Option<Item>,
 }
 
-#[derive(Ser, De, Debug)]
+#[derive(Ser, De, Clone, Debug)]
 pub struct StorageNode {
     pub index: StorageIndex,
     pub node: Vec<Slot>,
@@ -56,7 +56,7 @@ pub trait Storage {
     ) -> Option<&mut Slot>;
 }
 
-#[derive(Debug, Ser, De)]
+#[derive(Debug, Clone, Ser, De)]
 pub struct UnitStorage {
     pub storage: Vec<StorageNode>,
 }

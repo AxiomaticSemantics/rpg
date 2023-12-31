@@ -652,5 +652,13 @@ fn spawn_villain(
     transform.rotate_y(dir_roll);
     transform.translation += transform.forward() * distance;
 
-    actor::spawn_actor(commands, metadata, renderables, unit, Some(transform));
+    actor::spawn_actor(
+        commands,
+        metadata,
+        renderables,
+        unit,
+        None,
+        None,
+        Some(transform),
+    );
 }

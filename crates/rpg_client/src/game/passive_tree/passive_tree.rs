@@ -58,7 +58,7 @@ use bevy::{
 
 use petgraph::algo;
 
-#[derive(Resource, Deref, DerefMut)]
+#[derive(Component, Deref, DerefMut)]
 pub struct PassiveTree(pub PassiveSkillGraph);
 
 #[derive(Component)]
@@ -90,12 +90,6 @@ pub struct PassiveTreePopupBody;
 
 #[derive(Component)]
 pub struct PassiveTreePopupFlavour;
-
-#[derive(SystemParam)]
-pub struct PassiveResources<'w> {
-    pub passive_tree: ResMut<'w, PassiveTree>,
-    pub metadata: Res<'w, MetadataResources>,
-}
 
 pub(crate) fn setup(
     mut commands: Commands,
@@ -222,15 +216,7 @@ pub(crate) fn setup(
         .insert("line_allocated".into(), line_allocated_material.clone());
 
     let player = player_q.single();
-    let class_root = match player.class {
-        Class::Str => NodeId(48),
-        Class::StrDex => NodeId(440),
-        Class::Dex => NodeId(832),
-        Class::DexInt => NodeId(1224),
-        Class::Int => NodeId(1616),
-        Class::IntStr => NodeId(2008),
-        Class::StrDexInt => NodeId(2400),
-    };
+    let class_root = PassiveSkillGraph::get_class_root(player.class);
 
     /*
     let node_scale = 3.0;
@@ -466,44 +452,6 @@ pub(crate) fn setup(
         }
     }
 
-    /*
-    for node in &metadata.rpg.passive_tree.nodes {
-        let node_size = node.get_size(node_info) * 100.;
-        let node_origin = (node.position * 100.).extend(1.01);
-
-        for connection in node.connections.iter() {
-            let connection_idx = metadata.rpg.passive_tree.passive_indices[&connection];
-            let connection_descriptor = &metadata.rpg.passive_tree.nodes[connection_idx];
-
-            let connection_size = connection_descriptor.get_size(node_info) * 100.;
-            let connection_origin = (connection_descriptor.position * 100.).extend(1.01);
-
-            let line_transform =
-                get_line_transform(&node_origin, node_size, &connection_origin, connection_size);
-
-            commands.spawn((
-                GameSessionCleanup,
-                CleanupStrategy::Despawn,
-                first_pass_layer,
-                PassiveTreeConnection {
-                    lhs: node.id,
-                    rhs: *connection,
-                },
-                MaterialMesh2dBundle {
-                    transform: line_transform,
-                    mesh: Mesh2dHandle(line_mesh.clone()),
-                    material: line_material.clone(),
-                    ..default()
-                },
-            ));
-        }
-    } */
-
-    let passive_tree = PassiveTree(PassiveSkillGraph {
-        allocated_nodes: vec![class_root],
-        allocated_edges: vec![],
-    });
-
     let root_pos = metadata
         .rpg
         .passive_tree
@@ -512,8 +460,6 @@ pub(crate) fn setup(
         .find(|n| n.id == class_root)
         .unwrap()
         .position;
-
-    commands.insert_resource(passive_tree);
 
     commands.spawn((
         GameSessionCleanup,
@@ -710,11 +656,10 @@ pub fn update_legend(
 pub fn display(
     renderables: Res<RenderResources>,
     metadata: Res<MetadataResources>,
-    mut passive_tree: ResMut<PassiveTree>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mouse_input: Res<ButtonInput<MouseButton>>,
     window_q: Query<&Window, With<PrimaryWindow>>,
-    mut player_q: Query<&mut Unit, With<Player>>,
+    mut player_q: Query<(&mut Unit, &mut PassiveTree), With<Player>>,
     mut camera_passive_q: Query<(&GlobalTransform, &mut Camera), With<PassiveTreeCamera>>,
     mut passive_node_q: Query<(&PassiveTreeNode, &mut Handle<ColorMaterial>)>,
     mut passive_connection_q: Query<
@@ -744,7 +689,7 @@ pub fn display(
         return;
     };
 
-    let mut player = player_q.single_mut();
+    let (mut player, mut passive_tree) = player_q.single_mut();
 
     // Set edge material to allocated material if not already set
     for (passive_connection, mut connection_material) in &mut passive_connection_q {

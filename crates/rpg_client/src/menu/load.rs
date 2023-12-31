@@ -1,7 +1,7 @@
 use crate::{
     game::{
         plugin::{GameState, PlayerOptions},
-        state_saver::{SaveSlot, SaveSlotId, SaveSlots},
+        state_saver::{LoadCharacter, SaveSlot, SaveSlotId, SaveSlots},
     },
     menu::main::MainRoot,
     state::AppState,
@@ -13,6 +13,7 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
+        event::EventWriter,
         query::{Changed, With},
         schedule::NextState,
         system::{ParamSet, Query, Res, ResMut, Resource},
@@ -64,8 +65,8 @@ pub fn spawn_load(
             );
 
             let mut slot_style = ui_theme.frame_col_style.clone();
-            slot_style.width = Val::Px(250.);
-            slot_style.height = Val::Px(50.);
+            slot_style.width = Val::Px(256.);
+            slot_style.height = Val::Px(48.);
 
             for row in 0..6 {
                 p.spawn(NodeBundle {
@@ -167,6 +168,7 @@ pub fn select_save_slot(
 pub fn load_button(
     mut state: ResMut<NextState<AppState>>,
     mut game_state: ResMut<GameState>,
+    mut load_event: EventWriter<LoadCharacter>,
     save_slots: Res<SaveSlots>,
     selected_slot: Res<SelectedSaveSlot>,
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<LoadButton>)>,
@@ -196,6 +198,7 @@ pub fn load_button(
                 .class,
         });
 
+        load_event.send(LoadCharacter(slot_index.0));
         state.set(AppState::GameSpawn);
     }
 }
