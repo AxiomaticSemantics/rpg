@@ -1,4 +1,4 @@
-use crate::{assets::TextureAssets, loader::plugin::OutOfGameCamera, state::AppState};
+use crate::{assets::TextureAssets, state::AppState};
 
 use ui_util::style::UiTheme;
 use util::cleanup::CleanupStrategy;
@@ -9,10 +9,10 @@ use bevy::{
         component::Component,
         entity::Entity,
         query::With,
-        schedule::{common_conditions::in_state, IntoSystemConfigs, NextState, OnEnter, OnExit},
+        schedule::{common_conditions::in_state, IntoSystemConfigs, NextState, OnEnter},
         system::{Commands, Query, Res, ResMut},
     },
-    hierarchy::{BuildChildren, DespawnRecursiveExt},
+    hierarchy::BuildChildren,
     input::{keyboard::KeyCode, ButtonInput},
     math::{Vec2, Vec3},
     render::{color::Color, view::visibility::Visibility},
@@ -39,11 +39,24 @@ impl Plugin for SplashScreenPlugin {
                 update_splash_screen.run_if(in_state(AppState::Splash)),
             )
             .add_systems(
-                OnExit(AppState::Splash),
-                util::cleanup::cleanup::<SplashScreen>,
+                OnEnter(AppState::SplashCleanup),
+                util::cleanup::cleanup::<SplashScreenCleanup>,
+            )
+            .add_systems(
+                Update,
+                (|mut state: ResMut<NextState<AppState>>| {
+                    state.set(AppState::MenuLoad);
+                })
+                .run_if(in_state(AppState::SplashCleanup)),
             );
     }
 }
+
+#[derive(Component)]
+struct SplashScreenCleanup;
+
+#[derive(Component)]
+struct SplashScreenCamera;
 
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
 pub enum TweenState {
@@ -274,14 +287,14 @@ impl SplashScreen {
     ) {
         match self.state {
             SplashScreenState::Pending => {
-                self.state = SplashScreenState::Active;
-                if let Some(part) = self.sequences.front_mut() {
-                    if part.state == TweenState::Pending {
-                        part.start(commands, target_q);
-                    }
-                } else {
+                let Some(part) = self.sequences.front_mut() else {
                     panic!("no sequence");
+                };
+
+                if part.state == TweenState::Pending {
+                    part.start(commands, target_q);
                 }
+                self.state = SplashScreenState::Active;
             }
             SplashScreenState::Active => {
                 let sequence = &mut self.sequences[0];
@@ -296,17 +309,15 @@ impl SplashScreen {
                         sequence.update(target_q);
                     }
                 }
+
+                if self.is_complete() {
+                    self.state = SplashScreenState::Complete;
+                }
             }
-            _ => {}
+            SplashScreenState::Complete => {}
         }
     }
 }
-
-#[derive(Component)]
-struct SplashScreenCleanup;
-
-#[derive(Component)]
-struct SplashScreenCamera;
 
 fn setup_splash_screen(
     mut commands: Commands,
@@ -371,7 +382,7 @@ fn setup_splash_screen(
 
             bottom_text_entity = p
                 .spawn(Text2dBundle {
-                    text: Text::from_section("Project: Unnamed SurvivalRPG", text_style)
+                    text: Text::from_section("Project: UnnamedRPG", text_style)
                         .with_justify(JustifyText::Center),
                     transform: Transform::from_translation(-pos),
                     text_2d_bounds: Text2dBounds { size: box_size },
@@ -465,13 +476,9 @@ fn update_splash_screen(
     )>,
 ) {
     let mut screen = screen_q.single_mut();
-    if input.just_pressed(KeyCode::Escape) {
+    if input.just_pressed(KeyCode::Escape) || screen.is_complete() {
         screen.sequences.clear();
-    }
-
-    if screen.is_complete() {
-        println!("sequences complete");
-        state.set(AppState::MenuLoad);
+        state.set(AppState::SplashCleanup);
         return;
     }
 
