@@ -138,6 +138,7 @@ pub enum GameOverState {
     Pending,
     Restart,
     Exit,
+    Saved,
 }
 
 #[derive(Debug, Resource, Default)]
@@ -166,19 +167,19 @@ impl Plugin for GamePlugin {
             .init_resource::<CursorPosition>()
             .init_resource::<CursorItem>()
             .init_resource::<GroundItemDrops>()
-            .insert_resource(DirectionalLightShadowMap { size: 2048 })
-            .insert_resource(AmbientLight {
-                brightness: 0.,
-                ..default()
-            })
-            .insert_resource(Random(Rng::with_seed(1234)))
+            .init_resource::<GameTime>()
             .init_resource::<GameState>()
+            .insert_resource(Random(Rng::with_seed(1234)))
             .insert_resource(VillainSpawner {
                 units: 1,
                 frequency: 10.,
                 timer: Timer::from_seconds(10., TimerMode::Repeating),
             })
-            .init_resource::<GameTime>()
+            .insert_resource(DirectionalLightShadowMap { size: 2048 })
+            .insert_resource(AmbientLight {
+                brightness: 0.,
+                ..default()
+            })
             // GameSpawn
             .add_systems(
                 OnEnter(AppState::GameSpawn),
@@ -579,9 +580,8 @@ pub(crate) fn setup(
 }
 
 fn cleanup(mut game_state: ResMut<GameState>, mut controls: ResMut<Controls>) {
-    println!("cleanup");
+    println!("game::plugin cleanup");
 
-    println!("resetting controls");
     controls.reset();
 
     match game_state.state {
@@ -589,6 +589,9 @@ fn cleanup(mut game_state: ResMut<GameState>, mut controls: ResMut<Controls>) {
             game_state.state = PlayState::default();
         }
         PlayState::GameOver(GameOverState::Exit) => {
+            *game_state = GameState::default();
+        }
+        PlayState::GameOver(GameOverState::Saved) => {
             *game_state = GameState::default();
         }
         _ => {

@@ -82,6 +82,7 @@ pub(crate) fn user_pause(
 
 pub(crate) fn save_button_pressed(
     mut save_event_writer: EventWriter<SaveGame>,
+    mut pause_view_q: Query<&mut Style, With<PauseView>>,
     button_q: Query<&Interaction, (With<SaveButton>, Changed<Interaction>)>,
 ) {
     let Ok(interaction) = button_q.get_single() else {
@@ -89,6 +90,7 @@ pub(crate) fn save_button_pressed(
     };
 
     if interaction == &Interaction::Pressed {
+        pause_view_q.single_mut().display = Display::None;
         save_event_writer.send(SaveGame);
     }
 }
