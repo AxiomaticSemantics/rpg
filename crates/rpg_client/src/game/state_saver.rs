@@ -168,7 +168,7 @@ pub fn save_character(
         Err(e) => panic!("failed to serialize passive tree: `{e:?}`"),
     }
 
-    game_state.state = PlayState::GameOver(GameOverState::Exit);
+    game_state.state = PlayState::GameOver(GameOverState::Saved);
 
     state.set(AppState::GameCleanup);
 }

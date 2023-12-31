@@ -5,6 +5,7 @@ use crate::assets::TextureAssets;
 use crate::game::{
     actor::{player::Player, unit::Unit},
     assets::RenderResources,
+    controls::Controls,
     item::{
         self, CursorItem, GroundItem, GroundItemBundle, GroundItemHover, GroundItemStats,
         StorableItem, StorageSlot, UnitStorage,
@@ -26,7 +27,12 @@ use ui_util::style::UiTheme;
 use util::cleanup::CleanupStrategy;
 
 use bevy::{
-    ecs::prelude::*,
+    ecs::{
+        change_detection::DetectChanges,
+        component::Component,
+        query::{Changed, With},
+        system::{Commands, ParamSet, Query, Res, ResMut},
+    },
     hierarchy::{BuildChildren, ChildBuilder, Children},
     input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
     math::Vec3,
@@ -289,6 +295,7 @@ pub(crate) fn inventory_update(
 pub(crate) fn update(
     _metadata: Res<MetadataResources>,
     input: Res<ButtonInput<KeyCode>>,
+    mut controls: ResMut<Controls>,
     _player_q: Query<&Unit, With<Player>>,
     mut style_set: ParamSet<(
         Query<&mut Style, With<InventoryRoot>>,
@@ -298,8 +305,10 @@ pub(crate) fn update(
 ) {
     if input.just_pressed(KeyCode::KeyI) {
         if let Display::None = style_set.p0().single().display {
+            controls.set_inhibited(true);
             style_set.p0().single_mut().display = Display::Flex;
         } else {
+            controls.set_inhibited(false);
             style_set.p0().single_mut().display = Display::None;
             style_set.p2().single_mut().display = Display::None;
         }

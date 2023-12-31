@@ -8,11 +8,19 @@ use ui_util::style::UiTheme;
 use util::cleanup::CleanupStrategy;
 
 use bevy::{
-    ecs::{prelude::*, schedule::NextState},
+    ecs::{
+        component::Component,
+        query::{Changed, With},
+        schedule::NextState,
+        system::{Commands, ParamSet, Query, Res, ResMut},
+    },
     hierarchy::BuildChildren,
-    text::prelude::*,
-    ui::prelude::*,
-    utils::prelude::*,
+    text::Text,
+    ui::{
+        node_bundles::{ButtonBundle, NodeBundle, TextBundle},
+        AlignSelf, Display, Interaction, JustifyContent, Style,
+    },
+    utils::default,
 };
 
 #[derive(Component)]
@@ -54,14 +62,16 @@ pub(crate) fn game_over_transition(
     mut gameover_view_q: Query<&mut Style, With<GameOverView>>,
     mut gameover_stats_q: Query<&mut Text, With<GameOverStats>>,
 ) {
-    if game_state.state.game_over() {
+    if let PlayState::GameOver(GameOverState::Exit) = game_state.state {
         println!("game_over_transition");
         let mut stats = gameover_stats_q.single_mut();
         stats.sections[0].value = build_stats_string(&game_state.session_stats);
         let mut view = gameover_view_q.single_mut();
         view.display = Display::Flex;
 
-        state.set(AppState::GameOver);
+        state.set(AppState::GameCleanup);
+    } else if let PlayState::GameOver(GameOverState::Saved) = game_state.state {
+        state.set(AppState::GameCleanup);
     }
 }
 

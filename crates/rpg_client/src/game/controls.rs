@@ -42,11 +42,20 @@ pub struct Controls {
     pub mouse_motion: Vec2,
     pub escape: ButtonState,
     pub space: ButtonState,
+    pub inhibited: bool,
 }
 
 impl Controls {
     pub fn reset(&mut self) {
         *self = Self::default();
+    }
+
+    pub fn set_inhibited(&mut self, inhibited: bool) {
+        self.inhibited = inhibited;
+    }
+
+    pub fn is_inhibited(&self) -> bool {
+        self.inhibited
     }
 }
 
@@ -105,7 +114,6 @@ pub fn update_controls(
         return;
     };
     let body_point = ray.get_point(body_distance);
-    //point.y = 0.;
 
     cursor_position.screen = position;
     cursor_position.ground = ground_point;

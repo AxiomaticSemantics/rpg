@@ -99,6 +99,10 @@ pub fn input_actions(
     metadata: Res<MetadataResources>,
     mut player_q: Query<(&Transform, &mut Actions, &Unit), With<Player>>,
 ) {
+    if controls.is_inhibited() {
+        return;
+    }
+
     let (transform, mut actions, unit) = player_q.single_mut();
 
     if controls.mouse_primary.pressed {
@@ -164,6 +168,10 @@ pub(crate) fn update_camera(
     player_q: Query<&Transform, With<Player>>,
     mut camera_q: Query<(&mut Transform, &mut GameCamera), Without<Player>>,
 ) {
+    if controls.is_inhibited() {
+        return;
+    }
+
     let player_transform = player_q.single();
 
     let (mut camera_transform, mut game_camera) = camera_q.single_mut();

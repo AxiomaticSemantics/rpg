@@ -571,6 +571,7 @@ pub(crate) fn setup(
 }
 
 pub fn toggle_passive_tree(
+    mut controls: ResMut<Controls>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut camera_passive_q: Query<&mut Camera, With<PassiveTreeCamera>>,
     mut camera_main_q: Query<&mut Camera, (With<Camera3d>, Without<PassiveTreeCamera>)>,
@@ -580,10 +581,12 @@ pub fn toggle_passive_tree(
 
     if keyboard_input.just_pressed(KeyCode::KeyS) {
         if camera_passive.is_active {
+            controls.set_inhibited(false);
             camera_passive.is_active = false;
             camera_main.is_active = true;
         } else {
             camera_passive.is_active = true;
+            controls.set_inhibited(true);
             camera_main.is_active = false;
         }
     }
