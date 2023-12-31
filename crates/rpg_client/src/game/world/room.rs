@@ -1,9 +1,6 @@
 use super::zone::Zone;
 
-use crate::{
-    game::{assets::RenderResources, prop},
-    random::Random,
-};
+use crate::game::{assets::RenderResources, prop};
 
 use bevy::{
     ecs::system::Commands,
@@ -29,7 +26,6 @@ pub trait RoomSpawn {
         commands: &mut Commands,
         renderables: &RenderResources,
         zone: &mut Zone,
-        random: &mut Random,
     );
 }
 
@@ -87,15 +83,14 @@ impl RoomSpawn for Room {
         commands: &mut Commands,
         renderables: &RenderResources,
         zone: &mut Zone,
-        rng: &mut Random,
     ) {
         use std::f32::consts;
 
-        let key = match rng.usize(0..2) {
+        let key = match zone.zone.rng.usize(0..2) {
             0 => "rock_1",
             _ => "ground_lamp_1",
         };
-        let rot_y = consts::TAU * (0.5 - rng.f32());
+        let rot_y = consts::TAU * (0.5 - zone.zone.rng.f32());
 
         prop::spawn(
             commands,

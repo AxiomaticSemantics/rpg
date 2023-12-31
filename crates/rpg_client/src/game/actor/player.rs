@@ -14,7 +14,7 @@ use crate::game::{
 };
 
 use rpg_core::{
-    passive_tree::{PassiveSkillGraph, PassiveTreeTable},
+    passive_tree::PassiveSkillGraph,
     storage::UnitStorage as RpgUnitStorage,
     unit::{HeroInfo, Unit as RpgUnit, UnitInfo, UnitKind},
 };

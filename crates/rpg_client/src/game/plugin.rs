@@ -27,17 +27,17 @@ use util::cleanup::CleanupStrategy;
 use bevy::{
     app::{App, Plugin, PostUpdate, PreUpdate, Update},
     audio::{AudioBundle, AudioSink, PlaybackSettings},
-    core_pipeline::{
-        bloom::BloomSettings, clear_color::ClearColor, core_3d::Camera3dBundle,
-        tonemapping::Tonemapping,
-    },
+    core_pipeline::{bloom::BloomSettings, core_3d::Camera3dBundle, tonemapping::Tonemapping},
     ecs::prelude::*,
     ecs::schedule::IntoSystemConfigs,
     gizmos::{AabbGizmoConfig, GizmoConfig},
     hierarchy::prelude::*,
     math::Vec3,
     pbr::{AmbientLight, DirectionalLightShadowMap},
-    render::{camera::Camera, color::Color},
+    render::{
+        camera::{Camera, ClearColorConfig},
+        color::Color,
+    },
     time::{Stopwatch, Time, Timer, TimerMode},
     utils::default,
 };
@@ -166,7 +166,6 @@ impl Plugin for GamePlugin {
             .init_resource::<CursorPosition>()
             .init_resource::<CursorItem>()
             .init_resource::<GroundItemDrops>()
-            .insert_resource(ClearColor(Color::BLACK))
             .insert_resource(DirectionalLightShadowMap { size: 2048 })
             .insert_resource(AmbientLight {
                 brightness: 0.,
@@ -483,6 +482,7 @@ pub(crate) fn setup(
         },
         Camera3dBundle {
             camera: Camera {
+                clear_color: ClearColorConfig::Custom(Color::BLACK),
                 hdr: true,
                 ..default()
             },

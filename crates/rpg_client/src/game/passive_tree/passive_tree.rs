@@ -12,7 +12,6 @@ use crate::{
 };
 
 use rpg_core::{
-    class::Class,
     passive_tree::{EdgeNodes, Node, NodeId, NodeKind, PassiveSkillGraph},
     stat::value::ValueKind,
 };
@@ -22,21 +21,20 @@ use util::cleanup::CleanupStrategy;
 use bevy::{
     asset::{Assets, Handle},
     core_pipeline::{
-        clear_color::ClearColorConfig,
         core_2d::{Camera2d, Camera2dBundle},
         core_3d::Camera3d,
     },
     ecs::{
         component::Component,
         query::{With, Without},
-        system::{Commands, Query, Res, ResMut, Resource, SystemParam},
+        system::{Commands, Query, Res, ResMut},
     },
     hierarchy::{BuildChildren, Parent},
     input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
     math::{Vec2, Vec3},
     prelude::{Deref, DerefMut},
     render::{
-        camera::{Camera, OrthographicProjection},
+        camera::{Camera, ClearColorConfig, OrthographicProjection},
         color::Color,
         mesh::{
             shape::{Circle, Quad},
@@ -467,10 +465,8 @@ pub(crate) fn setup(
         PassiveTreeCamera,
         first_pass_layer,
         Camera2dBundle {
-            camera_2d: Camera2d {
-                clear_color: ClearColorConfig::Custom(Color::rgb(0.05, 0.04, 0.04)),
-            },
             camera: Camera {
+                clear_color: ClearColorConfig::Custom(Color::rgb(0.05, 0.04, 0.04)),
                 order: -1,
                 is_active: false,
                 ..default()
