@@ -16,7 +16,7 @@ use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::{
     app::{App, AppExit, Plugin, PluginGroup, Startup, Update},
     audio::GlobalVolume,
-    core_pipeline::core_2d::Camera2dBundle,
+    core_pipeline::core_2d::{Camera2d, Camera2dBundle},
     ecs::{
         component::Component,
         entity::Entity,
@@ -26,7 +26,10 @@ use bevy::{
         system::{Commands, NonSend, Query, ResMut},
     },
     log::LogPlugin,
-    render::prelude::*,
+    render::{
+        camera::{Camera, ClearColor},
+        prelude::*,
+    },
     utils::default,
     window::{PrimaryWindow, Window, WindowPlugin, WindowResolution},
     winit::WinitWindows,
@@ -126,7 +129,16 @@ impl Plugin for LoaderPlugin {
 fn transition_splash(mut commands: Commands, mut state: ResMut<NextState<AppState>>) {
     println!("transition to `AppState::Splash`");
 
-    commands.spawn((OutOfGameCamera, Camera2dBundle::default()));
+    commands.spawn((
+        OutOfGameCamera,
+        Camera2dBundle {
+            camera: Camera {
+                clear_color: ClearColorConfig::Custom(Color::BLACK),
+                ..default()
+            },
+            ..default()
+        },
+    ));
 
     state.set(AppState::Splash);
 }

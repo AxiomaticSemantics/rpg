@@ -10,7 +10,7 @@ use glam::{uvec2, UVec2, Vec2, Vec3};
 
 use std::collections::VecDeque;
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct Zone {
     pub id: u16,
     pub size_info: SizeInfo,
@@ -20,7 +20,7 @@ pub struct Zone {
     pub tile_route: Vec<UVec2>,
     pub curves: VecDeque<Vec<Vec3>>,
     pub rooms: Vec<Room>,
-    rng: Rng,
+    pub rng: Rng,
 }
 
 impl Zone {
@@ -308,9 +308,9 @@ impl Zone {
     }
 }
 
-#[derive(Default, Debug, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Kind {
-    #[default]
+    Town,
     Overworld,
     Underworld,
 }
