@@ -1,14 +1,10 @@
-use super::{room::RoomSpawn, tile::TileNode};
+use super::room::RoomSpawn;
 
-use crate::{
-    game::{assets::RenderResources, plugin::GameSessionCleanup},
-    random::Random,
-};
+use crate::game::{assets::RenderResources, plugin::GameSessionCleanup};
 
 use rpg_world::{
     edge::{Edge, EdgeFlags},
     room::Room,
-    tile::Tile,
     zone::{self, Connection, ConnectionKind, Kind, SizeInfo},
 };
 use util::cleanup::CleanupStrategy;
@@ -48,9 +44,8 @@ pub struct Zone {
     pub debug_options: Option<ZoneDebugOptions>,
 }
 
-pub(crate) fn setup(
+pub fn setup(
     mut commands: Commands,
-    mut rng: ResMut<Random>,
     renderables: Res<RenderResources>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -107,7 +102,7 @@ pub(crate) fn setup(
     commands.insert_resource(zone);
 }
 
-pub(crate) fn cleanup(mut zone: ResMut<Zone>) {
+pub fn cleanup(mut zone: ResMut<Zone>) {
     zone.zone.rooms.clear();
 }
 
@@ -162,55 +157,7 @@ fn build_zone(
                     world_offset.y + room_world_pos.y as f32,
                 );
 
-                /*
-                let connections: Vec<_> = zone
-                    .zone
-                    .connections
-                    .iter()
-                    .filter(|v| v.position / 4 == room.position)
-                    .collect();
-
-                if !connections.is_empty() {
-                    println!("room has connection: {connections:?} {}", room.position);
-
-                    if zone.debug_options.as_ref().is_some_and(|v| v.room_debug) {
-                        commands.spawn((
-                            GameSessionCleanup,
-                            CleanupStrategy::Despawn,
-                            Ground,
-                            PbrBundle {
-                                mesh: room_plane.clone(),
-                                material: renderables.materials["aura_red"].clone_weak(),
-                                transform: Transform::from_translation(Vec3::new(
-                                    world_position.x as f32,
-                                    0.001,
-                                    world_position.y as f32,
-                                ))
-                                .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
-                                ..default()
-                            },
-                        ));
-                    }
-                } else {
-                    if let Some(pos) = zone.zone.room_route.iter().find(|v| **v == room.position) {
-                        commands.spawn((
-                            GameSessionCleanup,
-                            CleanupStrategy::Despawn,
-                            Ground,
-                            PbrBundle {
-                                mesh: room_plane.clone(),
-                                material: renderables.materials["aura_red"].clone_weak(),
-                                transform: Transform::from_translation(Vec3::new(
-                                    world_position.x as f32,
-                                    0.001,
-                                    world_position.y as f32,
-                                ))
-                                .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
-                                ..default()
-                            },
-                        ));
-                    }
-                }*/
+                /* spawn_debug_connections(zone, room) */
 
                 commands.spawn((
                     GameSessionCleanup,
@@ -228,43 +175,15 @@ fn build_zone(
                         ..default()
                     },
                 ));
-                let tile_size = zone.zone.size_info.tile_size;
-
-                /*
-                spawn_debug_tiles(
-                    &mut commands,
-                    &renderables,
-                    tile,
-                    &tile_spawn,
-                    &world_offset,
-                );
-                */
-
-                /*
-                for tile in &room.tiles {
-                    let tile_position = tile.position();
-                    let tile_spawn = room_world_offset + tile_position * tile_size;
-                    //println!("room world {room_world_offset} {tile_position} {tile_spawn}");
-
-                    commands.spawn((
-                        GameSessionCleanup,
-                        CleanupStrategy::Despawn,
-                        TileNode,
-                        PbrBundle {
-                            mesh: tile_plane.clone(),
-                            material: renderables.materials["aura_red"].clone_weak(),
-                            transform: Transform::from_translation(Vec3::new(
-                                world_offset.x + tile_spawn.x as f32 + 2.,
-                                0.002,
-                                world_offset.y + tile_spawn.y as f32 + 2.,
-                            ))
-                            .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
-                            ..default()
-                        },
-                    ));
-                }
-                */
             });
+
+            /*
+            spawn_debug_tiles(
+                &mut commands,
+                &renderables,
+                &world_offset,
+            );
+            */
 
             println!("spawned {count} walls");
 
@@ -282,17 +201,94 @@ fn build_zone(
     }
 }
 
+fn spawn_debug_connections(commands: &mut Commands, zone: &Zone, room: &Room) {
+    let connections: Vec<_> = zone
+        .zone
+        .connections
+        .iter()
+        .filter(|v| v.position / 4 == room.position)
+        .collect();
+
+    if !connections.is_empty() {
+        println!("room has connection: {connections:?} {}", room.position);
+
+        if zone.debug_options.as_ref().is_some_and(|v| v.room_debug) {
+            /*
+            commands.spawn((
+                GameSessionCleanup,
+                CleanupStrategy::Despawn,
+                Ground,
+                PbrBundle {
+                    mesh: room_plane.clone(),
+                    material: renderables.materials["aura_red"].clone_weak(),
+                    transform: Transform::from_translation(Vec3::new(
+                        world_position.x as f32,
+                        0.001,
+                        world_position.y as f32,
+                    ))
+                    .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
+                    ..default()
+                },
+            ));
+            */
+        }
+    } else {
+        if let Some(pos) = zone.zone.room_route.iter().find(|v| **v == room.position) {
+            /*
+            commands.spawn((
+                GameSessionCleanup,
+                CleanupStrategy::Despawn,
+                Ground,
+                PbrBundle {
+                    mesh: room_plane.clone(),
+                    material: renderables.materials["aura_red"].clone_weak(),
+                    transform: Transform::from_translation(Vec3::new(
+                        world_position.x as f32,
+                        0.001,
+                        world_position.y as f32,
+                    ))
+                    .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
+                    ..default()
+                },
+            ));
+            */
+        }
+    }
+}
+
 fn spawn_debug_tiles(
     commands: &mut Commands,
     renderables: &RenderResources,
     zone: &Zone,
     room: &Room,
-    tile_spawn: &UVec2,
     room_world_offset: &UVec2,
-    tile_position: &UVec2,
     world_offset: &Vec2,
 ) {
+    let tile_size = zone.zone.size_info.tile_size;
     for tile in &room.tiles {
+        let tile_position = tile.position();
+        let tile_spawn = *room_world_offset + tile_position * tile_size;
+        //println!("room world {room_world_offset} {tile_position} {tile_spawn}");
+
+        /*
+        commands.spawn((
+            GameSessionCleanup,
+            CleanupStrategy::Despawn,
+            TileNode,
+            PbrBundle {
+                mesh: tile_plane.clone(),
+                material: renderables.materials["aura_red"].clone_weak(),
+                transform: Transform::from_translation(Vec3::new(
+                    world_offset.x + tile_spawn.x as f32 + 2.,
+                    0.002,
+                    world_offset.y + tile_spawn.y as f32 + 2.,
+                ))
+                .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
+                ..default()
+            },
+        ));
+        */
+
         for edge in tile.edges {
             //println!("edge {edge:?}");
 
@@ -362,18 +358,19 @@ fn spawn_debug_tiles(
                 ));*/
             }
         }
+
         let key = if zone
             .zone
             .connections
             .iter()
-            .any(|v| v.position == *room_world_offset / 4 + *tile_position)
+            .any(|v| v.position == *room_world_offset / 4 + tile_position)
         {
             "tile_red"
         } else if zone
             .zone
             .tile_route
             .iter()
-            .any(|pos| *pos == *room_world_offset / 4 + *tile_position)
+            .any(|pos| *pos == *room_world_offset / 4 + tile_position)
         {
             "tile_purple"
         } else {

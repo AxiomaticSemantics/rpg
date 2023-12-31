@@ -197,7 +197,7 @@ impl Plugin for GamePlugin {
                         ui::inventory::setup,
                         ui::pause::setup,
                         ui::game_over::setup,
-                        passive_tree::passive_tree::setup,
+                        passive_tree::setup,
                     )
                         .after(actor::player::spawn_player),
                 ),
@@ -231,10 +231,10 @@ impl Plugin for GamePlugin {
                             .chain(),
                         (
                             (
-                                passive_tree::passive_tree::toggle_passive_tree,
-                                passive_tree::passive_tree::set_view,
-                                passive_tree::passive_tree::update_legend,
-                                passive_tree::passive_tree::display,
+                                passive_tree::toggle_passive_tree,
+                                passive_tree::set_view,
+                                passive_tree::update_legend,
+                                passive_tree::display,
                             )
                                 .chain(),
                             background_audio,

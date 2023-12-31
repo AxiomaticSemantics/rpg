@@ -1,7 +1,7 @@
 use super::{
     actor::{player::Player, unit::Unit},
     item::UnitStorage,
-    passive_tree::passive_tree::PassiveTree,
+    passive_tree::PassiveTree,
     plugin::{GameOverState, GameState, PlayState},
 };
 use crate::state::AppState;
@@ -11,7 +11,7 @@ use bevy::ecs::{
     event::{Event, EventReader},
     query::With,
     schedule::NextState,
-    system::{Query, Res, ResMut, Resource},
+    system::{Query, ResMut, Resource},
 };
 
 use rpg_core::{
