@@ -572,7 +572,7 @@ pub fn prepare_skill(
             let time = game_time.watch.elapsed_secs();
             let forward = unit_transform.forward();
 
-            let spawn_transform = if let Some(_) = &info.orbit {
+            let spawn_transform = if info.orbit.is_some() {
                 let mut rot_transform = *unit_transform;
                 rot_transform.translation += Vec3::new(0., 1.2, 0.);
                 rot_transform.rotate_local_y(std::f32::consts::TAU * (0.5 - random.f32()));
@@ -580,7 +580,7 @@ pub fn prepare_skill(
                 Transform::from_translation(
                     rot_transform.translation + rot_transform.forward() * 2.,
                 )
-            } else if let Some(_) = &info.aerial {
+            } else if info.aerial.is_some() {
                 //println!("prepare aerial {attack_data:?}");
                 Transform::from_translation(origin).looking_at(attack_data.target, Vec3::Y)
             } else {
@@ -593,7 +593,7 @@ pub fn prepare_skill(
             let instance_info = SkillInstance::Projectile(ProjectileInstance {
                 info: info.clone(),
                 start_time: time,
-                orbit: if let Some(_) = &info.orbit {
+                orbit: if info.orbit.is_some() {
                     Some(OrbitData {
                         origin: spawn_transform.translation,
                     })

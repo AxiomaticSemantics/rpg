@@ -11,7 +11,7 @@ use bevy::{
     text::{Font, TextStyle},
     ui::{
         widget::Button, AlignItems, AlignSelf, BackgroundColor, BorderColor, FlexDirection,
-        Interaction, JustifyContent, Overflow, OverflowAxis, PositionType, Style, UiRect, Val,
+        Interaction, JustifyContent, PositionType, Style, UiRect, Val,
     },
     utils::default,
 };
