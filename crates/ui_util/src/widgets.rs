@@ -18,11 +18,11 @@ use bevy::{
     math::{Rect, Vec2, Vec3, Vec3Swizzles},
     render::color::Color,
     text::{Text, TextStyle},
-    transform::components::{GlobalTransform, Transform},
+    transform::components::GlobalTransform,
     ui::{
         node_bundles::{ImageBundle, NodeBundle, TextBundle},
-        AlignContent, AlignItems, AlignSelf, Display, FlexDirection, Interaction, JustifyContent,
-        Node, Overflow, OverflowAxis, Style, UiRect, Val,
+        AlignContent, AlignItems, AlignSelf, BackgroundColor, Display, FlexDirection, Interaction,
+        JustifyContent, Node, Overflow, OverflowAxis, Style, UiRect, Val,
     },
     utils::default,
     window::{PrimaryWindow, ReceivedCharacter, Window},
@@ -239,13 +239,16 @@ pub fn setup_focus(mut commands: Commands) {
 }
 
 pub fn edit_focus_update(
+    ui_theme: Res<UiTheme>,
     mut focused_element: ResMut<FocusedElement>,
-    edit_text_q: Query<(Entity, &Interaction), (Changed<Interaction>, With<EditText>)>,
+    mut edit_text_q: Query<
+        (Entity, &Interaction, &mut BackgroundColor),
+        (Changed<Interaction>, With<EditText>),
+    >,
 ) {
-    for (entity, interaction) in &edit_text_q {
+    for (entity, interaction, mut bg_color) in &mut edit_text_q {
         match &interaction {
             Interaction::Pressed => {
-                println!("pressed");
                 if let Some(focused) = &mut focused_element.0 {
                     println!("updating focus");
                     if *focused != entity {
@@ -258,7 +261,8 @@ pub fn edit_focus_update(
 
                 return;
             }
-            _ => {}
+            Interaction::Hovered => *bg_color = ui_theme.button_theme.hovered_background_color,
+            Interaction::None => *bg_color = ui_theme.button_theme.normal_background_color,
         }
     }
 }
@@ -347,14 +351,22 @@ fn get_node_rect(node: &Node, origin: &Vec3) -> Rect {
 }
 
 pub fn slider_update(
+    ui_theme: Res<UiTheme>,
     mut slider_q: Query<(&Node, &mut Slider<u32>, &GlobalTransform)>,
     mut slider_inner_q: Query<
-        (&Interaction, &mut Style, &Node, &GlobalTransform, &Parent),
+        (
+            &Interaction,
+            &mut Style,
+            &Node,
+            &GlobalTransform,
+            &mut BackgroundColor,
+            &Parent,
+        ),
         With<SliderBar>,
     >,
     window_q: Query<&Window, With<PrimaryWindow>>,
 ) {
-    for (interaction, mut style, node, transform, parent) in &mut slider_inner_q {
+    for (interaction, mut style, node, transform, mut bg_color, parent) in &mut slider_inner_q {
         match interaction {
             Interaction::Pressed => {
                 let (parent_node, mut slider, parent_transform) =
@@ -387,7 +399,8 @@ pub fn slider_update(
                     );*/
                 }
             }
-            _ => {}
+            Interaction::Hovered => *bg_color = ui_theme.button_theme.hovered_background_color,
+            Interaction::None => *bg_color = ui_theme.button_theme.normal_background_color,
         }
     }
 }
@@ -420,17 +433,14 @@ pub fn edit_text(
             let (can_add, ch) = match input.char.as_str() {
                 // `Backspace`
                 "\u{8}" => {
-                    //println!("backspace {}", text.sections[0].value);
                     assert!(edit_text.cursor.in_range());
 
                     let len = text.sections[0].value.len();
                     let min = edit_text.cursor.get_min();
                     if edit_text.cursor.position > min {
                         if edit_text.cursor.position >= len {
-                            //println!("pop");
                             text.sections[0].value.pop();
                         } else if len > 1 {
-                            //println!("remove inner");
                             text.sections[0].value.remove(edit_text.cursor.position);
                         }
                         edit_text

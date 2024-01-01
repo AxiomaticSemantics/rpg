@@ -209,50 +209,45 @@ fn spawn_debug_connections(commands: &mut Commands, zone: &Zone, room: &Room) {
         .filter(|v| v.position / 4 == room.position)
         .collect();
 
-    if !connections.is_empty() {
+    if !connections.is_empty() && zone.debug_options.as_ref().is_some_and(|v| v.room_debug) {
         println!("room has connection: {connections:?} {}", room.position);
-
-        if zone.debug_options.as_ref().is_some_and(|v| v.room_debug) {
-            /*
-            commands.spawn((
-                GameSessionCleanup,
-                CleanupStrategy::Despawn,
-                Ground,
-                PbrBundle {
-                    mesh: room_plane.clone(),
-                    material: renderables.materials["aura_red"].clone_weak(),
-                    transform: Transform::from_translation(Vec3::new(
-                        world_position.x as f32,
-                        0.001,
-                        world_position.y as f32,
-                    ))
-                    .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
-                    ..default()
-                },
-            ));
-            */
-        }
-    } else {
-        if let Some(pos) = zone.zone.room_route.iter().find(|v| **v == room.position) {
-            /*
-            commands.spawn((
-                GameSessionCleanup,
-                CleanupStrategy::Despawn,
-                Ground,
-                PbrBundle {
-                    mesh: room_plane.clone(),
-                    material: renderables.materials["aura_red"].clone_weak(),
-                    transform: Transform::from_translation(Vec3::new(
-                        world_position.x as f32,
-                        0.001,
-                        world_position.y as f32,
-                    ))
-                    .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
-                    ..default()
-                },
-            ));
-            */
-        }
+        /*
+        commands.spawn((
+            GameSessionCleanup,
+            CleanupStrategy::Despawn,
+            Ground,
+            PbrBundle {
+                mesh: room_plane.clone(),
+                material: renderables.materials["aura_red"].clone_weak(),
+                transform: Transform::from_translation(Vec3::new(
+                    world_position.x as f32,
+                    0.001,
+                    world_position.y as f32,
+                ))
+                .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
+                ..default()
+            },
+        ));
+        */
+    } else if let Some(pos) = zone.zone.room_route.iter().find(|v| **v == room.position) {
+        /*
+        commands.spawn((
+            GameSessionCleanup,
+            CleanupStrategy::Despawn,
+            Ground,
+            PbrBundle {
+                mesh: room_plane.clone(),
+                material: renderables.materials["aura_red"].clone_weak(),
+                transform: Transform::from_translation(Vec3::new(
+                    world_position.x as f32,
+                    0.001,
+                    world_position.y as f32,
+                ))
+                .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
+                ..default()
+            },
+        ));
+        */
     }
 }
 

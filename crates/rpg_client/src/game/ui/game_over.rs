@@ -15,10 +15,11 @@ use bevy::{
         system::{Commands, ParamSet, Query, Res, ResMut},
     },
     hierarchy::BuildChildren,
+    render::color::Color,
     text::Text,
     ui::{
         node_bundles::{ButtonBundle, NodeBundle, TextBundle},
-        AlignSelf, Display, Interaction, JustifyContent, Style,
+        AlignSelf, BackgroundColor, Display, Interaction, JustifyContent, Style,
     },
     utils::default,
 };
@@ -77,14 +78,15 @@ pub(crate) fn game_over_transition(
 
 pub(crate) fn game_over(
     mut state: ResMut<NextState<AppState>>,
+    ui_theme: Res<UiTheme>,
     mut game_state: ResMut<GameState>,
     mut interaction_set: ParamSet<(
-        Query<&Interaction, (With<RestartGame>, Changed<Interaction>)>,
-        Query<&Interaction, (With<ReturnToMenu>, Changed<Interaction>)>,
+        Query<(&Interaction, &mut BackgroundColor), (With<RestartGame>, Changed<Interaction>)>,
+        Query<(&Interaction, &mut BackgroundColor), (With<ReturnToMenu>, Changed<Interaction>)>,
     )>,
 ) {
-    let restart = &interaction_set.p0();
-    for interaction in restart.iter() {
+    let restart = &mut interaction_set.p0();
+    for (interaction, mut bg_color) in restart.iter_mut() {
         match interaction {
             Interaction::Pressed => {
                 game_state.state = PlayState::GameOver(GameOverState::Restart);
@@ -92,12 +94,13 @@ pub(crate) fn game_over(
                 state.set(AppState::GameSpawn);
                 println!("game_over: restarting with current character");
             }
-            _ => {}
+            Interaction::Hovered => *bg_color = ui_theme.button_theme.hovered_background_color,
+            Interaction::None => *bg_color = ui_theme.button_theme.normal_background_color,
         }
     }
 
-    let menu = &interaction_set.p1();
-    for interaction in menu.iter() {
+    let menu = &mut interaction_set.p1();
+    for (interaction, mut bg_color) in menu.iter_mut() {
         match interaction {
             Interaction::Pressed => {
                 println!("game_over: returning to menu");
@@ -105,7 +108,8 @@ pub(crate) fn game_over(
 
                 state.set(AppState::Menu);
             }
-            _ => {}
+            Interaction::Hovered => *bg_color = ui_theme.button_theme.hovered_background_color,
+            Interaction::None => *bg_color = ui_theme.button_theme.normal_background_color,
         }
     }
 }

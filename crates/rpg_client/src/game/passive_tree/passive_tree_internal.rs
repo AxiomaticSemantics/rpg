@@ -20,10 +20,7 @@ use util::cleanup::CleanupStrategy;
 
 use bevy::{
     asset::{Assets, Handle},
-    core_pipeline::{
-        core_2d::{Camera2d, Camera2dBundle},
-        core_3d::Camera3d,
-    },
+    core_pipeline::{core_2d::Camera2dBundle, core_3d::Camera3d},
     ecs::{
         component::Component,
         query::{With, Without},
@@ -43,11 +40,11 @@ use bevy::{
         view::RenderLayers,
     },
     sprite::{ColorMaterial, MaterialMesh2dBundle, Mesh2dHandle},
-    text::{BreakLineOn, JustifyText, Text, TextSection, TextStyle},
+    text::{BreakLineOn, JustifyText, Text, TextSection},
     time::Time,
     transform::components::{GlobalTransform, Transform},
     ui::{
-        node_bundles::{ImageBundle, NodeBundle, TextBundle},
+        node_bundles::{NodeBundle, TextBundle},
         AlignSelf, Display, FlexDirection, Style, UiRect, Val,
     },
     utils::default,

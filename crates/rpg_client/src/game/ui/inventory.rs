@@ -155,7 +155,7 @@ pub(crate) fn hover_storage(
 
                         unit.apply_item_stats(&metadata.rpg, &storage.0);
                     }
-                } else if let Some(_) = &slot.item {
+                } else if slot.item.is_some() {
                     cursor_item.item = Some(StorageSlot(RpgStorageSlot {
                         storage_index: node.storage_index,
                         slot_index: node.slot_index,
