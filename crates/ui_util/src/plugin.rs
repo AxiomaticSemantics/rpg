@@ -1,7 +1,7 @@
 use crate::{style, widgets};
 
 use bevy::{
-    app::{App, Plugin, Startup, Update},
+    app::{App, Plugin, PreUpdate, Startup, Update},
     asset::{AssetServer, Handle},
     ecs::{
         schedule::IntoSystemConfigs,
@@ -15,7 +15,6 @@ use bevy::{
 pub struct UiFont {
     pub prime: Handle<Font>,
     pub fira_sans: Handle<Font>,
-    pub avqest: Handle<Font>,
 }
 
 impl FromWorld for UiFont {
@@ -24,7 +23,6 @@ impl FromWorld for UiFont {
 
         UiFont {
             fira_sans: server.load("fonts/FiraNerd-Medium.ttf"),
-            avqest: server.load("fonts/avqest.ttf"),
             prime: server.load("fonts/courier_prime-regular.ttf"),
         }
     }
@@ -37,19 +35,19 @@ impl Plugin for UiUtilPlugin {
         println!("Initializing UI plugin.");
 
         app.init_resource::<UiFont>()
-            .add_systems(Startup, (widgets::setup_focus, style::insert_theme).chain())
+            .add_systems(Startup, (widgets::setup_focus, style::insert_theme))
+            .add_systems(
+                PreUpdate,
+                widgets::edit_focus_update.after(bevy::ui::ui_focus_system),
+            )
             .add_systems(
                 Update,
                 (
-                    widgets::edit_focus_update,
                     widgets::slider_update,
-                    (
-                        widgets::resize_view,
-                        widgets::mouse_scroll,
-                        widgets::edit_text,
-                        style::button_style,
-                    )
-                        .after(widgets::edit_focus_update),
+                    widgets::resize_view,
+                    widgets::mouse_scroll,
+                    widgets::edit_text,
+                    style::button_style,
                 ),
             );
     }

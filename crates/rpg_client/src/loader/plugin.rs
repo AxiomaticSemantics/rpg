@@ -16,19 +16,21 @@ use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::{
     app::{App, AppExit, Plugin, PluginGroup, Startup, Update},
     audio::GlobalVolume,
-    core_pipeline::core_2d::{Camera2d, Camera2dBundle},
+    core_pipeline::core_2d::Camera2dBundle,
     ecs::{
         component::Component,
         entity::Entity,
         event::EventWriter,
         query::With,
-        schedule::{common_conditions::in_state, IntoSystemConfigs, NextState, OnEnter, OnExit},
+        schedule::{common_conditions::in_state, IntoSystemConfigs, NextState, OnEnter},
         system::{Commands, NonSend, Query, ResMut},
     },
     log::LogPlugin,
     render::{
-        camera::{Camera, ClearColor},
-        prelude::*,
+        camera::{Camera, ClearColorConfig},
+        color::Color,
+        texture::ImagePlugin,
+        view::Msaa,
     },
     utils::default,
     window::{PrimaryWindow, Window, WindowPlugin, WindowResolution},
@@ -153,7 +155,7 @@ fn set_window_icon(windows: NonSend<WinitWindows>, window_q: Query<Entity, With<
     let entity = window_q.single();
     let primary = windows.get_window(entity).unwrap();
     let path = format!(
-        "{}/textures/app_icon.png",
+        "{}/assets/textures/app_icon.png",
         std::env::var("BEVY_ASSET_ROOT").unwrap()
     );
 

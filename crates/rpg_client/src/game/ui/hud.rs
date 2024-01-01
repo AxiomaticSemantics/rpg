@@ -8,7 +8,7 @@ use crate::game::{
     plugin::{GameSessionCleanup, GameState},
 };
 
-use ui_util::{style::UiTheme, widgets};
+use ui_util::style::UiTheme;
 use util::cleanup::CleanupStrategy;
 
 use bevy::{

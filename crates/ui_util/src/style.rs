@@ -33,7 +33,6 @@ pub struct ButtonTheme {
 #[derive(Debug, Default, Resource)]
 pub struct UiTheme {
     pub button_theme: ButtonTheme,
-    pub text_style: TextStyle,
     pub text_color_dark: Color,
     pub text_color_light: Color,
     pub vertical_spacer: Style,
@@ -126,7 +125,7 @@ pub fn insert_theme(mut ui_theme: ResMut<UiTheme>, ui_font: Res<UiFont>) {
     let frame_row_style = Style {
         flex_direction: FlexDirection::Row,
         align_items: AlignItems::Center,
-        align_self: AlignSelf::Center,
+        align_self: AlignSelf::FlexStart,
         justify_content: JustifyContent::Center,
         margin: UiRect::all(margin),
         border: UiRect::all(border),
@@ -159,11 +158,6 @@ pub fn insert_theme(mut ui_theme: ResMut<UiTheme>, ui_font: Res<UiFont>) {
     *ui_theme = UiTheme {
         text_color_dark,
         text_color_light,
-        text_style: TextStyle {
-            color: text_color_dark,
-            font: font.clone_weak(),
-            font_size: font_size_regular,
-        },
         container_absolute_max: container_style,
         frame_row_style,
         frame_col_style,

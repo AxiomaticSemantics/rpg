@@ -1,16 +1,19 @@
 use crate::menu::main::MainRoot;
 
-use ui_util::{
-    style::UiTheme,
-    widgets::{EditText, List, ListPosition},
-};
+use ui_util::style::UiTheme;
 
 use bevy::{
-    ecs::prelude::*,
-    hierarchy::prelude::*,
-    prelude::default,
-    text::prelude::*,
-    ui::{prelude::*, BorderColor},
+    ecs::{
+        component::Component,
+        query::{Changed, With},
+        system::{ParamSet, Query},
+    },
+    hierarchy::{BuildChildren, ChildBuilder},
+    ui::{
+        node_bundles::{ButtonBundle, NodeBundle, TextBundle},
+        Display, Interaction, Style,
+    },
+    utils::default,
 };
 
 #[derive(Component)]
@@ -19,14 +22,7 @@ pub struct CreditsRoot;
 #[derive(Component)]
 pub struct CancelButton;
 
-pub fn spawn_credits(
-    builder: &mut ChildBuilder,
-    ui_theme: &UiTheme,
-    button: &ButtonBundle,
-    frame: &Style,
-    text_node_style: &Style,
-    text_style: &TextStyle,
-) {
+pub fn spawn(builder: &mut ChildBuilder, ui_theme: &UiTheme, button: &ButtonBundle, frame: &Style) {
     builder
         .spawn((
             CreditsRoot,
@@ -38,18 +34,21 @@ pub fn spawn_credits(
         ))
         .with_children(|p| {
             p.spawn(
-                TextBundle::from_section("Credits", text_style.clone())
-                    .with_style(text_node_style.clone()),
+                TextBundle::from_section("Credits", ui_theme.text_style_regular.clone())
+                    .with_style(ui_theme.row_style.clone()),
             );
 
             p.spawn(TextBundle::from_section(
-                "UnknownSurvivalRPG\nCopyright (c) 2023\n\n\
+                "UnnamedRPG\nCopyright (c) 2023-2024\n\n\
                 Powered by Bevy Engine - https://bevyengine.org\n",
-                text_style.clone(),
+                ui_theme.text_style_small.clone(),
             ));
 
             p.spawn((button.clone(), CancelButton)).with_children(|p| {
-                p.spawn(TextBundle::from_section("Cancel", text_style.clone()));
+                p.spawn(TextBundle::from_section(
+                    "Cancel",
+                    ui_theme.text_style_regular.clone(),
+                ));
             });
         });
 }
