@@ -350,9 +350,6 @@ pub(crate) fn setup(
     let mut hidden_container_style = ui_theme.container_absolute_max.clone();
     hidden_container_style.display = Display::None;
 
-    let mut popup_style = ui_theme.frame_col_style.clone();
-    //popup_style.left = Val::Px(200.);
-
     commands
         .spawn((
             CleanupStrategy::DespawnRecursive,

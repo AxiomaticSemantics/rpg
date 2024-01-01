@@ -16,7 +16,7 @@ use super::{
     item::{self, CursorItem, GroundItemDrops},
     metadata::MetadataResources,
     passive_tree,
-    skill::{self, SkillEvent},
+    skill::{self, SkillContactEvent},
     state_saver, ui, world,
 };
 
@@ -162,7 +162,7 @@ impl Plugin for GamePlugin {
 
         app.add_event::<state_saver::LoadCharacter>()
             .add_event::<state_saver::SaveGame>()
-            .add_event::<SkillEvent>()
+            .add_event::<SkillContactEvent>()
             .init_resource::<Controls>()
             .init_resource::<CursorPosition>()
             .init_resource::<CursorItem>()

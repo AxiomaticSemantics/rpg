@@ -5,8 +5,10 @@ use ui_util::style::UiTheme;
 use bevy::{
     ecs::prelude::*,
     hierarchy::{BuildChildren, ChildBuilder},
-    text::prelude::*,
-    ui::{prelude::*, BorderColor},
+    ui::{
+        node_bundles::{ButtonBundle, NodeBundle, TextBundle},
+        BorderColor, Display, Interaction, Style,
+    },
     utils::default,
 };
 
@@ -25,14 +27,7 @@ pub struct AudioButton;
 #[derive(Component)]
 pub struct VideoButton;
 
-pub fn spawn_settings(
-    builder: &mut ChildBuilder,
-    ui_theme: &UiTheme,
-    button: &ButtonBundle,
-    frame: &Style,
-    text_node_style: &Style,
-    text_style: &TextStyle,
-) {
+pub fn spawn(builder: &mut ChildBuilder, ui_theme: &UiTheme, button: &ButtonBundle, frame: &Style) {
     builder
         .spawn((
             SettingsRoot,
@@ -44,8 +39,8 @@ pub fn spawn_settings(
         ))
         .with_children(|p| {
             p.spawn(
-                TextBundle::from_section("Settings", text_style.clone())
-                    .with_style(text_node_style.clone()),
+                TextBundle::from_section("Settings", ui_theme.text_style_regular.clone())
+                    .with_style(ui_theme.row_style.clone()),
             );
 
             p.spawn(NodeBundle {
@@ -60,19 +55,31 @@ pub fn spawn_settings(
                 .with_children(|p| {
                     p.spawn((button.clone(), ControlsButton))
                         .with_children(|p| {
-                            p.spawn(TextBundle::from_section("Controls", text_style.clone()));
+                            p.spawn(TextBundle::from_section(
+                                "Controls",
+                                ui_theme.text_style_small.clone(),
+                            ));
                         });
 
                     p.spawn((button.clone(), VideoButton)).with_children(|p| {
-                        p.spawn(TextBundle::from_section("Video", text_style.clone()));
+                        p.spawn(TextBundle::from_section(
+                            "Video",
+                            ui_theme.text_style_small.clone(),
+                        ));
                     });
 
                     p.spawn((button.clone(), AudioButton)).with_children(|p| {
-                        p.spawn(TextBundle::from_section("Audio", text_style.clone()));
+                        p.spawn(TextBundle::from_section(
+                            "Audio",
+                            ui_theme.text_style_small.clone(),
+                        ));
                     });
 
                     p.spawn((button.clone(), CancelButton)).with_children(|p| {
-                        p.spawn(TextBundle::from_section("Cancel", text_style.clone()));
+                        p.spawn(TextBundle::from_section(
+                            "Cancel",
+                            ui_theme.text_style_small.clone(),
+                        ));
                     });
                 });
 
@@ -82,8 +89,8 @@ pub fn spawn_settings(
                 })
                 .with_children(|p| {
                     p.spawn(
-                        TextBundle::from_section("Foo", text_style.clone())
-                            .with_style(text_node_style.clone()),
+                        TextBundle::from_section("Foo", ui_theme.text_style_regular.clone())
+                            .with_style(ui_theme.row_style.clone()),
                     );
                 });
             });

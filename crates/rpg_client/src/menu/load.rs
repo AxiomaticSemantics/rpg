@@ -12,7 +12,6 @@ use ui_util::style::UiTheme;
 use bevy::{
     ecs::{
         component::Component,
-        entity::Entity,
         event::EventWriter,
         query::{Changed, With},
         schedule::NextState,
@@ -20,7 +19,6 @@ use bevy::{
     },
     hierarchy::{BuildChildren, ChildBuilder},
     prelude::{Deref, DerefMut},
-    text::TextStyle,
     ui::{
         node_bundles::{ButtonBundle, NodeBundle, TextBundle},
         BackgroundColor, Display, Interaction, Style, Val,
@@ -40,14 +38,12 @@ pub struct CancelLoadButton;
 #[derive(Component)]
 pub struct LoadButton;
 
-pub fn spawn_load(
-    save_slots: &SaveSlots,
+pub fn spawn(
     builder: &mut ChildBuilder,
     ui_theme: &UiTheme,
     button: &ButtonBundle,
     frame: &Style,
-    text_node_style: &Style,
-    text_style: &TextStyle,
+    save_slots: &SaveSlots,
 ) {
     builder
         .spawn((
@@ -60,8 +56,8 @@ pub fn spawn_load(
         ))
         .with_children(|p| {
             p.spawn(
-                TextBundle::from_section("Load Character", text_style.clone())
-                    .with_style(text_node_style.clone()),
+                TextBundle::from_section("Load Character", ui_theme.text_style_regular.clone())
+                    .with_style(ui_theme.row_style.clone()),
             );
 
             let mut slot_style = ui_theme.frame_col_style.clone();
@@ -99,8 +95,11 @@ pub fn spawn_load(
                         ))
                         .with_children(|p| {
                             p.spawn(
-                                TextBundle::from_section(slot_string, text_style.clone())
-                                    .with_style(text_node_style.clone()),
+                                TextBundle::from_section(
+                                    slot_string,
+                                    ui_theme.text_style_regular.clone(),
+                                )
+                                .with_style(ui_theme.row_style.clone()),
                             );
                         });
                     }
@@ -113,12 +112,18 @@ pub fn spawn_load(
             });
 
             p.spawn((button.clone(), LoadButton)).with_children(|p| {
-                p.spawn(TextBundle::from_section("Load", text_style.clone()));
+                p.spawn(TextBundle::from_section(
+                    "Load",
+                    ui_theme.text_style_regular.clone(),
+                ));
             });
 
             p.spawn((button.clone(), CancelLoadButton))
                 .with_children(|p| {
-                    p.spawn(TextBundle::from_section("Cancel", text_style.clone()));
+                    p.spawn(TextBundle::from_section(
+                        "Cancel",
+                        ui_theme.text_style_regular.clone(),
+                    ));
                 });
         });
 }

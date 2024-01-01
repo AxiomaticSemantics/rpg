@@ -18,7 +18,6 @@ use bevy::{
     },
     hierarchy::{BuildChildren, ChildBuilder},
     render::color::Color,
-    text::TextStyle,
     ui::{
         node_bundles::{ButtonBundle, ImageBundle, NodeBundle, TextBundle},
         Display, Interaction, Style, UiImage, UiRect, Val,
@@ -44,14 +43,12 @@ pub struct SettingsButton;
 #[derive(Component)]
 pub struct CreditsButton;
 
-pub fn spawn_main(
+pub fn spawn(
     builder: &mut ChildBuilder,
     textures: &TextureAssets,
     ui_theme: &UiTheme,
     button: &ButtonBundle,
     frame: &Style,
-    text_node_style: &Style,
-    text_style: &TextStyle,
 ) {
     let frame_image = UiImage {
         texture: textures.icons["frame"].clone_weak(),
@@ -94,8 +91,8 @@ pub fn spawn_main(
                 })
                 .with_children(|p| {
                     p.spawn(
-                        TextBundle::from_section("Main Menu", text_style.clone())
-                            .with_style(text_node_style.clone()),
+                        TextBundle::from_section("Main Menu", ui_theme.text_style_regular.clone())
+                            .with_style(ui_theme.row_style.clone()),
                     );
                 });
             });
@@ -128,8 +125,11 @@ pub fn spawn_main(
             ))
             .with_children(|p| {
                 p.spawn(
-                    TextBundle::from_section("Create Character", text_style.clone())
-                        .with_style(text_node_style.clone()),
+                    TextBundle::from_section(
+                        "Create Character",
+                        ui_theme.text_style_regular.clone(),
+                    )
+                    .with_style(ui_theme.row_style.clone()),
                 );
             });
 
@@ -156,8 +156,8 @@ pub fn spawn_main(
             ))
             .with_children(|p| {
                 p.spawn(
-                    TextBundle::from_section("Load Character", text_style.clone())
-                        .with_style(text_node_style.clone()),
+                    TextBundle::from_section("Load Character", ui_theme.text_style_regular.clone())
+                        .with_style(ui_theme.row_style.clone()),
                 );
             });
 
@@ -184,8 +184,8 @@ pub fn spawn_main(
             ))
             .with_children(|p| {
                 p.spawn(
-                    TextBundle::from_section("Settings", text_style.clone())
-                        .with_style(text_node_style.clone()),
+                    TextBundle::from_section("Settings", ui_theme.text_style_regular.clone())
+                        .with_style(ui_theme.row_style.clone()),
                 );
             });
 
@@ -212,8 +212,8 @@ pub fn spawn_main(
             ))
             .with_children(|p| {
                 p.spawn(
-                    TextBundle::from_section("Credits", text_style.clone())
-                        .with_style(text_node_style.clone()),
+                    TextBundle::from_section("Credits", ui_theme.text_style_regular.clone())
+                        .with_style(ui_theme.row_style.clone()),
                 );
             });
 
@@ -245,8 +245,8 @@ pub fn spawn_main(
             ))
             .with_children(|p| {
                 p.spawn(
-                    TextBundle::from_section("Exit", text_style.clone())
-                        .with_style(text_node_style.clone()),
+                    TextBundle::from_section("Exit", ui_theme.text_style_regular.clone())
+                        .with_style(ui_theme.row_style.clone()),
                 );
             });
             p.spawn(NodeBundle {

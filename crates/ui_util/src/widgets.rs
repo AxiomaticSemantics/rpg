@@ -6,10 +6,10 @@ use bevy::{
         component::Component,
         entity::Entity,
         event::EventReader,
-        query::{Changed, With, Without},
+        query::{Changed, With},
         system::{Commands, Query, Res, ResMut, Resource},
     },
-    hierarchy::prelude::*,
+    hierarchy::{BuildChildren, ChildBuilder, Parent},
     input::{
         keyboard::KeyCode,
         mouse::{MouseMotion, MouseScrollUnit, MouseWheel},
@@ -17,17 +17,15 @@ use bevy::{
     },
     math::{Rect, Vec2, Vec3, Vec3Swizzles},
     render::color::Color,
-    text::{Font, Text, TextStyle},
+    text::{Text, TextStyle},
     transform::components::{GlobalTransform, Transform},
     ui::{
         node_bundles::{ImageBundle, NodeBundle, TextBundle},
-        widget::Button,
-        AlignContent, AlignItems, AlignSelf, BackgroundColor, BorderColor, Display, FlexDirection,
-        Interaction, JustifyContent, Node, Overflow, OverflowAxis, PositionType, Style, UiRect,
-        Val,
+        AlignContent, AlignItems, AlignSelf, Display, FlexDirection, Interaction, JustifyContent,
+        Node, Overflow, OverflowAxis, Style, UiRect, Val,
     },
     utils::default,
-    window::{prelude::*, PrimaryWindow},
+    window::{PrimaryWindow, ReceivedCharacter, Window},
 };
 
 pub trait RangedValue<T>
@@ -241,17 +239,26 @@ pub fn setup_focus(mut commands: Commands) {
 }
 
 pub fn edit_focus_update(
-    mut focused: ResMut<FocusedElement>,
-    mut node_q: Query<(Entity, &Interaction), With<EditText>>,
+    mut focused_element: ResMut<FocusedElement>,
+    edit_text_q: Query<(Entity, &Interaction), (Changed<Interaction>, With<EditText>)>,
 ) {
-    for (entity, interaction) in &mut node_q {
-        if let Some(focused_entity) = focused.0 {
-            if interaction == &Interaction::Pressed && focused_entity != entity {
-                println!("updating focus");
-                focused.0 = Some(entity);
+    for (entity, interaction) in &edit_text_q {
+        match &interaction {
+            Interaction::Pressed => {
+                println!("pressed");
+                if let Some(focused) = &mut focused_element.0 {
+                    println!("updating focus");
+                    if *focused != entity {
+                        *focused = entity;
+                    }
+                } else {
+                    println!("set focus");
+                    focused_element.0 = Some(entity);
+                }
+
+                return;
             }
-        } else if interaction == &Interaction::Pressed {
-            focused.0 = Some(entity);
+            _ => {}
         }
     }
 }
@@ -289,14 +296,6 @@ pub fn resize_view(
 
             match &mut style.width {
                 Val::Percent(ref mut width) => {
-                    /*
-                    let half_node_size = node.size() / 2.;
-                    let view_width_px = window_size.x * (*width / 100.);
-                    let top_left = window_size.extend(0.)
-                    - global_transform.translation()
-                    - half_node_size.extend(0.);
-                    */
-
                     println!("resize {}", node.size(),);
 
                     if cursor_position.x > rect.min.x && cursor_position.x < rect.min.x + 8. {
@@ -396,15 +395,15 @@ pub fn slider_update(
 pub fn edit_text(
     mut input_chars: EventReader<ReceivedCharacter>,
     input: Res<ButtonInput<KeyCode>>,
-    focus: Res<FocusedElement>,
-    mut text_q: Query<(Entity, &mut EditText, &mut Text, &Style)>,
+    focused_element: Res<FocusedElement>,
+    mut edit_text_q: Query<(Entity, &mut EditText, &mut Text, &Style)>,
 ) {
-    let Some(focus) = focus.0 else {
+    let Some(focused_element) = focused_element.0 else {
         return;
     };
 
-    for (entity, mut edit_text, mut text, style) in &mut text_q {
-        if entity != focus {
+    for (entity, mut edit_text, mut text, style) in &mut edit_text_q {
+        if entity != focused_element {
             println!("skipping non-focused edit_text");
             continue;
         }
@@ -447,16 +446,15 @@ pub fn edit_text(
                 // `Delete`
                 "\u{7f}" => {
                     let len = text.sections[0].value.len();
-                    if edit_text.cursor.position <= len {
-                        text.sections[0]
-                            .value
-                            .remove(edit_text.cursor.position.saturating_sub(1));
+                    let pos = edit_text.cursor.position.saturating_sub(1);
+                    if len > 0 && len <= edit_text.cursor.position {
+                        text.sections[0].value.remove(pos);
                         edit_text.cursor.set_max(Some(len));
                     }
                     (false, '\u{0}')
                 }
-                ch if ch.chars().next().unwrap().is_ascii_control()
-                    && ch.chars().next().unwrap().is_ascii_whitespace() =>
+                ch if ch.chars().next().unwrap().is_control()
+                    && ch.chars().next().unwrap().is_whitespace() =>
                 {
                     if ch == "\r" || ch == "\n" {
                         // TODO FIXME Improve this at some point
@@ -478,7 +476,7 @@ pub fn edit_text(
                         (true, ' ')
                     }
                 }
-                ch if ch.chars().next().unwrap().is_ascii_control() => {
+                ch if ch.chars().next().unwrap().is_control() => {
                     println!("rejecting control: `{ch:#?}`");
 
                     (false, ch.chars().next().unwrap())
@@ -495,21 +493,17 @@ pub fn edit_text(
             }
 
             let len = text.sections[0].value.len();
-
-            edit_text.cursor.set_max(Some(len + 2));
+            edit_text.cursor.set_max(Some(len));
 
             if edit_text.cursor.position >= len {
-                println!("max");
                 text.sections[0].value.push(ch);
-                edit_text.cursor.position = len + 2;
+                edit_text.cursor.position = len;
             } else {
-                println!("inner");
-                text.sections[0]
-                    .value
-                    .insert(edit_text.cursor.position.saturating_sub(1), ch);
+                edit_text.cursor.increment();
+                text.sections[0].value.insert(edit_text.cursor.position, ch);
             }
 
-            assert!(edit_text.cursor.position <= text.sections[0].value.len() + 1);
+            assert!(edit_text.cursor.position <= text.sections[0].value.len());
         }
 
         if input.just_pressed(KeyCode::ArrowRight) {

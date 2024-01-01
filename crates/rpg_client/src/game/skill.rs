@@ -61,8 +61,6 @@ use rpg_core::{
 };
 use util::{cleanup::CleanupStrategy, math::intersect_aabb};
 
-use fastrand::Rng;
-
 use std::borrow::Cow;
 
 #[derive(Default, Debug, Component, Deref, DerefMut)]
@@ -77,12 +75,8 @@ pub struct InvulnerabilityTimer {
 #[derive(Default, Debug, Clone, Component, Deref, DerefMut)]
 pub struct Invulnerability(pub Vec<InvulnerabilityTimer>);
 
-pub enum SkillEventKind {
-    Contact,
-}
-
 #[derive(Event)]
-pub struct SkillEvent {
+pub struct SkillContactEvent {
     entity: Entity,
     owner_entity: Entity,
     defender_entity: Entity,
@@ -140,7 +134,7 @@ impl SkillUseBundle {
     }
 }
 
-pub(crate) fn update_invulnerability(
+pub fn update_invulnerability(
     time: Res<Time>,
     mut skill_q: Query<&mut Invulnerability, With<SkillUse>>,
 ) {
@@ -153,14 +147,14 @@ pub(crate) fn update_invulnerability(
     }
 }
 
-pub(crate) fn handle_contact(
+pub fn handle_contact(
     mut commands: Commands,
     metadata: Res<MetadataResources>,
     mut game_time: ResMut<GameTime>,
     mut game_state: ResMut<GameState>,
     mut ground_drops: ResMut<GroundItemDrops>,
     mut random: ResMut<Random>,
-    mut skill_events: EventReader<SkillEvent>,
+    mut skill_events: EventReader<SkillContactEvent>,
     mut skill_q: Query<(Entity, &mut Transform, &mut Invulnerability, &mut SkillUse)>,
     mut unit_q: Query<
         (
@@ -312,7 +306,7 @@ pub(crate) fn handle_contact(
     }
 }
 
-pub(crate) fn clean_skills(
+pub fn clean_skills(
     mut commands: Commands,
     time: Res<Time>,
     game_time: Res<GameTime>,
@@ -330,7 +324,7 @@ pub(crate) fn clean_skills(
             SkillInstance::Projectile(info) => match info.info.duration {
                 Some(d) => game_time.watch.elapsed_secs() - info.start_time >= d,
                 None => {
-                    if let Some(aerial) = &info.info.aerial {
+                    if info.info.aerial.is_some() {
                         transform.translation.y < info.info.size as f32 / 100.
                     } else {
                         false
@@ -353,7 +347,7 @@ pub(crate) fn clean_skills(
     }
 }
 
-pub(crate) fn update_skill(time: Res<Time>, mut skill_q: Query<(&mut Transform, &mut SkillUse)>) {
+pub fn update_skill(time: Res<Time>, mut skill_q: Query<(&mut Transform, &mut SkillUse)>) {
     let dt = time.delta_seconds();
     for (mut transform, mut skill_use) in &mut skill_q {
         match &mut skill_use.info {
@@ -406,8 +400,8 @@ pub(crate) fn update_skill(time: Res<Time>, mut skill_q: Query<(&mut Transform, 
     }
 }
 
-pub(crate) fn collide_skills(
-    mut skill_events: EventWriter<SkillEvent>,
+pub fn collide_skills(
+    mut skill_events: EventWriter<SkillContactEvent>,
     mut skill_q: Query<(Entity, &Transform, &Aabb, &Invulnerability, &SkillUse)>,
     unit_q: Query<(Entity, &Transform, &Aabb, &Unit), Without<CorpseTimer>>,
 ) {
@@ -446,7 +440,7 @@ pub(crate) fn collide_skills(
             };
 
             if collision {
-                skill_events.send(SkillEvent {
+                skill_events.send(SkillContactEvent {
                     entity: s_entity,
                     owner_entity: instance.owner,
                     defender_entity: u_entity,
@@ -456,7 +450,7 @@ pub(crate) fn collide_skills(
     }
 }
 
-pub(crate) fn prepare_skill(
+pub fn prepare_skill(
     owner: Entity,
     attack_data: &AttackData,
     game_time: &GameTime,

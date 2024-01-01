@@ -342,7 +342,7 @@ fn setup_splash_screen(
         ))
         .id();
 
-    let mut text_style = ui_theme.text_style.clone();
+    let mut text_style = ui_theme.text_style_regular.clone();
     text_style.color = ui_theme.text_color_light;
     text_style.font_size = ui_theme.font_size_xtra_large;
 

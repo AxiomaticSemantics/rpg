@@ -14,7 +14,6 @@ workspace = true
 git = "https://github.com/AxiomaticSemantics/bevy"
 features = [
   "bevy_asset",
-#  "bevy_sprite",  
   "bevy_text",
   "bevy_ui",
   "subpixel_glyph_atlas",

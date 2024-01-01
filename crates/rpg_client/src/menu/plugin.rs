@@ -161,49 +161,17 @@ fn spawn(
             UiRoot,
         ))
         .with_children(|p| {
-            super::main::spawn_main(
+            super::main::spawn(
                 p,
                 &textures,
                 &ui_theme,
                 &button_bundle,
-                &frame_hidden,
-                &text_node_style,
-                &text_style,
+                &ui_theme.frame_col_style,
             );
-            super::create::spawn_create(
-                p,
-                &ui_theme,
-                &button_bundle,
-                &frame_hidden,
-                &text_node_style,
-                &text_style,
-            );
-            super::load::spawn_load(
-                &save_slots,
-                p,
-                &ui_theme,
-                &button_bundle,
-                &frame_hidden,
-                &text_node_style,
-                &text_style,
-            );
-            super::settings::spawn_settings(
-                p,
-                &ui_theme,
-                &button_bundle,
-                &frame_hidden,
-                &text_node_style,
-                &text_style,
-            );
-
-            super::credits::spawn_credits(
-                p,
-                &ui_theme,
-                &button_bundle,
-                &frame_hidden,
-                &text_node_style,
-                &text_style,
-            );
+            super::create::spawn(p, &ui_theme, &button_bundle, &frame_hidden);
+            super::load::spawn(p, &ui_theme, &button_bundle, &frame_hidden, &save_slots);
+            super::settings::spawn(p, &ui_theme, &button_bundle, &frame_hidden);
+            super::credits::spawn(p, &ui_theme, &button_bundle, &frame_hidden);
         });
 
     println!("transition `AppState::Menu`");
