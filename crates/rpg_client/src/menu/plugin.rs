@@ -162,13 +162,13 @@ fn spawn(
         ))
         .with_children(|p| {
             super::main::spawn(
-                p,
                 &textures,
+                p,
                 &ui_theme,
                 &button_bundle,
                 &ui_theme.frame_col_style,
             );
-            super::create::spawn(p, &ui_theme, &button_bundle, &frame_hidden);
+            super::create::spawn(&textures, p, &ui_theme, &button_bundle, &frame_hidden);
             super::load::spawn(p, &ui_theme, &button_bundle, &frame_hidden, &save_slots);
             super::settings::spawn(p, &ui_theme, &button_bundle, &frame_hidden);
             super::credits::spawn(p, &ui_theme, &button_bundle, &frame_hidden);

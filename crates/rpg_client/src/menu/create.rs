@@ -1,4 +1,5 @@
 use crate::{
+    assets::TextureAssets,
     game::plugin::{GameState, PlayerOptions},
     menu::main::MainRoot,
     state::AppState,
@@ -22,8 +23,9 @@ use bevy::{
     prelude::{Deref, DerefMut},
     text::Text,
     ui::{
-        node_bundles::{ButtonBundle, NodeBundle, TextBundle},
-        AlignItems, AlignSelf, Display, FocusPolicy, Interaction, Style, UiRect, Val,
+        node_bundles::{ButtonBundle, ImageBundle, NodeBundle, TextBundle},
+        AlignItems, AlignSelf, Display, FocusPolicy, Interaction, JustifyContent, Style, UiImage,
+        UiRect, Val,
     },
     utils::default,
 };
@@ -46,7 +48,13 @@ pub struct CancelCreateButton;
 #[derive(Deref, DerefMut, Resource)]
 pub struct SelectedClass(pub Class);
 
-pub fn spawn(builder: &mut ChildBuilder, ui_theme: &UiTheme, button: &ButtonBundle, frame: &Style) {
+pub fn spawn(
+    textures: &TextureAssets,
+    builder: &mut ChildBuilder,
+    ui_theme: &UiTheme,
+    button: &ButtonBundle,
+    frame: &Style,
+) {
     let mut row_centered = ui_theme.row_style.clone();
     row_centered.align_self = AlignSelf::Center;
 
@@ -108,7 +116,7 @@ pub fn spawn(builder: &mut ChildBuilder, ui_theme: &UiTheme, button: &ButtonBund
                     });
 
                     p.spawn(NodeBundle {
-                        style: ui_theme.row_style.clone(),
+                        style: ui_theme.col_style.clone(),
                         ..default()
                     })
                     .with_children(|p| {
@@ -156,6 +164,55 @@ pub fn spawn(builder: &mut ChildBuilder, ui_theme: &UiTheme, button: &ButtonBund
                                         ..default()
                                     },
                                 ));
+                            });
+                        });
+                        p.spawn(NodeBundle {
+                            style: ui_theme.frame_row_style.clone(),
+                            ..default()
+                        })
+                        .with_children(|p| {
+                            p.spawn(TextBundle {
+                                text: Text::from_section(
+                                    "Hardcore:",
+                                    ui_theme.text_style_regular.clone(),
+                                ),
+                                ..default()
+                            });
+
+                            let mut button_style = Style {
+                                align_items: AlignItems::Center,
+                                justify_content: JustifyContent::Center,
+                                min_width: Val::Px(28.),
+                                min_height: Val::Px(28.),
+                                max_width: Val::Px(28.),
+                                max_height: Val::Px(28.),
+                                padding: UiRect::all(ui_theme.padding),
+                                border: UiRect::all(ui_theme.border),
+                                ..default()
+                            };
+
+                            p.spawn(ButtonBundle {
+                                style: button_style.clone(),
+                                background_color: ui_theme.button_theme.normal_background_color,
+                                border_color: ui_theme.border_color,
+                                ..default()
+                            })
+                            .with_children(|p| {
+                                p.spawn(ImageBundle {
+                                    image: UiImage {
+                                        texture: textures.icons["checkmark"].clone_weak(),
+
+                                        ..default()
+                                    },
+                                    style: Style {
+                                        max_width: Val::Px(22.),
+                                        min_height: Val::Px(22.),
+                                        //display: Display::None,
+                                        ..default()
+                                    },
+                                    //transform: Transform::from_scale(Vec3::splat(0.5)),
+                                    ..default()
+                                });
                             });
                         });
                     });

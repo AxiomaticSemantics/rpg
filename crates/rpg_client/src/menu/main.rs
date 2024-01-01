@@ -44,8 +44,8 @@ pub struct SettingsButton;
 pub struct CreditsButton;
 
 pub fn spawn(
-    builder: &mut ChildBuilder,
     textures: &TextureAssets,
+    builder: &mut ChildBuilder,
     ui_theme: &UiTheme,
     button: &ButtonBundle,
     frame: &Style,
