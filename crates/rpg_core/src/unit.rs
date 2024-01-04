@@ -28,14 +28,23 @@ pub enum UnitKind {
     Villain,
 }
 
+#[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Ser, De)]
+pub enum HeroGameMode {
+    #[default]
+    Normal,
+    Hardcore,
+}
+
 #[derive(Ser, De, Clone, Debug)]
 pub struct HeroInfo {
+    pub game_mode: HeroGameMode,
     pub xp_curr: Stat,
 }
 
 impl HeroInfo {
-    pub fn new(metadata: &Metadata) -> Self {
+    pub fn new(metadata: &Metadata, game_mode: HeroGameMode) -> Self {
         Self {
+            game_mode,
             xp_curr: Stat::new(metadata.stat.stats["Xp"].id, Value::zero(ValueKind::U64)),
         }
     }
@@ -160,7 +169,7 @@ impl Unit {
     pub fn add_default_skills(&mut self, metadata: &Metadata) {
         let skill_id = match &self.info {
             UnitInfo::Hero(_) => metadata.unit.hero.default_skills[&self.class],
-            UnitInfo::Villain(info) => metadata.unit.villains.villains[&info.id].skill_id,
+            UnitInfo::Villain(info) => metadata.unit.villains[&info.id].skill_id,
         };
 
         self.add_skill(metadata, skill_id, 1);
@@ -448,12 +457,7 @@ impl Unit {
         match self.kind {
             UnitKind::Villain => {
                 let villain_info = self.info.villain();
-                let villain_info = metadata
-                    .unit
-                    .villains
-                    .villains
-                    .get(&villain_info.id)
-                    .unwrap();
+                let villain_info = metadata.unit.villains.get(&villain_info.id).unwrap();
 
                 let xp = Value::U64(villain_info.xp_reward);
 
@@ -552,19 +556,19 @@ impl Unit {
         if let Some(hp_cost) = skill_cost.hp {
             // TODO Decide if skill use should be denied or allow the user to /wrists
             if self.stats.vitals.stats["Hp"].value < hp_cost {
-                return SkillUseResult::Blocked;
+                return SkillUseResult::InsufficientResources;
             }
         }
 
         if let Some(ep_cost) = skill_cost.ep {
             if self.stats.vitals.stats["Ep"].value < ep_cost {
-                return SkillUseResult::Blocked;
+                return SkillUseResult::InsufficientResources;
             }
         }
 
         if let Some(mp_cost) = skill_cost.mp {
             if self.stats.vitals.stats["Mp"].value < mp_cost {
-                return SkillUseResult::Blocked;
+                return SkillUseResult::InsufficientResources;
             }
         }
 
@@ -585,11 +589,6 @@ impl Unit {
         let Some(skill) = self.skills.iter().find(|s| s.id == skill_id) else {
             return SkillUseResult::Error;
         };
-        let skill_info = metadata.skill.skills.get(&skill_id).unwrap();
-
-        if skill_info.use_range > 0 && skill_info.use_range < target_distance {
-            return SkillUseResult::Error;
-        }
 
         let skill_cost = skill.get_skill_cost(metadata);
 
@@ -621,7 +620,7 @@ pub mod generation {
     ) -> Unit {
         let villain_id: VillainId = VillainId::sample(rng);
 
-        let villain_table_entry = metadata.unit.villains.villains.get(&villain_id).unwrap();
+        let villain_table_entry = metadata.unit.villains.get(&villain_id).unwrap();
         let class = villain_table_entry.class;
 
         let uid = next_uid.0;

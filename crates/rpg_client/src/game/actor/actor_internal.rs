@@ -1,14 +1,13 @@
 use super::{
     animation::AnimationState,
     player::{Player, PlayerBundle},
-    unit::{Hero, ThinkTimer, Unit, UnitBundle, Villain, VillainBundle},
+    unit::{Hero, Unit, UnitBundle},
+    villain::{ThinkTimer, Villain, VillainBundle, VillainState},
 };
 use crate::game::{
     actions::Actions, assets::RenderResources, health_bar::HealthBar, item::UnitStorage,
     metadata::MetadataResources, passive_tree::PassiveTree, plugin::GameSessionCleanup,
 };
-
-use audio_manager::plugin::AudioActions;
 
 use bevy::{
     animation::AnimationClip,
@@ -24,6 +23,7 @@ use bevy::{
     utils::default,
 };
 
+use audio_manager::plugin::AudioActions;
 use rpg_core::{
     class::Class,
     passive_tree::PassiveSkillGraph,
@@ -163,7 +163,7 @@ pub(crate) fn spawn_actor(
         }
         UnitKind::Villain => {
             let unit_info = unit.info.villain();
-            let villain_info = &metadata.rpg.unit.villains.villains[&unit_info.id];
+            let villain_info = &metadata.rpg.unit.villains[&unit_info.id];
 
             let actor = renderables.actors[actor_key].actor.clone();
 
@@ -178,7 +178,7 @@ pub(crate) fn spawn_actor(
                 VillainBundle {
                     villain: Villain {
                         look_target: None,
-                        moving: false,
+                        state: VillainState::Idle,
                     },
                     think_timer,
                 },

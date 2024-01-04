@@ -15,10 +15,7 @@ use console_plugin::{
     plugin::{ConsoleHistoryItem, ConsoleInput},
 };*/
 
-use ui_util::{
-    style::{UiRoot, UiTheme},
-    widgets::{EditText, List, ListPosition},
-};
+use ui_util::style::{UiRoot, UiTheme};
 use util::cleanup::{self, CleanupStrategy};
 
 use bevy::{
@@ -57,6 +54,7 @@ impl Plugin for MenuPlugin {
                     menu::main::credits_button,
                     menu::create::cancel_button,
                     menu::create::create_class,
+                    menu::create::set_game_mode,
                     menu::load::cancel_button,
                     menu::load::select_save_slot,
                     menu::load::load_button,

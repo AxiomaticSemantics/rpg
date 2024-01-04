@@ -69,6 +69,7 @@ impl FromWorld for TextureAssets {
 
         let mut icons = HashMap::new();
         icons.insert("checkmark", server.load("textures/icons/checkmark.png"));
+        icons.insert("transparent", server.load("textures/icons/transparent.png"));
         icons.insert("frame", server.load("ui/frame.png"));
         icons.insert("p_circle", server.load("ui/circle_512.png"));
 

@@ -15,6 +15,7 @@ pub struct VillainsTableEntry {
     pub drop_chances: u16,
     pub drop_chance: f32,
     pub move_speed: f32,
+    pub max_vision: f32,
 }
 
 #[derive(De)]
@@ -31,10 +32,5 @@ pub struct VillainTable {
 pub struct UnitTable {
     pub hero: HeroTable,
     pub villain: VillainTable,
-    pub villains: VillainsTable,
-}
-
-#[derive(De)]
-pub struct VillainsTable {
     pub villains: HashMap<VillainId, VillainsTableEntry>,
 }
