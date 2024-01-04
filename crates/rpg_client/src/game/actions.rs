@@ -42,7 +42,8 @@ pub enum Kind {
 pub enum ActionData {
     Move(Vec3),
     MoveEnd,
-    Look(Vec3),
+    LookDir(Vec3),
+    LookPoint(Vec3),
     Knockback(KnockbackData),
     Attack(AttackData),
 }
@@ -70,7 +71,7 @@ impl Action {
         let kind = match data {
             ActionData::Move(_) => Kind::Move,
             ActionData::MoveEnd => Kind::MoveEnd,
-            ActionData::Look(_) => Kind::Look,
+            ActionData::LookDir(_) | ActionData::LookPoint(_) => Kind::Look,
             ActionData::Attack(_) => Kind::Attack,
             ActionData::Knockback(_) => Kind::Knockback,
         };

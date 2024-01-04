@@ -8,7 +8,8 @@ use super::{
     actions,
     actor::{
         self, player,
-        unit::{self, Unit, VillainSpawner},
+        unit::{self, Unit},
+        villain::{self, VillainSpawner},
     },
     assets::RenderResources,
     controls::{self, Controls, CursorPosition},
@@ -21,7 +22,7 @@ use super::{
 };
 
 use audio_manager::plugin::AudioActions;
-use rpg_core::{class::Class, uid::NextUid};
+use rpg_core::{class::Class, uid::NextUid, unit::HeroGameMode};
 use util::cleanup::CleanupStrategy;
 
 use bevy::{
@@ -58,6 +59,7 @@ pub struct GameCamera {
 pub struct PlayerOptions {
     pub class: Class,
     pub name: String,
+    pub game_mode: HeroGameMode,
 }
 
 #[derive(Debug, Default)]
@@ -219,7 +221,7 @@ impl Plugin for GamePlugin {
                         (
                             controls::update_controls,
                             player::input_actions,
-                            unit::villain_think,
+                            villain::villain_think,
                             unit::action,
                             skill::update_skill,
                             unit::collide_units,
@@ -280,7 +282,7 @@ impl Plugin for GamePlugin {
                 )
                     .run_if(in_state(AppState::Game).and_then(is_playing)),
             )
-            // This system is special and transitions from Game to GameOver when the player dies.
+            // This system is special and transitions from Game to GameOver when the player dies
             .add_systems(
                 PostUpdate,
                 (ui::hud::update, ui::game_over::game_over_transition)
@@ -293,7 +295,7 @@ impl Plugin for GamePlugin {
                     environment::day_night_cycle,
                     stopwatch,
                     unit::upkeep,
-                    unit::spawner,
+                    villain::spawner,
                     unit::corpse_removal,
                     skill::clean_skills,
                     skill::update_invulnerability,
@@ -393,7 +395,6 @@ fn is_game_over(game_state: Res<GameState>) -> bool {
     game_state.state.game_over()
 }
 
-/*
 fn _calculate_normals(indices: &Vec<u32>, vertices: &[[f32; 3]], normals: &mut [[f32; 3]]) {
     let vertex_count = indices.len();
 
@@ -432,7 +433,6 @@ fn _make_indices(indices: &mut Vec<u32>, size: [u32; 2]) {
         }
     }
 }
-*/
 
 pub(crate) fn load_assets(mut commands: Commands) {
     println!("loading game assets");

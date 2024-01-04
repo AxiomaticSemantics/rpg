@@ -10,14 +10,14 @@ use ui_util::{
     widgets::EditText,
 };
 
-use rpg_core::class::Class;
+use rpg_core::{class::Class, unit::HeroGameMode};
 
 use bevy::{
     ecs::{
         component::Component,
         query::{Changed, With},
         schedule::NextState,
-        system::{ParamSet, Query, ResMut, Resource},
+        system::{ParamSet, Query, Res, ResMut, Resource},
     },
     hierarchy::{BuildChildren, ChildBuilder},
     prelude::{Deref, DerefMut},
@@ -29,6 +29,9 @@ use bevy::{
     },
     utils::default,
 };
+
+#[derive(Component)]
+pub struct CreateMode(pub HeroGameMode);
 
 #[derive(Component)]
 pub struct CreatePlayerName;
@@ -43,7 +46,7 @@ pub struct CreateButton;
 pub struct CreatePlayerClass(Class);
 
 #[derive(Component)]
-pub struct CancelCreateButton;
+pub struct CancelButton;
 
 #[derive(Deref, DerefMut, Resource)]
 pub struct SelectedClass(pub Class);
@@ -191,28 +194,29 @@ pub fn spawn(
                                 ..default()
                             };
 
-                            p.spawn(ButtonBundle {
+                            p.spawn(NodeBundle {
                                 style: button_style.clone(),
                                 background_color: ui_theme.button_theme.normal_background_color,
                                 border_color: ui_theme.border_color,
                                 ..default()
                             })
                             .with_children(|p| {
-                                p.spawn(ImageBundle {
-                                    image: UiImage {
-                                        texture: textures.icons["checkmark"].clone_weak(),
-
+                                p.spawn((
+                                    CreateMode(HeroGameMode::Normal),
+                                    Interaction::None,
+                                    ImageBundle {
+                                        image: UiImage {
+                                            texture: textures.icons["transparent"].clone_weak(),
+                                            ..default()
+                                        },
+                                        style: Style {
+                                            max_width: Val::Px(24.),
+                                            min_height: Val::Px(24.),
+                                            ..default()
+                                        },
                                         ..default()
                                     },
-                                    style: Style {
-                                        max_width: Val::Px(22.),
-                                        min_height: Val::Px(22.),
-                                        //display: Display::None,
-                                        ..default()
-                                    },
-                                    //transform: Transform::from_scale(Vec3::splat(0.5)),
-                                    ..default()
-                                });
+                                ));
                             });
                         });
                     });
@@ -224,19 +228,18 @@ pub fn spawn(
                 ..default()
             })
             .with_children(|p| {
-                p.spawn((button.clone(), CancelCreateButton))
-                    .with_children(|p| {
-                        p.spawn(TextBundle::from_section(
-                            "Cancel",
-                            ui_theme.text_style_regular.clone(),
-                        ));
-                    });
+                p.spawn((button.clone(), CancelButton)).with_children(|p| {
+                    p.spawn(TextBundle::from_section(
+                        "Cancel",
+                        ui_theme.text_style_regular.clone(),
+                    ));
+                });
             });
         });
 }
 
 pub fn cancel_button(
-    interaction_q: Query<&Interaction, (Changed<Interaction>, With<CancelCreateButton>)>,
+    interaction_q: Query<&Interaction, (Changed<Interaction>, With<CancelButton>)>,
     mut menu_set: ParamSet<(
         Query<&mut Style, With<MainRoot>>,
         Query<&mut Style, With<CreateRoot>>,
@@ -249,6 +252,27 @@ pub fn cancel_button(
     }
 }
 
+pub fn set_game_mode(
+    textures: Res<TextureAssets>,
+    mut game_mode_q: Query<(&mut CreateMode, &mut UiImage, &Interaction), Changed<Interaction>>,
+) {
+    let Ok((mut game_mode, mut ui_image, interaction)) = game_mode_q.get_single_mut() else {
+        return;
+    };
+
+    if interaction == &Interaction::Pressed {
+        if game_mode.0 == HeroGameMode::Normal {
+            println!("setting hardcore mode");
+            ui_image.texture = textures.icons["checkmark"].clone_weak();
+            game_mode.0 = HeroGameMode::Hardcore;
+        } else {
+            println!("setting normal mode");
+            ui_image.texture = textures.icons["transparent"].clone_weak();
+            game_mode.0 = HeroGameMode::Normal;
+        }
+    }
+}
+
 pub fn create_class(
     mut state: ResMut<NextState<AppState>>,
     mut game_state: ResMut<GameState>,
@@ -256,6 +280,7 @@ pub fn create_class(
         (&Interaction, &CreatePlayerClass),
         (Changed<Interaction>, With<CreatePlayerClass>),
     >,
+    game_mode_q: Query<&CreateMode>,
     mut menu_root_q: Query<&mut Style, With<UiRoot>>,
     player_name_text_q: Query<&Text, With<CreatePlayerName>>,
 ) {
@@ -265,9 +290,11 @@ pub fn create_class(
     }
 
     if let Ok((Interaction::Pressed, create_class)) = interaction_q.get_single() {
+        let game_mode = game_mode_q.single();
         game_state.player_config = Some(PlayerOptions {
             name: "Player".to_string(),
             class: create_class.0,
+            game_mode: game_mode.0,
         });
 
         menu_root_q.single_mut().display = Display::None;

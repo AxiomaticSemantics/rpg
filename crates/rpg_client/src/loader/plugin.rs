@@ -1,5 +1,5 @@
 use crate::{
-    assets::{AudioAssets, FontAssets, JsonAssets, TextureAssets},
+    assets::{AudioAssets, JsonAssets, TextureAssets},
     game::{self, plugin::GamePlugin, state_saver},
     menu::plugin::MenuPlugin,
     splash::plugin::SplashScreenPlugin,
@@ -93,7 +93,6 @@ impl Plugin for LoaderPlugin {
             .add_systems(Startup, set_window_icon)
             .add_plugins(UtilityPlugin)
             .init_resource::<JsonAssets>()
-            .init_resource::<FontAssets>()
             .init_resource::<TextureAssets>()
             .init_resource::<AudioAssets>()
             .init_resource::<UiTheme>()

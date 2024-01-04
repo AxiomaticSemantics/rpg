@@ -2,7 +2,8 @@ use crate::game::{
     actions::{Action, ActionData, Actions, AttackData},
     actor::{
         self,
-        unit::{CorpseTimer, Hero, Unit, Villain},
+        unit::{CorpseTimer, Hero, Unit},
+        villain::Villain,
     },
     assets::RenderResources,
     controls::{Controls, CursorPosition},
@@ -22,13 +23,14 @@ use rpg_core::{
 use bevy::{
     ecs::{
         bundle::Bundle,
+        change_detection::DetectChanges,
         component::Component,
         event::EventReader,
         query::{With, Without},
         system::{Commands, Query, Res, ResMut},
     },
     gizmos::gizmos::Gizmos,
-    math::Vec3,
+    math::{Vec2, Vec3},
     pbr::SpotLight,
     render::color::Color,
     time::Time,
@@ -105,7 +107,7 @@ pub fn input_actions(
 
     let (transform, mut actions, unit) = player_q.single_mut();
 
-    if controls.mouse_primary.pressed {
+    if controls.mouse_primary.pressed || controls.gamepad_b.pressed {
         let skill_id = unit.active_skills.primary.skill.unwrap();
 
         let (origin, target) =
@@ -128,24 +130,41 @@ pub fn input_actions(
         }
     }
 
-    if controls.mouse_secondary.pressed {
+    if controls.mouse_secondary.pressed || controls.gamepad_a.pressed {
         actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
-    } else if controls.mouse_secondary.just_released {
+    } else if controls.mouse_secondary.just_released || controls.gamepad_a.just_released {
         actions.request(Action::new(ActionData::MoveEnd, None, true));
     }
 
-    let look_point = cursor_position.ground;
-    let target_dir = (look_point - transform.translation).normalize_or_zero();
-    let rot_diff = transform.forward().dot(target_dir);
-    if (rot_diff - 1.).abs() > 0.001 {
-        //println!("rot_diff {rot_diff}");
-        actions.request(Action::new(ActionData::Look(look_point), None, true));
+    /*if controls.gamepad_axis_left != Vec2::ZERO {
+        let atan = controls
+            .gamepad_axis_left
+            .x
+            .atan2(-controls.gamepad_axis_left.y);
+        let sc = atan.sin_cos();
+        //println!("atan {atan} f sc_f {sc:?} {}", transform.forward());
+
+        Some(Vec3::new(sc.0, 0., sc.1))
+    }*/
+    let target_dir = if cursor_position.is_changed() {
+        let look_point = cursor_position.ground;
+        Some((look_point - transform.translation).normalize_or_zero())
+    } else {
+        None
+    };
+
+    if let Some(target_dir) = target_dir {
+        let rot_diff = transform.forward().dot(target_dir);
+        if (rot_diff - 1.).abs() > 0.001 {
+            //println!("rot_diff {rot_diff}");
+            actions.request(Action::new(ActionData::LookDir(target_dir), None, true));
+        }
     }
 
     // println!("actions: {actions:?} controls: {controls:?}");
 }
 
-pub(crate) fn update_spotlight(
+pub fn update_spotlight(
     player_q: Query<&Transform, (With<Player>, Without<SpotLight>)>,
     mut spotlight_q: Query<&mut Transform, (With<SpotLight>, Without<Player>)>,
 ) {
@@ -162,7 +181,7 @@ pub(crate) fn update_spotlight(
     }
 }
 
-pub(crate) fn update_camera(
+pub fn update_camera(
     time: Res<Time>,
     controls: Res<Controls>,
     player_q: Query<&Transform, With<Player>>,
@@ -175,22 +194,35 @@ pub(crate) fn update_camera(
     let player_transform = player_q.single();
 
     let (mut camera_transform, mut game_camera) = camera_q.single_mut();
-    // println!("wheel {} {camera_transform:?} {player_transform:?}", controls.mouse_wheel);
 
-    if controls.mouse_wheel_delta != 0. {
-        game_camera.offset.y -= controls.mouse_wheel_delta * time.delta_seconds();
-        game_camera.offset.y = game_camera
-            .offset
-            .y
-            .clamp(game_camera.min_y, game_camera.max_y);
-        game_camera.offset.z = game_camera.offset.y * 0.55;
+    let delta = if controls.mouse_wheel_delta != 0. {
+        controls.mouse_wheel_delta * time.delta_seconds()
+    } else if controls.gamepad_lt_a.pressed {
+        4. * time.delta_seconds()
+    } else if controls.gamepad_lt_b.pressed {
+        -4. * time.delta_seconds()
+    } else {
+        0.
+    };
+
+    if delta != 0. {
+        game_camera.offset.y =
+            (game_camera.offset.y - delta).clamp(game_camera.min_y, game_camera.max_y);
     }
 
-    camera_transform.translation = player_transform.translation + game_camera.offset;
-    camera_transform.look_at(player_transform.translation, Vec3::Y);
+    let wanted_z = game_camera.offset.y * 0.55;
+    if (wanted_z - game_camera.offset.z).abs() > 0.001 {
+        game_camera.offset.z = wanted_z;
+    }
+
+    let camera_position = player_transform.translation + game_camera.offset;
+    if camera_transform.translation != camera_position {
+        camera_transform.translation = camera_position;
+        camera_transform.look_at(player_transform.translation, Vec3::Y);
+    }
 }
 
-pub(crate) fn spawn_player(
+pub fn spawn_player(
     mut commands: Commands,
     mut game_state: ResMut<GameState>,
     metadata: Res<MetadataResources>,
@@ -217,7 +249,7 @@ pub(crate) fn spawn_player(
             game_state.next_uid.0,
             player_config.class,
             UnitKind::Hero,
-            UnitInfo::Hero(HeroInfo::new(&metadata.rpg)),
+            UnitInfo::Hero(HeroInfo::new(&metadata.rpg, player_config.game_mode)),
             1,
             player_config.name.clone(),
             None,

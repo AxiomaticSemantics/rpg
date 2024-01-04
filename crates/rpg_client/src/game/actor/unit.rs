@@ -2,8 +2,8 @@
 
 use crate::{
     game::{
-        actions::{Action, ActionData, Actions, AttackData, State},
-        actor::{self, animation::AnimationState, player::Player},
+        actions::{ActionData, Actions, State},
+        actor::{animation::AnimationState, player::Player},
         assets::RenderResources,
         health_bar::{HealthBar, HealthBarFrame, HealthBarRect},
         item::{GroundItem, ResourceItem, StorableItem, UnitStorage},
@@ -18,7 +18,6 @@ use audio_manager::plugin::AudioActions;
 use rpg_core::{
     skill::{SkillInfo, SkillUseResult},
     storage::Storage,
-    uid::NextUid,
     unit::UnitKind,
 };
 use util::math::intersect_aabb;
@@ -31,7 +30,7 @@ use bevy::{
         component::Component,
         entity::Entity,
         query::{With, Without},
-        system::{Commands, ParamSet, Query, Res, ResMut, Resource},
+        system::{Commands, ParamSet, Query, Res, ResMut},
     },
     hierarchy::{Children, DespawnRecursiveExt},
     input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
@@ -40,11 +39,7 @@ use bevy::{
     render::{mesh::Mesh, primitives::Aabb},
     time::{Time, Timer, TimerMode},
     transform::components::Transform,
-    utils::Duration,
 };
-
-#[derive(Component, Default, Debug, Deref, DerefMut)]
-pub struct ThinkTimer(pub Timer);
 
 #[derive(Component, Default, Debug, Deref, DerefMut)]
 pub struct CorpseTimer(pub Timer);
@@ -52,17 +47,11 @@ pub struct CorpseTimer(pub Timer);
 #[derive(Component)]
 pub struct Hero;
 
-#[derive(Component)]
-pub struct Villain {
-    pub look_target: Option<Vec3>,
-    pub moving: bool,
-}
-
 #[derive(Debug, Component, Deref, DerefMut)]
 pub struct Unit(pub rpg_core::unit::Unit);
 
 #[derive(Bundle)]
-pub(crate) struct UnitBundle {
+pub struct UnitBundle {
     pub unit: Unit,
 }
 
@@ -72,76 +61,13 @@ impl UnitBundle {
     }
 }
 
-#[derive(Bundle)]
-pub(crate) struct VillainBundle {
-    pub villain: Villain,
-    pub think_timer: ThinkTimer,
-}
-
-#[derive(Resource, Default)]
-pub struct VillainSpawner {
-    pub units: u32,
-    pub frequency: f32,
-    pub timer: Timer,
-}
-
-impl VillainSpawner {
-    pub fn update_frequency(&mut self, frequency: f32) {
-        if frequency != self.frequency {
-            println!("updating frequency from {} to {frequency}", self.frequency);
-            self.frequency = frequency;
-            self.timer.set_duration(Duration::from_secs_f32(frequency));
-            if self.timer.elapsed_secs() > frequency {
-                self.timer.reset();
-            }
-        }
-    }
-}
-
-pub(crate) fn spawner(
-    mut commands: Commands,
-    time: Res<Time>,
-    mut spawner: ResMut<VillainSpawner>,
-    mut state: ResMut<GameState>,
-    mut random: ResMut<Random>,
-    metadata: Res<MetadataResources>,
-    renderables: Res<RenderResources>,
-    hero_q: Query<(&Unit, &Transform), With<Hero>>,
-) {
-    // Eventually resurrection or continuation of villain actions may be desired, keep this check
-    // here for now
-    let (hero_unit, hero_transform) = hero_q.single();
-    if !hero_unit.is_alive() {
-        return;
-    }
-
-    spawner.timer.tick(time.delta());
-    if spawner.timer.finished() || state.session_stats.spawned == 0 {
-        let frequency = spawner.frequency * 0.995;
-        if state.session_stats.spawned != 0 {
-            spawner.update_frequency(frequency);
-        }
-
-        spawn_villain(
-            &mut commands,
-            &mut state.next_uid,
-            &hero_transform.translation,
-            &metadata,
-            &renderables,
-            &mut random,
-        );
-
-        state.session_stats.spawned += 1;
-    }
-}
-
-pub(crate) fn upkeep(time: Res<Time>, mut unit_q: Query<&mut Unit, Without<CorpseTimer>>) {
+pub fn upkeep(time: Res<Time>, mut unit_q: Query<&mut Unit, Without<CorpseTimer>>) {
     for mut unit in &mut unit_q {
         unit.stats.apply_regeneration(time.delta_seconds());
     }
 }
 
-pub(crate) fn update_health_bars(
+pub fn update_health_bars(
     mut unit_q: Query<
         (&Unit, &Transform, &mut HealthBar),
         (
@@ -194,7 +120,8 @@ pub(crate) fn update_health_bars(
             health_bar.curr = *unit.stats.vitals.stats["Hp"].value.u32();
 
             changed = true;
-        }
+        };
+
         if unit.stats.vitals.stats["HpMax"].value != health_bar.max {
             health_bar.max = *unit.stats.vitals.stats["HpMax"].value.u32();
 
@@ -213,7 +140,7 @@ pub(crate) fn update_health_bars(
 }
 
 // TODO FIXME this is just a buggy hack
-pub(crate) fn collide_units(
+pub fn collide_units(
     mut unit_q: Query<(&mut Transform, &Aabb), (With<Unit>, Without<CorpseTimer>)>,
 ) {
     let mut combinations = unit_q.iter_combinations_mut();
@@ -233,7 +160,7 @@ pub(crate) fn collide_units(
 }
 
 // TODO move this to somewhere else
-pub(crate) fn pick_storable_items(
+pub fn pick_storable_items(
     mut commands: Commands,
     mouse_input: Res<ButtonInput<MouseButton>>,
     key_input: Res<ButtonInput<KeyCode>>,
@@ -267,19 +194,19 @@ pub(crate) fn pick_storable_items(
                 return;
             };
 
-            let item = i_item.0.take().unwrap();
-            slot.item = Some(item);
+            slot.item = i_item.0.take();
 
             u_audio.push("item_pickup".into());
             game_state.session_stats.items_looted += 1;
 
             commands.entity(i_entity).despawn_recursive();
+            return;
         }
     }
 }
 
 // TODO factor out unit targetting code to a component
-pub(crate) fn attract_resource_items(
+pub fn attract_resource_items(
     mut commands: Commands,
     mut game_state: ResMut<GameState>,
     time: Res<Time>,
@@ -322,7 +249,7 @@ pub(crate) fn attract_resource_items(
     }
 }
 
-pub(crate) fn action(
+pub fn action(
     mut commands: Commands,
     time: Res<Time>,
     game_time: Res<GameTime>,
@@ -357,8 +284,6 @@ pub(crate) fn action(
                 panic!("expected knockback data");
             };
 
-            //println!("knockback {knockback:?}");
-
             if game_time.watch.elapsed_secs() < knockback.start + knockback.duration {
                 let target =
                     -transform.forward() * time.delta_seconds() * (knockback.speed as f32 / 100.);
@@ -375,22 +300,18 @@ pub(crate) fn action(
                 panic!("expected attack data");
             };
 
-            // println!("Attack Handler");
             match &mut action.state {
                 State::Pending => {
                     let distance = (attack.user.distance(attack.target) * 100.).round() as u32;
                     match unit.can_use_skill(&metadata.rpg, attack.skill_id, distance) {
-                        SkillUseResult::Blocked | SkillUseResult::InsufficientResources => {
+                        SkillUseResult::Blocked
+                        | SkillUseResult::OutOfRange
+                        | SkillUseResult::InsufficientResources => {
                             action.state = State::Completed;
                             //println!("skill use blocked {:?}", unit.skills);
                             continue;
                         }
                         SkillUseResult::Ok => {}
-                        SkillUseResult::OutOfRange => {
-                            println!("out of range {distance}");
-                            action.state = State::Completed;
-                            continue;
-                        }
                         SkillUseResult::Error => {
                             panic!("Skill use error");
                         }
@@ -431,12 +352,8 @@ pub(crate) fn action(
                     let distance = (attack.user.distance(attack.target) * 100.).round() as u32;
                     let skill_use_result = unit.use_skill(&metadata.rpg, attack.skill_id, distance);
                     match skill_use_result {
-                        SkillUseResult::OutOfRange
-                        | SkillUseResult::Error
-                        | SkillUseResult::Blocked => {
-                            panic!("This should never happen. {skill_use_result:?}")
-                        }
-                        _ => {}
+                        SkillUseResult::Ok => {}
+                        _ => panic!("This should never happen. {skill_use_result:?}"),
                     }
 
                     let Some(skill) = unit.skills.iter().find(|s| s.id == attack.skill_id) else {
@@ -483,11 +400,14 @@ pub(crate) fn action(
         }
 
         if let Some(action) = &mut actions.look {
-            let ActionData::Look(target) = action.data else {
+            let wanted = if let ActionData::LookPoint(target) = action.data {
+                transform.looking_at(target, Vec3::Y)
+            } else if let ActionData::LookDir(dir) = action.data {
+                transform.looking_to(dir, Vec3::Y)
+            } else {
                 panic!("Invalid action data");
             };
 
-            let wanted = transform.looking_at(target, Vec3::Y);
             let diff = transform.rotation.angle_between(wanted.rotation);
             let speed = consts::TAU * 1.33;
             let ratio = (speed * dt) / diff;
@@ -532,7 +452,7 @@ pub(crate) fn action(
     }
 }
 
-pub(crate) fn corpse_removal(
+pub fn corpse_removal(
     mut commands: Commands,
     time: Res<Time>,
     mut unit_q: Query<(Entity, &mut CorpseTimer, &mut HealthBar), With<Unit>>,
@@ -548,117 +468,4 @@ pub(crate) fn corpse_removal(
             commands.entity(entity).despawn_recursive();
         }
     }
-}
-
-pub(crate) fn villain_think(
-    time: Res<Time>,
-    mut rng: ResMut<Random>,
-    metadata: Res<MetadataResources>,
-    hero_q: Query<(&Transform, &Unit), (Without<Villain>, With<Hero>)>,
-    mut villain_q: Query<
-        (
-            &Transform,
-            &Unit,
-            &mut Villain,
-            &mut Actions,
-            &mut ThinkTimer,
-        ),
-        Without<CorpseTimer>,
-    >,
-) {
-    let (hero_transform, hero_unit) = hero_q.single();
-    if !hero_unit.is_alive() {
-        return;
-    }
-
-    for (transform, unit, mut villain, mut actions, mut think_timer) in &mut villain_q {
-        think_timer.tick(time.delta());
-
-        let target_dir = (hero_transform.translation - transform.translation).normalize_or_zero();
-        let rot_diff = transform.forward().dot(target_dir) - 1.;
-        let want_look = rot_diff.abs() > 0.001;
-
-        if want_look {
-            actions.request(Action::new(
-                ActionData::Look(hero_transform.translation),
-                None,
-                true,
-            ));
-        }
-
-        let distance =
-            (transform.translation.distance(hero_transform.translation) * 100.).round() as u32;
-
-        let skill_id = unit.active_skills.primary.skill.unwrap();
-        let skill_info = &metadata.rpg.skill.skills[&skill_id];
-
-        let wanted_range = (skill_info.use_range as f32 * 0.5) as u32;
-        let wanted_range = wanted_range.clamp(150, wanted_range.max(150));
-        let in_range = skill_info.use_range > 0 && distance < wanted_range;
-        if rot_diff.abs() < 0.1 {
-            if !in_range {
-                actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
-                villain.moving = true;
-                continue;
-            }
-
-            if actions.movement.is_none() && villain.moving {
-                villain.moving = false;
-                actions.request(Action::new(ActionData::MoveEnd, None, false));
-            }
-
-            if think_timer.finished() && actions.attack.is_none() {
-                //println!("distance {distance} use range {}", skill_info.use_range);
-
-                let (origin, target) = skill::get_skill_origin(
-                    &metadata,
-                    transform,
-                    hero_transform.translation,
-                    skill_id,
-                );
-
-                actions.request(Action::new(
-                    ActionData::Attack(AttackData {
-                        skill_id,
-                        user: transform.translation,
-                        origin,
-                        target,
-                    }),
-                    None,
-                    true,
-                ));
-                think_timer.reset();
-            }
-        }
-    }
-}
-
-fn spawn_villain(
-    commands: &mut Commands,
-    next_uid: &mut NextUid,
-    origin: &Vec3,
-    metadata: &MetadataResources,
-    renderables: &RenderResources,
-    rng: &mut Random,
-) {
-    let mut unit = rpg_core::unit::generation::generate(&mut rng.0, &metadata.rpg, next_uid, 1);
-
-    unit.add_default_skills(&metadata.rpg);
-
-    let dir_roll = std::f32::consts::TAU * (0.5 - rng.f32());
-    let distance = 14_f32;
-
-    let mut transform = Transform::from_translation(*origin);
-    transform.rotate_y(dir_roll);
-    transform.translation += transform.forward() * distance;
-
-    actor::spawn_actor(
-        commands,
-        metadata,
-        renderables,
-        unit,
-        None,
-        None,
-        Some(transform),
-    );
 }

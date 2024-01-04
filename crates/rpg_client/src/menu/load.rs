@@ -7,6 +7,7 @@ use crate::{
     state::AppState,
 };
 
+use rpg_core::unit::HeroGameMode;
 use ui_util::style::UiTheme;
 
 use bevy::{
@@ -193,14 +194,16 @@ pub fn load_button(
         menu_set.p0().single_mut().display = Display::None;
         menu_set.p1().single_mut().display = Display::None;
 
+        let unit = &save_slots.slots[slot_index.0 as usize]
+            .state
+            .as_ref()
+            .unwrap()
+            .unit;
+
         game_state.player_config = Some(PlayerOptions {
             name: "Player".to_string(),
-            class: save_slots.slots[slot_index.0 as usize]
-                .state
-                .as_ref()
-                .unwrap()
-                .unit
-                .class,
+            class: unit.class,
+            game_mode: unit.info.hero().game_mode,
         });
 
         load_event.send(LoadCharacter(slot_index.0));

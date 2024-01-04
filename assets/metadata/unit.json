@@ -1,61 +1,62 @@
 {
-	"hero": {
-		"default_skills": {
-			"Str": "BasicDirect",
-			"Dex": "BasicBolt",
-			"Int": "BasicOrb",
-			"StrDex": "BasicBolt",
-			"DexInt": "AreaRemote",
-			"IntStr": "BasicAerial",
-			"StrDexInt": "AreaLocked"
-		}
-	},
-	"villain": {
-		"damage_scale": 0.666
-	},
-	"villains": {
-		"villains": {
-			"Wizard": { 
-				"name": "Wizard",
-				"class": "Int",
-				"skill_id": "BasicOrb",
-				"think_cooldown": 3.5,
-				"xp_reward": 10,
-				"drop_chances": 10,
-				"drop_chance": 0.5,
-				"move_speed": 90
-			},
-			"Swordsman": { 
-				"name": "Swordsman",
-				"class": "Str",
-				"skill_id": "BasicDirect",
-				"think_cooldown": 3.0,
-				"xp_reward": 9,
-				"drop_chances": 12,
-				"drop_chance": 0.5,
-				"move_speed": 100
-			},
-			"Archer": {
-				"name": "Archer",
-				"class": "Dex",
-				"skill_id": "BasicBolt",
-				"think_cooldown": 3.5,
-				"xp_reward": 8,
-				"drop_chances": 12,
-				"drop_chance": 0.5,
-				"move_speed": 110 
-			},
-			"Cleric": {
-				"name": "Cleric",
-				"class": "IntStr",
-				"skill_id": "AreaRemote",
-				"think_cooldown": 3.5,
-				"xp_reward": 12,
-				"drop_chances": 12,
-				"drop_chance": 0.5,
-				"move_speed": 95
-
-			}
-		}
-	}
+  "hero": {
+    "default_skills": {
+      "Str": "BasicDirect",
+      "Dex": "BasicBolt",
+      "Int": "BasicOrb",
+      "StrDex": "BasicBolt",
+      "DexInt": "AreaRemote",
+      "IntStr": "BasicAerial",
+      "StrDexInt": "AreaLocked"
+    }
+  },
+  "villain": {
+    "damage_scale": 0.666
+  },
+  "villains": {
+    "Wizard": {
+      "name": "Wizard",
+      "class": "Int",
+      "skill_id": "BasicOrb",
+      "think_cooldown": 3.5,
+      "xp_reward": 10,
+      "drop_chances": 10,
+      "drop_chance": 0.5,
+      "move_speed": 90,
+      "max_vision": 12
+    },
+    "Swordsman": {
+      "name": "Swordsman",
+      "class": "Str",
+      "skill_id": "BasicDirect",
+      "think_cooldown": 3,
+      "xp_reward": 9,
+      "drop_chances": 12,
+      "drop_chance": 0.5,
+      "move_speed": 100,
+      "max_vision": 12
+    },
+    "Archer": {
+      "name": "Archer",
+      "class": "Dex",
+      "skill_id": "BasicBolt",
+      "think_cooldown": 3.5,
+      "xp_reward": 8,
+      "drop_chances": 12,
+      "drop_chance": 0.5,
+      "move_speed": 110,
+      "max_vision": 12
+    },
+    "Cleric": {
+      "name": "Cleric",
+      "class": "IntStr",
+      "skill_id": "AreaRemote",
+      "think_cooldown": 3.5,
+      "xp_reward": 12,
+      "drop_chances": 12,
+      "drop_chance": 0.5,
+      "move_speed": 95,
+      "max_vision": 12
+    }
+  }
 }
