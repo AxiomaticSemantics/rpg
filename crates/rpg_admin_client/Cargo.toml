@@ -1,0 +1,39 @@
+[package]
+resolver = "2"
+name = "rpg_admin_client"
+version = "0.1.0"
+description = "An admin client for rpg_server"
+license = "MIT OR Apache-2.0"
+authors.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_derive = { workspace = true }
+derive_more = "0.99.17"
+clap = { version = "4.4.13", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = "0.3.17"
+rpg_network_protocol = { path = "../rpg_network_protocol" }
+
+[dependencies.lightyear]
+git = "https://github.com/AxiomaticSemantics/lightyear"
+
+[dependencies.bevy]
+git = "https://github.com/AxiomaticSemantics/bevy"
+features = [
+	"bevy_core_pipeline",
+        "bevy_pbr",
+	"bevy_text",
+	"bevy_ui",
+	"bevy_gizmos",
+        "x11",
+        "tonemapping_luts",
+	"multi-threaded",
+	"dynamic_linking"
+]
+optional = false
+default-features = false

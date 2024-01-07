@@ -1,0 +1,29 @@
+[package]
+resolver = "2"
+name = "rpg_network_protocol"
+version = "0.1.0"
+description = "A shared network protocol"
+license = "MIT OR Apache-2.0"
+authors.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+rpg_core = { path = "../rpg_core" }
+serde = { workspace = true }
+serde_derive = { workspace = true }
+derive_more = "0.99.17"
+
+[dependencies.lightyear]
+git = "https://github.com/AxiomaticSemantics/lightyear"
+
+[dependencies.bevy]
+git = "https://github.com/AxiomaticSemantics/bevy"
+features = [
+  "multi-threaded",
+  "dynamic_linking",
+]
+optional = false
+default-features = false
