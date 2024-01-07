@@ -7,12 +7,16 @@ use crate::{
 use fastrand::Rng;
 
 use glam::{uvec2, UVec2, Vec2, Vec3};
+use serde_derive::{Deserialize as De, Serialize as Ser};
 
 use std::collections::VecDeque;
 
+#[derive(Ser, De, Copy, Clone, PartialEq, Eq, Debug)]
+pub struct ZoneId(pub u16);
+
 #[derive(Debug)]
 pub struct Zone {
-    pub id: u16,
+    pub id: ZoneId,
     pub size_info: SizeInfo,
     pub kind: Kind,
     pub connections: Vec<Connection>,
@@ -25,7 +29,7 @@ pub struct Zone {
 
 impl Zone {
     pub fn new(
-        id: u16,
+        id: ZoneId,
         seed: u64,
         size_info: SizeInfo,
         kind: Kind,

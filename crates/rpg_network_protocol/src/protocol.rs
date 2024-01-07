@@ -10,6 +10,7 @@ use lightyear::prelude::*;
 use serde_derive::{Deserialize, Serialize};
 
 use rpg_core::uid::Uid;
+use rpg_world::zone::ZoneId;
 
 // Player
 #[derive(Bundle)]
@@ -25,7 +26,7 @@ impl NetworkPlayerBundle {
         Self {
             id: NetworkClientId(id),
             position: PlayerPosition(position),
-            direction: PlayerDirection(Vec3::ZERO),
+            direction: PlayerDirection(direction),
             replicate: Replicate {
                 // prediction_target: NetworkTarget::None,
                 prediction_target: NetworkTarget::Only(vec![id]),
@@ -104,6 +105,9 @@ pub struct CSConnectPlayer;
 pub struct CSConnectAdmin;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSJoinZone(pub ZoneId);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSMovePlayer;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -125,6 +129,7 @@ pub enum Messages {
     // Client -> Server
     CSConnectPlayer(CSConnectPlayer),
     CSConnectAdmin(CSConnectAdmin),
+    CSJoinZone(CSJoinZone),
     CSRotPlayer(CSRotPlayer),
     CSMovePlayer(CSMovePlayer),
 }
