@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = [ "crates/util", "crates/audio_manager", "crates/ui_util", "crates/rpg_world", "crates/rpg_core", "crates/rpg_client" ]
+members = [ "crates/util", "crates/audio_manager", "crates/ui_util", "crates/rpg_network_protocol", "crates/rpg_server", "crates/rpg_admin_client", "crates/rpg_world", "crates/rpg_core", "crates/rpg_client" ]
 
 [workspace.package]
 description = "A prototype of an Action RPG"
@@ -37,8 +37,8 @@ features = ["serde-1"]
 [workspace.dependencies.glam]
 version = "0.24"
 
-[workspace.target.'cfg(target_os = "windows")'.build-dependencies]
-embed-resource = "1.7"
+#[workspace.target.'cfg(target_os = "windows")'.build-dependencies]
+#embed-resource = "1.7"
 
 [profile.release]
 lto = "thin"
