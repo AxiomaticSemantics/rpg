@@ -6,7 +6,6 @@ use bevy::{
         world::{FromWorld, World},
     },
     render::texture::Image,
-    text::Font,
 };
 
 use util::assets::json::JsonSource;
@@ -38,21 +37,6 @@ impl FromWorld for JsonAssets {
             level: server.load("metadata/level.json"),
             prop: server.load("metadata/prop.json"),
             passive_tree: server.load("metadata/passive_tree.json"),
-        }
-    }
-}
-
-#[derive(Resource)]
-pub struct FontAssets {
-    pub fira_sans: Handle<Font>,
-}
-
-impl FromWorld for FontAssets {
-    fn from_world(world: &mut World) -> Self {
-        let server = world.resource_mut::<AssetServer>();
-
-        FontAssets {
-            fira_sans: server.load("fonts/FiraNerd-Medium.ttf"),
         }
     }
 }

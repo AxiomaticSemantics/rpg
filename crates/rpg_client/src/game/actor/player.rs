@@ -147,8 +147,7 @@ pub fn input_actions(
         Some(Vec3::new(sc.0, 0., sc.1))
     }*/
     let target_dir = if cursor_position.is_changed() {
-        let look_point = cursor_position.ground;
-        Some((look_point - transform.translation).normalize_or_zero())
+        Some((cursor_position.ground - transform.translation).normalize_or_zero())
     } else {
         None
     };

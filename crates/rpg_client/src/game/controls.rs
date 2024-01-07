@@ -175,8 +175,7 @@ pub fn update_controls(
         return;
     };
 
-    let Some(ground_distance) = ray.intersect_plane(Vec3::new(0., 0., 0.), Plane3d::new(Vec3::Y))
-    else {
+    let Some(ground_distance) = ray.intersect_plane(Vec3::ZERO, Plane3d::new(Vec3::Y)) else {
         println!("could not determine ground distance");
         return;
     };
