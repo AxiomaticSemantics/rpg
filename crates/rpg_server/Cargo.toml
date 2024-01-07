@@ -13,6 +13,7 @@ workspace = true
 [dependencies]
 rpg_network_protocol = { path = "../rpg_network_protocol" }
 rpg_core = { path = "../rpg_core" }
+rpg_world = { path = "../rpg_world" }
 
 clap = { version = "4.4.13", features = ["derive"] }
 tracing = "0.1"
