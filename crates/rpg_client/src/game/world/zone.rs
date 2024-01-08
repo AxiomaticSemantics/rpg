@@ -5,7 +5,7 @@ use crate::game::{assets::RenderResources, plugin::GameSessionCleanup};
 use rpg_world::{
     edge::{Edge, EdgeFlags},
     room::Room,
-    zone::{self, Connection, ConnectionKind, Kind, SizeInfo},
+    zone::{self, Connection, ConnectionKind, Kind, SizeInfo, ZoneId},
 };
 use util::cleanup::CleanupStrategy;
 
@@ -82,7 +82,7 @@ pub fn setup(
 
     //println!("curve {curve:?}");
     let size_info = SizeInfo::new(uvec2(8, 8), uvec2(4, 4), uvec2(4, 4));
-    let mut zone = zone::Zone::new(0, 1234, size_info, Kind::Overworld, curves);
+    let mut zone = zone::Zone::new(ZoneId(0), 1234, size_info, Kind::Overworld, curves);
     zone.create_rooms();
     zone.set_tile_path();
 

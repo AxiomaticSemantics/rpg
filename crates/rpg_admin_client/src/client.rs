@@ -1,7 +1,5 @@
 use rpg_network_protocol::{self, protocol::*, KEY, PROTOCOL_ID};
 
-use crate::Transports;
-
 use bevy::{
     math::primitives::Plane3d, prelude::*, render::primitives::Aabb, window::PrimaryWindow,
 };
@@ -28,7 +26,6 @@ pub(crate) struct NetworkClientPluginConfig {
     pub(crate) client_port: u16,
     pub(crate) server_addr: Ipv4Addr,
     pub(crate) server_port: u16,
-    pub(crate) transport: Transports,
 }
 
 pub struct NetworkClientPlugin {
@@ -88,13 +85,16 @@ impl Plugin for NetworkClientPlugin {
             .add_systems(
                 Update,
                 (
-                    receive_hello,
-                    receive_entity_spawn,
-                    receive_entity_despawn,
-                    handle_predicted_spawn,
-                    handle_interpolated_spawn,
-                )
-                    .before(update_camera),
+                    (
+                        receive_hello,
+                        receive_entity_spawn,
+                        receive_entity_despawn,
+                        handle_predicted_spawn,
+                        handle_interpolated_spawn,
+                    )
+                        .before(update_camera),
+                    update_camera,
+                ),
             );
     }
 }
@@ -146,16 +146,15 @@ pub(crate) fn init(mut commands: Commands) {
 
 pub(crate) fn update_camera(
     camera_target: Res<CameraTarget>,
-    player_q: Query<&Transform, With<PlayerPosition>>,
+    player_q: Query<&Transform, (With<PlayerPosition>, Without<Camera3d>)>,
     mut camera_q: Query<&mut Transform, With<Camera3d>>,
 ) {
     let mut transform = camera_q.single_mut();
 
-    //if camera_target.0 != Entity::PLACEHOLDER {
-    let player_transform = player_q.get(camera_target.0).unwrap();
-    transform.translation = player_transform.translation + Vec3::Y * 10.;
-    transform.look_at(player_transform.translation, Vec3::Y)
-    //}
+    if let Ok(player_transform) = player_q.get_single() {
+        transform.translation = player_transform.translation + Vec3::Y * 10.;
+        transform.look_at(player_transform.translation, Vec3::Y)
+    }
 }
 
 pub(crate) fn input(
@@ -249,7 +248,7 @@ pub(crate) fn receive_hello(
     mut reader: EventReader<MessageEvent<SCHello>>,
 ) {
     for event in reader.read() {
-        info!("Client received message: {:?}", event.message());
+        info!("received: {:?}", event.message());
 
         client
             .send_message::<Channel1, CSConnectPlayer>(CSConnectPlayer)

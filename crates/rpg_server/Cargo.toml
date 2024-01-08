@@ -13,6 +13,8 @@ workspace = true
 [dependencies]
 rpg_network_protocol = { path = "../rpg_network_protocol" }
 rpg_core = { path = "../rpg_core" }
+rpg_world = { path = "../rpg_world" }
+util = { path = "../util" }
 
 clap = { version = "4.4.13", features = ["derive"] }
 tracing = "0.1"
@@ -24,6 +26,7 @@ git = "https://github.com/AxiomaticSemantics/lightyear"
 [dependencies.bevy]
 git = "https://github.com/AxiomaticSemantics/bevy"
 features = [
+  "bevy_asset",
   "multi-threaded",
   "dynamic_linking",
 ]

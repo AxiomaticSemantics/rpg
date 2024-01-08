@@ -1,21 +1,15 @@
-use crate::Transports;
+use crate::game;
 
 use bevy::{
-    app::{
-        App, FixedUpdate, Plugin, PluginGroup, PreUpdate, ScheduleRunnerPlugin, Startup, Update,
-    },
+    app::{App, FixedUpdate, Plugin, PreUpdate, Update},
     ecs::{
         entity::Entity,
         event::EventReader,
         schedule::IntoSystemConfigs,
-        system::{Commands, Query, Res, ResMut, Resource},
+        system::{Commands, ResMut, Resource},
     },
     hierarchy::DespawnRecursiveExt,
     log::info,
-    math::Vec3,
-    transform::{components::Transform, TransformBundle},
-    utils::default,
-    MinimalPlugins,
 };
 
 use lightyear::prelude::server::*;
@@ -25,11 +19,9 @@ use rpg_network_protocol::{protocol::*, *};
 
 use std::collections::HashMap;
 use std::net::{Ipv4Addr, SocketAddr};
-use std::time::Duration;
 
 pub(crate) struct NetworkServerPlugin {
     pub(crate) port: u16,
-    pub(crate) transport: Transports,
 }
 
 impl Plugin for NetworkServerPlugin {
@@ -57,18 +49,16 @@ impl Plugin for NetworkServerPlugin {
         let plugin_config = PluginConfig::new(config, io, protocol());
 
         app.add_plugins(server::ServerPlugin::new(plugin_config))
-            .add_plugins(MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(
-                Duration::from_secs_f64(1.0 / 60.0),
-            )))
             .init_resource::<NetworkContext>()
+            .init_resource::<ServerState>()
             .add_systems(
                 FixedUpdate,
-                (rotation_request, movement_request)
+                (game::rotation_request, game::movement_request)
                     .chain()
                     .in_set(FixedUpdateSet::Main),
             )
             .add_systems(PreUpdate, (handle_connections, handle_disconnections))
-            .add_systems(Update, connect_player);
+            .add_systems(Update, game::receive_connect_player);
     }
 }
 
@@ -78,6 +68,19 @@ pub(crate) enum ClientType {
     Unknown,
     Player(ClientId),
     Admin(ClientId),
+}
+
+#[derive(Default, Debug, Copy, Clone, PartialEq)]
+pub(crate) enum ServerMode {
+    #[default]
+    Idle,
+    Lobby,
+    Game,
+}
+
+#[derive(Default, Resource)]
+pub(crate) struct ServerState {
+    pub(crate) mode: ServerMode,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -120,7 +123,12 @@ pub(crate) fn handle_connections(
     mut connections: EventReader<ConnectEvent>,
     mut context: ResMut<NetworkContext>,
     mut server: ResMut<Server>,
+    mut server_state: ResMut<ServerState>,
 ) {
+    if connections.len() > 0 && server_state.mode == ServerMode::Idle {
+        server_state.mode = ServerMode::Lobby;
+    }
+
     for connection in connections.read() {
         let client_id = connection.context();
 
@@ -138,109 +146,6 @@ pub(crate) fn handle_connections(
                 NetworkTarget::Only(vec![*client_id]),
             )
             .unwrap();
-    }
-}
-
-pub(crate) fn connect_player(
-    mut commands: Commands,
-    mut connect_reader: EventReader<MessageEvent<CSConnectPlayer>>,
-    mut context: ResMut<NetworkContext>,
-) {
-    for player in connect_reader.read() {
-        let client_id = player.context();
-        let Some(client) = context.clients.get_mut(client_id) else {
-            continue;
-        };
-
-        if client.client_type != ClientType::Unknown {
-            continue;
-        }
-
-        client.client_type = ClientType::Player(*client_id);
-
-        client.entity = commands
-            .spawn((
-                protocol::NetworkPlayerBundle::new(*client_id, Vec3::ZERO, Vec3::ZERO),
-                TransformBundle::from_transform(
-                    Transform::from_translation(Vec3::ZERO).looking_to(Vec3::NEG_Z, Vec3::Y),
-                ),
-            ))
-            .id();
-        info!("client type set to player");
-    }
-}
-
-//// Read client inputs and move players
-pub(crate) fn movement_request(
-    mut player_q: Query<(&mut Transform, &NetworkClientId)>,
-    mut movement_events: EventReader<MessageEvent<CSMovePlayer>>,
-    context: Res<NetworkContext>,
-    mut server: ResMut<Server>,
-) {
-    for movement in movement_events.read() {
-        let client_id = movement.context();
-        let Some(client) = context.clients.get(client_id) else {
-            println!("client not found");
-            continue;
-        };
-
-        let ClientType::Player(id) = client.client_type else {
-            println!("client not a player");
-            continue;
-        };
-
-        for (mut transform, player) in &mut player_q {
-            if id != player.0 {
-                continue;
-            }
-
-            transform.translation = transform.translation + transform.forward() * 0.01;
-            //println!("move player to {}", transform.translation);
-
-            server
-                .send_message_to_target::<Channel1, SCMovePlayer>(
-                    SCMovePlayer(transform.translation),
-                    NetworkTarget::Only(vec![*client_id]),
-                )
-                .unwrap();
-        }
-    }
-}
-
-//// Read client inputs and move players
-pub(crate) fn rotation_request(
-    mut player_q: Query<(&mut Transform, &NetworkClientId, &mut PlayerDirection)>,
-    mut rotation_events: EventReader<MessageEvent<CSRotPlayer>>,
-    context: Res<NetworkContext>,
-    mut server: ResMut<Server>,
-) {
-    for rotation in rotation_events.read() {
-        let client_id = rotation.context();
-        let Some(client) = context.clients.get(client_id) else {
-            println!("client not found");
-            continue;
-        };
-
-        let ClientType::Player(id) = client.client_type else {
-            println!("client not a player");
-            continue;
-        };
-
-        for (mut transform, player, mut direction) in &mut player_q {
-            if player.0 != id {
-                continue;
-            }
-
-            direction.0 = rotation.message().0;
-            transform.look_to(direction.0, Vec3::Y);
-
-            server
-                .send_message_to_target::<Channel1, SCRotPlayer>(
-                    SCRotPlayer(direction.0),
-                    NetworkTarget::Only(vec![*client_id]),
-                )
-                .unwrap();
-        }
     }
 }
 
