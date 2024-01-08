@@ -20,7 +20,7 @@ use rpg_core::{
     storage::Storage,
     unit::UnitKind,
 };
-use util::math::intersect_aabb;
+use util::math::{intersect_aabb, Aabb as UtilAabb};
 
 use bevy::{
     animation::RepeatAnimation,
@@ -145,7 +145,22 @@ pub fn collide_units(
 ) {
     let mut combinations = unit_q.iter_combinations_mut();
     while let Some([(mut t1, a1), (mut t2, a2)]) = combinations.fetch_next() {
-        while intersect_aabb((&mut t1.translation, a1), (&mut t2.translation, a2)) {
+        while intersect_aabb(
+            (
+                &mut t1.translation,
+                &UtilAabb {
+                    center: a1.center,
+                    half_extents: a1.half_extents,
+                },
+            ),
+            (
+                &mut t2.translation,
+                &UtilAabb {
+                    center: a2.center,
+                    half_extents: a2.half_extents,
+                },
+            ),
+        ) {
             let distance = t1.translation.distance(t2.translation);
 
             let offset = 0.01 * t1.forward();

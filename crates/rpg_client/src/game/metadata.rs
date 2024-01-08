@@ -17,7 +17,6 @@ use serde_json::from_slice;
 #[derive(Resource)]
 pub(crate) struct MetadataResources {
     pub(crate) rpg: Metadata,
-    //pub(crate) passive_tree: PassiveTreeMetadata,
     pub(crate) props: PropMetadata,
 }
 
