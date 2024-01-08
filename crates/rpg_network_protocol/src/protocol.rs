@@ -9,7 +9,7 @@ use derive_more::{Add, Mul};
 use lightyear::prelude::*;
 use serde_derive::{Deserialize, Serialize};
 
-use rpg_core::uid::Uid;
+use rpg_core::{class::Class, skill::SkillId, uid::Uid, unit::HeroGameMode};
 use rpg_world::zone::ZoneId;
 
 // Player
@@ -92,17 +92,35 @@ pub struct Channel1;
 
 // Messages
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CSHello;
-
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCHello;
+// Client -> Server
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSConnectPlayer;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSConnectAdmin;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSLoadAccount {
+    pub uid: Uid,
+}
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSCreateAccount {
+    pub name: String,
+}
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSLoadCharacter {
+    pub uid: Uid,
+}
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSCreateCharacter {
+    pub name: String,
+    pub class: Class,
+    pub game_mode: HeroGameMode,
+}
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSJoinZone(pub ZoneId);
@@ -114,6 +132,28 @@ pub struct CSMovePlayer;
 pub struct CSRotPlayer(pub Vec3);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSUseSkillDirect(pub SkillId);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSUseSkillTargeted {
+    pub skill_id: SkillId,
+    pub target: Vec3,
+}
+
+// Server -> Client
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCHello;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCCreateAccount(pub bool);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCAccountInfo {
+    pub characters: Vec<Uid>,
+}
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCMovePlayer(pub Vec3);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -123,15 +163,23 @@ pub struct SCRotPlayer(pub Vec3);
 pub enum Messages {
     // Server -> Client
     SCHello(SCHello),
+    SCCreateAccount(SCCreateAccount),
+    SCAccountInfo(SCAccountInfo),
     SCMovePlayer(SCMovePlayer),
     SCRotPlayer(SCRotPlayer),
 
     // Client -> Server
     CSConnectPlayer(CSConnectPlayer),
     CSConnectAdmin(CSConnectAdmin),
+    CSCreateAccount(CSCreateAccount),
+    CSLoadAccount(CSLoadAccount),
+    CSLoadCharacter(CSLoadCharacter),
+    CSCreateCharacter(CSCreateCharacter),
     CSJoinZone(CSJoinZone),
     CSRotPlayer(CSRotPlayer),
     CSMovePlayer(CSMovePlayer),
+    CSUseSkillDirect(CSUseSkillDirect),
+    CSUseSkillTargetet(CSUseSkillTargeted),
 }
 
 // Protocol
