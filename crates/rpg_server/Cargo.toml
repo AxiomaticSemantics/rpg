@@ -16,6 +16,8 @@ rpg_core = { path = "../rpg_core" }
 rpg_world = { path = "../rpg_world" }
 util = { path = "../util" }
 
+serde_json = { workspace = true }
+
 clap = { version = "4.4.13", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = "0.3.17"

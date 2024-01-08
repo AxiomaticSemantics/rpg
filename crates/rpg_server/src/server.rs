@@ -1,12 +1,12 @@
 use crate::game;
 
 use bevy::{
-    app::{App, FixedUpdate, Plugin, PreUpdate, Update},
+    app::{App, FixedUpdate, Plugin, PreUpdate, Startup, Update},
     ecs::{
         entity::Entity,
         event::EventReader,
         schedule::IntoSystemConfigs,
-        system::{Commands, ResMut, Resource},
+        system::{Commands, Res, ResMut, Resource},
     },
     hierarchy::DespawnRecursiveExt,
     log::info,
@@ -16,6 +16,7 @@ use lightyear::prelude::server::*;
 use lightyear::prelude::*;
 
 use rpg_network_protocol::{protocol::*, *};
+use util::assets::json::JsonSource;
 
 use std::collections::HashMap;
 use std::net::{Ipv4Addr, SocketAddr};
