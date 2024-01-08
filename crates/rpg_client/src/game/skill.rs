@@ -59,7 +59,10 @@ use rpg_core::{
     },
     unit::UnitKind,
 };
-use util::{cleanup::CleanupStrategy, math::intersect_aabb};
+use util::{
+    cleanup::CleanupStrategy,
+    math::{intersect_aabb, Aabb as UtilAabb},
+};
 
 use std::borrow::Cow;
 
@@ -430,8 +433,20 @@ pub fn collide_skills(
 
             let collision = match &instance.info {
                 SkillInstance::Direct(_) | SkillInstance::Projectile(_) => intersect_aabb(
-                    (&(s_transform.translation), s_aabb),
-                    (&(u_transform.translation + unit_offset), u_aabb),
+                    (
+                        &(s_transform.translation),
+                        &UtilAabb {
+                            center: s_aabb.center,
+                            half_extents: s_aabb.half_extents,
+                        },
+                    ),
+                    (
+                        &(u_transform.translation + unit_offset),
+                        &UtilAabb {
+                            center: u_aabb.center,
+                            half_extents: u_aabb.half_extents,
+                        },
+                    ),
                 ),
                 SkillInstance::Area(info) => {
                     s_transform.translation.distance(u_transform.translation)
