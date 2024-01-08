@@ -11,7 +11,7 @@ use serde_derive::{Deserialize as De, Serialize as Ser};
 
 use std::collections::VecDeque;
 
-#[derive(Ser, De, Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Ser, De, Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub struct ZoneId(pub u16);
 
 #[derive(Debug)]

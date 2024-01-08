@@ -1,21 +1,15 @@
 use crate::game;
 
 use bevy::{
-    app::{
-        App, FixedUpdate, Plugin, PluginGroup, PreUpdate, ScheduleRunnerPlugin, Startup, Update,
-    },
+    app::{App, FixedUpdate, Plugin, PreUpdate, Update},
     ecs::{
         entity::Entity,
         event::EventReader,
         schedule::IntoSystemConfigs,
-        system::{Commands, Query, Res, ResMut, Resource},
+        system::{Commands, ResMut, Resource},
     },
     hierarchy::DespawnRecursiveExt,
     log::info,
-    math::Vec3,
-    transform::{components::Transform, TransformBundle},
-    utils::default,
-    MinimalPlugins,
 };
 
 use lightyear::prelude::server::*;
@@ -25,7 +19,6 @@ use rpg_network_protocol::{protocol::*, *};
 
 use std::collections::HashMap;
 use std::net::{Ipv4Addr, SocketAddr};
-use std::time::Duration;
 
 pub(crate) struct NetworkServerPlugin {
     pub(crate) port: u16,
@@ -56,10 +49,8 @@ impl Plugin for NetworkServerPlugin {
         let plugin_config = PluginConfig::new(config, io, protocol());
 
         app.add_plugins(server::ServerPlugin::new(plugin_config))
-            .add_plugins(MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(
-                Duration::from_secs_f64(1.0 / 60.0),
-            )))
             .init_resource::<NetworkContext>()
+            .init_resource::<ServerState>()
             .add_systems(
                 FixedUpdate,
                 (game::rotation_request, game::movement_request)
@@ -77,6 +68,19 @@ pub(crate) enum ClientType {
     Unknown,
     Player(ClientId),
     Admin(ClientId),
+}
+
+#[derive(Default, Debug, Copy, Clone, PartialEq)]
+pub(crate) enum ServerMode {
+    #[default]
+    Idle,
+    Lobby,
+    Game,
+}
+
+#[derive(Default, Resource)]
+pub(crate) struct ServerState {
+    pub(crate) mode: ServerMode,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -119,7 +123,12 @@ pub(crate) fn handle_connections(
     mut connections: EventReader<ConnectEvent>,
     mut context: ResMut<NetworkContext>,
     mut server: ResMut<Server>,
+    mut server_state: ResMut<ServerState>,
 ) {
+    if connections.len() > 0 && server_state.mode == ServerMode::Idle {
+        server_state.mode = ServerMode::Lobby;
+    }
+
     for connection in connections.read() {
         let client_id = connection.context();
 

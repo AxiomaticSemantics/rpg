@@ -3,12 +3,11 @@ use crate::server::{ClientType, NetworkContext};
 use bevy::{
     ecs::{
         event::EventReader,
-        system::{Commands, Query, Res, ResMut, Resource},
+        system::{Commands, Query, Res, ResMut},
     },
     log::info,
     math::Vec3,
     transform::{components::Transform, TransformBundle},
-    utils::default,
 };
 
 use lightyear::prelude::server::*;
@@ -45,7 +44,7 @@ pub(crate) fn receive_connect_player(
     }
 }
 
-//// Read client inputs and move players
+/// Move player
 pub(crate) fn movement_request(
     mut player_q: Query<(&mut Transform, &NetworkClientId)>,
     mut movement_events: EventReader<MessageEvent<CSMovePlayer>>,
@@ -82,7 +81,7 @@ pub(crate) fn movement_request(
     }
 }
 
-//// Read client inputs and move players
+/// Rotate player
 pub(crate) fn rotation_request(
     mut player_q: Query<(&mut Transform, &NetworkClientId, &mut PlayerDirection)>,
     mut rotation_events: EventReader<MessageEvent<CSRotPlayer>>,

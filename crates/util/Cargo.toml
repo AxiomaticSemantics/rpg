@@ -19,9 +19,8 @@ thiserror = "1.0.50"
 [dependencies.bevy]
 git = "https://github.com/AxiomaticSemantics/bevy"
 features = [
-"bevy_asset",
-"bevy_render",
-#  "dynamic_linking"
+  "bevy_asset",
+  "dynamic_linking"
 ]
 optional = false
 default-features = false
