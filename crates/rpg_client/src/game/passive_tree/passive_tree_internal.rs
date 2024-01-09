@@ -100,10 +100,10 @@ pub(crate) fn setup(
 
     let node_info = &metadata.rpg.passive_tree.node_info;
 
-    let line_mesh = meshes.add(Quad::new(Vec2::new(1., 0.125) * 100.).into());
-    let circle_root = meshes.add(Circle::new(node_info.root_size * 100.).into());
-    let circle_major = meshes.add(Circle::new(node_info.major_size * 100.).into());
-    let circle_minor = meshes.add(Circle::new(node_info.minor_size * 100.).into());
+    let line_mesh = meshes.add(Quad::new(Vec2::new(1., 0.125) * 100.));
+    let circle_root = meshes.add(Circle::new(node_info.root_size * 100.));
+    let circle_major = meshes.add(Circle::new(node_info.major_size * 100.));
+    let circle_minor = meshes.add(Circle::new(node_info.minor_size * 100.));
 
     let circle_material_root = materials.add(ColorMaterial {
         color: Color::rgb_u8(255, 108, 171),

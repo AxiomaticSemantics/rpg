@@ -1,4 +1,4 @@
-use crate::game;
+use crate::{account, game};
 
 use bevy::{
     app::{App, FixedUpdate, Plugin, PreUpdate, Update},
@@ -66,11 +66,11 @@ impl Plugin for NetworkServerPlugin {
             .add_systems(
                 Update,
                 (
-                    game::receive_account_create,
-                    game::receive_account_load,
-                    game::receive_character_create,
-                    game::receive_character_load,
-                    game::receive_connect_player,
+                    account::receive_account_create,
+                    account::receive_account_load,
+                    account::receive_character_create,
+                    account::receive_character_load,
+                    account::receive_connect_player,
                 ),
             );
     }
