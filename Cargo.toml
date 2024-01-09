@@ -16,7 +16,7 @@ undocumented_unsafe_blocks = "warn"
 redundant_else = "warn"
 semicolon_if_nothing_returned = "warn"
 map_flatten = "warn"
-excessive-nesting-threshold = "8"
+# excessive-nesting-threshold = 8 # This does not work as intended, need to investigate further.
 
 [lints]
 workspace = true
