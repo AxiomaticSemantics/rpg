@@ -39,11 +39,10 @@ impl FromWorld for RenderResources {
         let mut meshes = HashMap::<Cow<'static, str>, Handle<Mesh>>::new();
 
         let mut mesh_assets = world.resource_mut::<Assets<Mesh>>();
-        let bar_mesh_outer =
-            mesh_assets.add(shape::Quad::new(Vec2::new(0.792857, 0.102857)).into());
+        let bar_mesh_outer = mesh_assets.add(shape::Quad::new(Vec2::new(0.792857, 0.102857)));
         meshes.insert(Cow::Owned("bar_outer".into()), bar_mesh_outer);
 
-        let bar_mesh_inner = mesh_assets.add(shape::Quad::new(Vec2::new(0.75, 0.06)).into());
+        let bar_mesh_inner = mesh_assets.add(shape::Quad::new(Vec2::new(0.75, 0.06)));
         meshes.insert(Cow::Owned("bar_inner".into()), bar_mesh_inner);
 
         let mut aabbs = HashMap::new();
