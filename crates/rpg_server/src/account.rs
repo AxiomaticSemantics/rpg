@@ -15,12 +15,15 @@ use bevy::{
 
 use lightyear::prelude::server::*;
 
-use rpg_account::account::Account;
+use rpg_account::{
+    account::{Account, AccountInfo},
+    character::{Character, CharacterInfo},
+};
 use rpg_network_protocol::{protocol::*, *};
 
 use util::fs::{open_read, open_write};
 
-use serde_json::from_reader;
+use serde_json;
 
 use std::path::Path;
 
@@ -59,6 +62,16 @@ pub(crate) fn receive_account_create(
                 continue;
             };
 
+            let account = Account {
+                info: AccountInfo {
+                    name: event.message().name.clone(),
+                    character_info: vec![],
+                },
+                characters: vec![],
+            };
+
+            serde_json::to_writer(file, &account).unwrap();
+
             info!("writing account file to {file_path}");
             // Write account data
         }
@@ -82,8 +95,10 @@ pub(crate) fn receive_account_load(
         let file = open_read(path);
 
         if let Ok(file) = file {
-            let account: Result<Account, _> = from_reader(file);
+            let account: Result<Account, _> = serde_json::from_reader(file);
             if let Ok(account) = account {
+                info!("spawning RpgAccount for {client:?}");
+
                 commands.spawn(RpgAccountBundle {
                     account: RpgAccount(account),
                 });
