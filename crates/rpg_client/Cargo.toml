@@ -39,7 +39,7 @@ thiserror = "1.0"
 fastrand = "2.0.1"
 
 [dependencies.interpolation]
-version = "0.2"
+version = "0.3"
 default-features = false
 
 [dependencies.bevy]
