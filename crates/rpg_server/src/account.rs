@@ -78,7 +78,7 @@ pub(crate) fn receive_account_create(
             let account = Account {
                 info: AccountInfo {
                     name: event.message().name.clone(),
-                    id: net_params.state.next_uid.get(),
+                    uid: net_params.state.next_uid.get(),
                     character_info: vec![],
                 },
                 characters: vec![],
