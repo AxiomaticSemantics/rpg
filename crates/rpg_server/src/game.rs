@@ -5,7 +5,6 @@ use bevy::{
         event::EventReader,
         system::{Query, Res, ResMut},
     },
-    log::info,
     math::Vec3,
     transform::components::Transform,
 };
@@ -23,18 +22,13 @@ pub(crate) fn movement_request(
 ) {
     for movement in movement_events.read() {
         let client_id = movement.context();
-        let Some(client) = net_params.context.clients.get(client_id) else {
-            println!("client not found");
-            continue;
-        };
-
-        let ClientType::Player(id) = client.client_type else {
-            println!("client not a player");
+        let client = net_params.context.clients.get(client_id).unwrap();
+        if !client.is_authenticated_player() {
             continue;
         };
 
         for (mut transform, player) in &mut player_q {
-            if id != player.0 {
+            if *client_id != player.0 {
                 continue;
             }
 
@@ -61,18 +55,13 @@ pub(crate) fn rotation_request(
 ) {
     for rotation in rotation_events.read() {
         let client_id = rotation.context();
-        let Some(client) = context.clients.get(client_id) else {
-            println!("client not found");
-            continue;
-        };
-
-        let ClientType::Player(id) = client.client_type else {
-            println!("client not a player");
+        let client = context.clients.get(client_id).unwrap();
+        if !client.is_authenticated_player() {
             continue;
         };
 
         for (mut transform, player, mut direction) in &mut player_q {
-            if player.0 != id {
+            if *client_id != player.0 {
                 continue;
             }
 
