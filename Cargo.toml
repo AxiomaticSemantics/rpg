@@ -16,6 +16,7 @@ undocumented_unsafe_blocks = "warn"
 redundant_else = "warn"
 semicolon_if_nothing_returned = "warn"
 map_flatten = "warn"
+excessive-nesting-threshold = 8
 
 [lints]
 workspace = true
