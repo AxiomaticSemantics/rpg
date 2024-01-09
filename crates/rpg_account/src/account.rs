@@ -1,8 +1,15 @@
-pub struct AccountCharacter {
-    pub name: String,
+use crate::character::{Character, CharacterInfo};
+
+use serde_derive::{Deserialize as De, Serialize as Ser};
+
+#[derive(Debug, Ser, De)]
+pub struct Account {
+    pub info: AccountInfo,
+    pub characters: Vec<Character>,
 }
 
-pub struct Account {
+#[derive(Debug, Ser, De)]
+pub struct AccountInfo {
     pub name: String,
-    pub characters: Vec<AccountCharacter>,
+    pub character_info: Vec<CharacterInfo>,
 }
