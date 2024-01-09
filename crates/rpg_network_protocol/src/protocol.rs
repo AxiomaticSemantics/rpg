@@ -94,6 +94,7 @@ pub struct Channel1;
 
 // Client -> Server
 
+// Account Messages
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSConnectPlayer;
 
@@ -102,7 +103,7 @@ pub struct CSConnectAdmin;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSLoadAccount {
-    pub uid: Uid,
+    pub name: String,
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -121,6 +122,17 @@ pub struct CSCreateCharacter {
     pub class: Class,
     pub game_mode: HeroGameMode,
 }
+
+// Chat Messages
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSChatMessageChannel(pub String);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSChatJoinChannel(pub String);
+
+// Game Messages
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSCreateGame(pub HeroGameMode);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSJoinZone(pub ZoneId);
@@ -142,6 +154,7 @@ pub struct CSUseSkillTargeted {
 
 // Server -> Client
 
+// Account Messages
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCHello;
 
@@ -153,7 +166,16 @@ pub struct SCNoSuchAccount;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCAccountInfo {
-    pub characters: Vec<Uid>,
+    pub name: String,
+    pub characters: Vec<Option<Uid>>,
+}
+
+// Chat Messages
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCChatMessageChannel {
+    pub channel_id: u16,
+    pub message_id: u64,
+    pub message: String,
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -165,25 +187,40 @@ pub struct SCRotPlayer(pub Vec3);
 #[message_protocol(protocol = "MyProtocol")]
 pub enum Messages {
     // Server -> Client
+
+    // Account Messages
     SCHello(SCHello),
     SCCreateAccount(SCCreateAccount),
     SCAccountInfo(SCAccountInfo),
     SCNoSuchAccount(SCNoSuchAccount),
+
+    // Chat Messages
+    SCChatMessageChannel(SCChatMessageChannel),
+
+    // Game Messages
     SCMovePlayer(SCMovePlayer),
     SCRotPlayer(SCRotPlayer),
 
     // Client -> Server
+
+    // Account Messages
     CSConnectPlayer(CSConnectPlayer),
     CSConnectAdmin(CSConnectAdmin),
     CSCreateAccount(CSCreateAccount),
     CSLoadAccount(CSLoadAccount),
     CSLoadCharacter(CSLoadCharacter),
     CSCreateCharacter(CSCreateCharacter),
+
+    // Chat Messages
+    CSChatMessageChannel(CSChatMessageChannel),
+    CSChatJoinChannel(CSChatJoinChannel),
+    // Game Messages
+    CSCreateGame(CSCreateGame),
     CSJoinZone(CSJoinZone),
     CSRotPlayer(CSRotPlayer),
     CSMovePlayer(CSMovePlayer),
     CSUseSkillDirect(CSUseSkillDirect),
-    CSUseSkillTargetet(CSUseSkillTargeted),
+    CSUseSkillTargeted(CSUseSkillTargeted),
 }
 
 // Protocol
