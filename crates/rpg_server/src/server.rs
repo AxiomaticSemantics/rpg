@@ -98,10 +98,36 @@ pub(crate) struct ServerState {
     pub(crate) mode: ServerMode,
 }
 
+#[derive(Default, Debug, PartialEq, Eq)]
+pub enum AuthorizationStatus {
+    #[default]
+    Unauthenticated,
+    Authenticated,
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Client {
     pub(crate) entity: Entity,
     pub(crate) client_type: ClientType,
+    pub(crate) auth_status: AuthorizationStatus,
+}
+
+impl Client {
+    pub(crate) fn new(
+        entity: Entity,
+        client_type: ClientType,
+        auth_status: AuthorizationStatus,
+    ) -> Self {
+        Self {
+            entity,
+            client_type,
+            auth_status,
+        }
+    }
+
+    pub(crate) fn is_authenticated(&self) -> bool {
+        self.auth_status == AuthorizationStatus::Authenticated
+    }
 }
 
 impl Default for Client {
@@ -109,6 +135,7 @@ impl Default for Client {
         Self {
             entity: Entity::PLACEHOLDER,
             client_type: ClientType::Unknown,
+            auth_status: AuthorizationStatus::Unauthenticated,
         }
     }
 }
@@ -147,13 +174,7 @@ pub(crate) fn handle_connections(
     for connection in connections.read() {
         let client_id = connection.context();
 
-        context.clients.insert(
-            *client_id,
-            Client {
-                entity: Entity::PLACEHOLDER,
-                client_type: ClientType::Unknown,
-            },
-        );
+        context.clients.insert(*client_id, Client::default());
 
         server
             .send_message_to_target::<Channel1, SCHello>(

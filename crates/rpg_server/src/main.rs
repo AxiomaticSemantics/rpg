@@ -1,24 +1,24 @@
 //! Run with
 //! - `cargo run`
 //! - `cargo run -- port 42069`
+mod account;
 mod assets;
 mod game;
 mod server;
 mod state;
 mod world;
 
-use crate::assets::{load_metadata, JsonAssets, MetadataResources};
+use crate::assets::{load_metadata, JsonAssets};
 use crate::state::AppState;
 use crate::{server::NetworkServerPlugin, world::ServerWorldPlugin};
 
 use rpg_network_protocol::*;
 use util::plugin::UtilityPlugin;
 
-use bevy::app::ScheduleRunnerPlugin;
-use bevy::asset::AssetPlugin;
-use bevy::ecs::schedule::common_conditions::in_state;
-use bevy::log::LogPlugin;
-use bevy::prelude::*;
+use bevy::{
+    app::ScheduleRunnerPlugin, asset::AssetPlugin, ecs::schedule::common_conditions::in_state,
+    log::LogPlugin, prelude::*,
+};
 
 use clap::Parser;
 use std::time::Duration;

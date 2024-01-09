@@ -35,7 +35,7 @@ version = "0.6"
 features = ["serde-1"]
 
 [workspace.dependencies.glam]
-version = "0.24"
+version = "0.25"
 
 #[workspace.target.'cfg(target_os = "windows")'.build-dependencies]
 #embed-resource = "1.7"
