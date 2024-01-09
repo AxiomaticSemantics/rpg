@@ -248,10 +248,18 @@ pub(crate) fn receive_hello(
     mut reader: EventReader<MessageEvent<SCHello>>,
 ) {
     for event in reader.read() {
-        info!("received: {:?}", event.message());
+        info!("Received: {:?}", event.message());
 
         client
-            .send_message::<Channel1, CSConnectPlayer>(CSConnectPlayer)
+            .send_message::<Channel1, CSLoadAccount>(CSLoadAccount {
+                name: "TestAccount".into(),
+            })
+            .unwrap();
+
+        client
+            .send_message::<Channel1, CSCreateAccount>(CSCreateAccount {
+                name: "TestAccount".into(),
+            })
             .unwrap();
 
         reader.clear();
@@ -266,7 +274,7 @@ pub(crate) fn receive_entity_spawn(
     player_q: Query<&PlayerPosition>,
 ) {
     for event in reader.read() {
-        info!("Client received entity spawn: {:?}", event.entity());
+        info!("Received entity spawn: {:?}", event.entity());
 
         let bundle = (
             Aabb::from_min_max(Vec3::new(-0.5, -0.5, -0.5), Vec3::new(0.5, 0.5, 0.5)),

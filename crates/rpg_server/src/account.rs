@@ -1,4 +1,6 @@
-use crate::server::{ClientType, NetworkContext, NetworkParamsRO, NetworkParamsRW};
+use crate::server::{
+    AuthorizationStatus, ClientType, NetworkContext, NetworkParamsRO, NetworkParamsRW,
+};
 
 use bevy::{
     ecs::{
@@ -25,7 +27,7 @@ use util::fs::{open_read, open_write};
 
 use serde_json;
 
-use std::path::Path;
+use std::{env, path::Path};
 
 #[derive(Bundle)]
 pub(crate) struct RpgAccountBundle {
@@ -50,7 +52,11 @@ pub(crate) fn receive_account_create(
         // Allow authenticated admins to create accounts
         if client.is_authenticated_admin() {}
 
-        let file_path = format!("save/server/accounts/{}.json", event.message().name);
+        let file_path = format!(
+            "{}/server/accounts/{}.json",
+            std::env::var("RPG_SAVE_ROOT").unwrap(),
+            event.message().name
+        );
         let path = Path::new(file_path.as_str());
         let file = open_read(path);
 
@@ -81,22 +87,27 @@ pub(crate) fn receive_account_create(
 pub(crate) fn receive_account_load(
     mut commands: Commands,
     mut account_load_reader: EventReader<MessageEvent<CSLoadAccount>>,
-    net_params: NetworkParamsRO,
+    mut net_params: NetworkParamsRW,
 ) {
     for event in account_load_reader.read() {
-        let client = net_params.context.clients.get(event.context()).unwrap();
-        if !client.is_authenticated_player() {
-            info!("unauthenticated client attempted to load account {client:?}");
+        let client = net_params.context.clients.get_mut(event.context()).unwrap();
+        if client.is_authenticated_player() {
+            info!("authenticated player attempted to load account {client:?}");
             continue;
         }
 
-        let file_path = format!("save/server/accounts/{}.json", event.message().name);
+        let file_path = format!(
+            "{}/server/accounts/{}.json",
+            env::var("RPG_SAVE_ROOT").unwrap(),
+            event.message().name
+        );
         let path = Path::new(file_path.as_str());
         let file = open_read(path);
 
         if let Ok(file) = file {
             let account: Result<Account, _> = serde_json::from_reader(file);
             if let Ok(account) = account {
+                client.auth_status = AuthorizationStatus::Authenticated;
                 info!("spawning RpgAccount for {client:?}");
 
                 commands.spawn(RpgAccountBundle {
@@ -104,6 +115,7 @@ pub(crate) fn receive_account_load(
                 });
             }
         } else {
+            info!("account does not exist {client:?}");
         }
     }
 }
