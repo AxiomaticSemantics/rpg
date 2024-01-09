@@ -9,6 +9,7 @@ use derive_more::{Add, Mul};
 use lightyear::prelude::*;
 use serde_derive::{Deserialize, Serialize};
 
+use rpg_account::{account::AccountInfo, character::CharacterInfo};
 use rpg_core::{class::Class, skill::SkillId, uid::Uid, unit::HeroGameMode};
 use rpg_world::zone::ZoneId;
 
@@ -159,10 +160,16 @@ pub struct CSUseSkillTargeted {
 pub struct SCHello;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCCreateAccount(pub bool);
+pub struct SCCreateAccountSuccess(pub AccountInfo);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCNoSuchAccount;
+pub struct SCCreateAccountError;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCCreateCharacterSuccess(pub CharacterInfo);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCCreateCharacterError;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCAccountInfo {
@@ -190,9 +197,11 @@ pub enum Messages {
 
     // Account Messages
     SCHello(SCHello),
-    SCCreateAccount(SCCreateAccount),
+    SCCreateAccountSuccess(SCCreateAccountSuccess),
+    SCCreateAccountError(SCCreateAccountError),
+    SCCreateCharacterSuccess(SCCreateCharacterSuccess),
+    SCCreateCharacterError(SCCreateCharacterError),
     SCAccountInfo(SCAccountInfo),
-    SCNoSuchAccount(SCNoSuchAccount),
 
     // Chat Messages
     SCChatMessageChannel(SCChatMessageChannel),

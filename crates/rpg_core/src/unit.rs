@@ -28,7 +28,7 @@ pub enum UnitKind {
     Villain,
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Copy, Clone, Ser, De)]
+#[derive(Debug, Default, PartialEq, PartialOrd, Copy, Clone, Ser, De)]
 pub enum HeroGameMode {
     #[default]
     Normal,
