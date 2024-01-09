@@ -11,7 +11,6 @@ use bevy::{
 };
 
 use lightyear::prelude::server::*;
-use lightyear::prelude::*;
 
 use rpg_network_protocol::{protocol::*, *};
 
@@ -55,6 +54,7 @@ pub(crate) fn receive_character_load(
     }
 }
 
+// FIXME this should probably be moved back to game.rs
 pub(crate) fn receive_connect_player(
     mut commands: Commands,
     mut connect_reader: EventReader<MessageEvent<CSConnectPlayer>>,
