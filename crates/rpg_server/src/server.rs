@@ -6,7 +6,7 @@ use bevy::{
         entity::Entity,
         event::EventReader,
         schedule::IntoSystemConfigs,
-        system::{Commands, ResMut, Resource},
+        system::{Commands, Res, ResMut, Resource, SystemParam},
     },
     hierarchy::DespawnRecursiveExt,
     log::info,
@@ -74,6 +74,18 @@ impl Plugin for NetworkServerPlugin {
                 ),
             );
     }
+}
+
+#[derive(SystemParam)]
+pub(crate) struct NetworkParamsRO<'w> {
+    pub(crate) server: Res<'w, Server>,
+    pub(crate) context: Res<'w, NetworkContext>,
+}
+
+#[derive(SystemParam)]
+pub(crate) struct NetworkParamsRW<'w> {
+    pub(crate) server: ResMut<'w, Server>,
+    pub(crate) context: ResMut<'w, NetworkContext>,
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -147,13 +159,13 @@ pub(crate) struct NetworkContext {
 
 pub(crate) fn handle_disconnections(
     mut disconnections: EventReader<DisconnectEvent>,
-    mut context: ResMut<NetworkContext>,
+    mut net_params: NetworkParamsRW,
     mut commands: Commands,
 ) {
     for disconnection in disconnections.read() {
         let client_id = disconnection.context();
         info!("Removing {client_id} from global map");
-        if let Some(client) = context.clients.remove(client_id) {
+        if let Some(client) = net_params.context.clients.remove(client_id) {
             if client.entity != Entity::PLACEHOLDER {
                 commands.entity(client.entity).despawn_recursive();
             }
@@ -163,20 +175,24 @@ pub(crate) fn handle_disconnections(
 
 pub(crate) fn handle_connections(
     mut connections: EventReader<ConnectEvent>,
-    mut context: ResMut<NetworkContext>,
-    mut server: ResMut<Server>,
+    mut net_params: NetworkParamsRW,
     mut server_state: ResMut<ServerState>,
 ) {
     if connections.len() > 0 && server_state.mode == ServerMode::Idle {
+        info!("Setting server to Lobby mode");
         server_state.mode = ServerMode::Lobby;
     }
 
     for connection in connections.read() {
         let client_id = connection.context();
 
-        context.clients.insert(*client_id, Client::default());
+        net_params
+            .context
+            .clients
+            .insert(*client_id, Client::default());
 
-        server
+        net_params
+            .server
             .send_message_to_target::<Channel1, SCHello>(
                 SCHello,
                 NetworkTarget::Only(vec![*client_id]),

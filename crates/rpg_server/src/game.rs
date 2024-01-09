@@ -1,4 +1,4 @@
-use crate::server::{ClientType, NetworkContext};
+use crate::server::{ClientType, NetworkContext, NetworkParamsRW};
 
 use bevy::{
     ecs::{
@@ -19,12 +19,11 @@ use rpg_network_protocol::protocol::*;
 pub(crate) fn movement_request(
     mut player_q: Query<(&mut Transform, &NetworkClientId)>,
     mut movement_events: EventReader<MessageEvent<CSMovePlayer>>,
-    context: Res<NetworkContext>,
-    mut server: ResMut<Server>,
+    mut net_params: NetworkParamsRW,
 ) {
     for movement in movement_events.read() {
         let client_id = movement.context();
-        let Some(client) = context.clients.get(client_id) else {
+        let Some(client) = net_params.context.clients.get(client_id) else {
             println!("client not found");
             continue;
         };
@@ -42,7 +41,8 @@ pub(crate) fn movement_request(
             transform.translation = transform.translation + transform.forward() * 0.01;
             //println!("move player to {}", transform.translation);
 
-            server
+            net_params
+                .server
                 .send_message_to_target::<Channel1, SCMovePlayer>(
                     SCMovePlayer(transform.translation),
                     NetworkTarget::Only(vec![*client_id]),
