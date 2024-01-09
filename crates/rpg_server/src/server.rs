@@ -71,6 +71,7 @@ impl Plugin for NetworkServerPlugin {
                     account::receive_character_create,
                     account::receive_character_load,
                     account::receive_connect_player,
+                    account::receive_connect_admin,
                 ),
             );
     }
@@ -139,6 +140,30 @@ impl Client {
 
     pub(crate) fn is_authenticated(&self) -> bool {
         self.auth_status == AuthorizationStatus::Authenticated
+    }
+
+    pub(crate) fn is_player(&self) -> bool {
+        if let ClientType::Player(_) = self.client_type {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub(crate) fn is_admin(&self) -> bool {
+        if let ClientType::Admin(_) = self.client_type {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub(crate) fn is_authenticated_player(&self) -> bool {
+        self.is_player() && self.is_authenticated()
+    }
+
+    pub(crate) fn is_authenticated_admin(&self) -> bool {
+        self.is_admin() && self.is_authenticated()
     }
 }
 

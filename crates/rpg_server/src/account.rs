@@ -54,7 +54,6 @@ pub(crate) fn receive_character_load(
     }
 }
 
-// FIXME this should probably be moved back to game.rs
 pub(crate) fn receive_connect_player(
     mut commands: Commands,
     mut connect_reader: EventReader<MessageEvent<CSConnectPlayer>>,
@@ -62,11 +61,12 @@ pub(crate) fn receive_connect_player(
 ) {
     for player in connect_reader.read() {
         let client_id = player.context();
-        let Some(client) = context.clients.get_mut(client_id) else {
-            continue;
-        };
-
+        let client = context.clients.get_mut(client_id).unwrap();
         if client.client_type != ClientType::Unknown {
+            info!(
+                "client type {:?} attempted to authorize as player while already authorized",
+                client.client_type
+            );
             continue;
         }
 
@@ -80,6 +80,28 @@ pub(crate) fn receive_connect_player(
                 ),
             ))
             .id();
+
         info!("client type set to player");
+    }
+}
+
+pub(crate) fn receive_connect_admin(
+    mut connect_reader: EventReader<MessageEvent<CSConnectAdmin>>,
+    mut context: ResMut<NetworkContext>,
+) {
+    for admin in connect_reader.read() {
+        let client_id = admin.context();
+        let client = context.clients.get_mut(client_id).unwrap();
+        if client.client_type != ClientType::Unknown {
+            info!(
+                "client type {:?} attempted to authorize as admin while already authorized",
+                client.client_type
+            );
+            continue;
+        }
+
+        client.client_type = ClientType::Admin(*client_id);
+
+        info!("client type set to admin");
     }
 }
