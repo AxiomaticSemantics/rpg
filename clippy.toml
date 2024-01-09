@@ -1,0 +1,2 @@
+# clippy.toml
+excessive-nesting-threshold = 8
