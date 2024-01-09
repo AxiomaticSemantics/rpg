@@ -83,4 +83,4 @@ optional = false
 default-features = false
 
 [target.'cfg(target_os = "windows")'.build-dependencies]
-embed-resource = { version = "1.7" }
+embed-resource = { version = "2.4" }
