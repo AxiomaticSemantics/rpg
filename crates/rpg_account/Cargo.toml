@@ -11,6 +11,7 @@ description.workspace = true
 workspace = true
 
 [dependencies]
+rpg_core = { path = "../rpg_core" }
+
 serde = { workspace = true }
 serde_derive = { workspace = true }
-util = { workspace = true }
