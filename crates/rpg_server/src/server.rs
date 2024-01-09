@@ -31,15 +31,20 @@ impl Plugin for NetworkServerPlugin {
             .with_protocol_id(PROTOCOL_ID)
             .with_key(KEY);
 
-        /*let link_conditioner = LinkConditionerConfig {
+        let transport = TransportConfig::UdpSocket(server_addr);
+
+        #[cfg(feature = "net_debug")]
+        let link_conditioner = LinkConditionerConfig {
             incoming_latency: Duration::from_millis(10),
             incoming_jitter: Duration::from_millis(20),
             incoming_loss: 0.05,
-        };*/
+        };
+        #[cfg(feature = "net_debug")]
+        let io =
+            Io::from_config(IoConfig::from_transport(transport)).with_conditioner(link_conditioner);
 
-        let transport = TransportConfig::UdpSocket(server_addr);
+        #[cfg(not(feature = "net_debug"))]
         let io = Io::from_config(IoConfig::from_transport(transport));
-        //.with_conditioner(link_conditioner));
 
         let config = ServerConfig {
             shared: shared_config(),
@@ -58,7 +63,16 @@ impl Plugin for NetworkServerPlugin {
                     .in_set(FixedUpdateSet::Main),
             )
             .add_systems(PreUpdate, (handle_connections, handle_disconnections))
-            .add_systems(Update, game::receive_connect_player);
+            .add_systems(
+                Update,
+                (
+                    game::receive_account_create,
+                    game::receive_account_load,
+                    game::receive_character_create,
+                    game::receive_character_load,
+                    game::receive_connect_player,
+                ),
+            );
     }
 }
 
@@ -73,6 +87,7 @@ pub(crate) enum ClientType {
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
 pub(crate) enum ServerMode {
     #[default]
+    Offline,
     Idle,
     Lobby,
     Game,
@@ -83,10 +98,36 @@ pub(crate) struct ServerState {
     pub(crate) mode: ServerMode,
 }
 
+#[derive(Default, Debug, PartialEq, Eq)]
+pub enum AuthorizationStatus {
+    #[default]
+    Unauthenticated,
+    Authenticated,
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Client {
     pub(crate) entity: Entity,
     pub(crate) client_type: ClientType,
+    pub(crate) auth_status: AuthorizationStatus,
+}
+
+impl Client {
+    pub(crate) fn new(
+        entity: Entity,
+        client_type: ClientType,
+        auth_status: AuthorizationStatus,
+    ) -> Self {
+        Self {
+            entity,
+            client_type,
+            auth_status,
+        }
+    }
+
+    pub(crate) fn is_authenticated(&self) -> bool {
+        self.auth_status == AuthorizationStatus::Authenticated
+    }
 }
 
 impl Default for Client {
@@ -94,6 +135,7 @@ impl Default for Client {
         Self {
             entity: Entity::PLACEHOLDER,
             client_type: ClientType::Unknown,
+            auth_status: AuthorizationStatus::Unauthenticated,
         }
     }
 }
@@ -132,13 +174,7 @@ pub(crate) fn handle_connections(
     for connection in connections.read() {
         let client_id = connection.context();
 
-        context.clients.insert(
-            *client_id,
-            Client {
-                entity: Entity::PLACEHOLDER,
-                client_type: ClientType::Unknown,
-            },
-        );
+        context.clients.insert(*client_id, Client::default());
 
         server
             .send_message_to_target::<Channel1, SCHello>(
@@ -151,8 +187,6 @@ pub(crate) fn handle_connections(
 
 /*
 server.send_message_to_target::<Channel1, _>(message, NetworkTarget::All)
-    .unwrap_or_else(|e| {
-        error!("Failed to send message: {:?}", e);
-    });
+    .unwrap_or_else(|e| error!("Failed to send message: {:?}", e));
 }
 */
