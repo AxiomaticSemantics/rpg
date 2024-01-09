@@ -14,16 +14,13 @@ use bevy::ecs::{
     system::{Query, ResMut, Resource},
 };
 
+use util::fs::{open_read, open_write};
+
 use rpg_core::{
     passive_tree::PassiveSkillGraph, storage::UnitStorage as RpgUnitStorage, unit::Unit as RpgUnit,
 };
 
-use std::{
-    env,
-    fs::{self, File},
-    io,
-    path::Path,
-};
+use std::{env, io, path::Path};
 
 #[derive(Event)]
 pub struct SaveGame;
@@ -169,16 +166,4 @@ pub fn save_character(
     game_state.state = PlayState::GameOver(GameOverState::Saved);
 
     state.set(AppState::GameCleanup);
-}
-
-fn open_read(path: &Path) -> Result<File, io::Error> {
-    fs::OpenOptions::new().read(true).open(path)
-}
-
-fn open_write(path: &Path) -> Result<File, io::Error> {
-    fs::OpenOptions::new()
-        .create(true)
-        .write(true)
-        .truncate(true)
-        .open(path)
 }
