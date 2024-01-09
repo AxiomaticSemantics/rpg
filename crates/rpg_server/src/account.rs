@@ -14,13 +14,31 @@ use lightyear::prelude::server::*;
 
 use rpg_network_protocol::{protocol::*, *};
 
+use util::fs::{open_read, open_write};
+
+use std::{fs::Metadata, path::Path};
+
 pub(crate) fn receive_account_create(
     mut commands: Commands,
     mut account_create_reader: EventReader<MessageEvent<CSCreateAccount>>,
     mut context: ResMut<NetworkContext>,
 ) {
     for event in account_create_reader.read() {
-        //
+        let file_path = format!("save/server/accounts/{}", event.message().name);
+        let path = Path::new(file_path.as_str());
+        let file = open_read(path);
+
+        if let Ok(file) = file {
+            let fs_meta = file.metadata().unwrap();
+        } else {
+            let Ok(file) = open_write(path) else {
+                info!("unable to open account file for writing");
+                continue;
+            };
+
+            info!("writing account file to {file_path}");
+            // Write account data
+        }
     }
 }
 
