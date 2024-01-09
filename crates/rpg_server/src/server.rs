@@ -15,6 +15,7 @@ use bevy::{
 use lightyear::prelude::server::*;
 use lightyear::prelude::*;
 
+use rpg_core::uid::NextUid;
 use rpg_network_protocol::{protocol::*, *};
 
 use std::collections::HashMap;
@@ -81,12 +82,14 @@ impl Plugin for NetworkServerPlugin {
 pub(crate) struct NetworkParamsRO<'w> {
     pub(crate) server: Res<'w, Server>,
     pub(crate) context: Res<'w, NetworkContext>,
+    pub(crate) state: Res<'w, ServerState>,
 }
 
 #[derive(SystemParam)]
 pub(crate) struct NetworkParamsRW<'w> {
     pub(crate) server: ResMut<'w, Server>,
     pub(crate) context: ResMut<'w, NetworkContext>,
+    pub(crate) state: ResMut<'w, ServerState>,
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -109,6 +112,7 @@ pub(crate) enum ServerMode {
 #[derive(Default, Resource)]
 pub(crate) struct ServerState {
     pub(crate) mode: ServerMode,
+    pub(crate) next_uid: NextUid,
 }
 
 #[derive(Default, Debug, PartialEq, Eq)]

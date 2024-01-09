@@ -101,7 +101,7 @@ pub mod generation {
     pub fn generate(rng: &mut Rng, metadata: &Metadata, level: u8, next_uid: &mut NextUid) -> Item {
         assert!(level > 0, "Level must be non-zero");
 
-        let uid = next_uid.0;
+        let uid = next_uid.get();
 
         let kind_roll = rng.f32();
         let kind = match kind_roll {
@@ -264,7 +264,7 @@ pub mod generation {
             socketable,
         };
 
-        next_uid.0 .0 += 1;
+        next_uid.next();
 
         item
     }

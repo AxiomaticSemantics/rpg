@@ -479,7 +479,7 @@ impl Unit {
                     ),
                 );
                 let xp_item = Item::new(
-                    ItemUid(next_uid.0),
+                    ItemUid(next_uid.get()),
                     ItemId(32768),
                     1,
                     Rarity::Normal,
@@ -623,8 +623,8 @@ pub mod generation {
         let villain_table_entry = metadata.unit.villains.get(&villain_id).unwrap();
         let class = villain_table_entry.class;
 
-        let uid = next_uid.0;
-        next_uid.0 .0 += 1;
+        let uid = next_uid.get();
+        next_uid.next();
 
         Unit::new(
             uid,

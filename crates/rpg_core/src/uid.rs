@@ -1,13 +1,23 @@
 use serde_derive::{Deserialize as De, Serialize as Ser};
 
-#[derive(Ser, De, Default, PartialEq, Debug, Copy, Clone)]
-pub struct Uid(pub u64);
+#[derive(Ser, De, Default, PartialEq, PartialOrd, Debug, Copy, Clone)]
+pub struct Uid(u64);
 
-#[derive(Ser, De, Default, PartialEq, Debug)]
-pub struct NextUid(pub Uid);
+impl Uid {
+    pub fn id(&self) -> u64 {
+        self.0
+    }
+}
+
+#[derive(Ser, De, Default, PartialEq, PartialOrd, Debug)]
+pub struct NextUid(Uid);
 
 impl NextUid {
     pub fn next(&mut self) {
         self.0 .0 += 1;
+    }
+
+    pub fn get(&self) -> Uid {
+        self.0
     }
 }
