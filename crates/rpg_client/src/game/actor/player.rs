@@ -245,7 +245,7 @@ pub fn spawn_player(
         )
     } else {
         let mut unit = RpgUnit::new(
-            game_state.next_uid.0,
+            game_state.next_uid.get(),
             player_config.class,
             UnitKind::Hero,
             UnitInfo::Hero(HeroInfo::new(&metadata.rpg, player_config.game_mode)),

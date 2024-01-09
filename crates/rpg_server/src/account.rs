@@ -1,5 +1,6 @@
-use crate::server::{
-    AuthorizationStatus, ClientType, NetworkContext, NetworkParamsRO, NetworkParamsRW,
+use crate::{
+    assets::MetadataResources,
+    server::{AuthorizationStatus, ClientType, NetworkContext, NetworkParamsRO, NetworkParamsRW},
 };
 
 use bevy::{
@@ -7,7 +8,7 @@ use bevy::{
         bundle::Bundle,
         component::Component,
         event::EventReader,
-        system::{Commands, Query, ResMut},
+        system::{Commands, Query, Res, ResMut},
     },
     log::info,
     math::Vec3,
@@ -16,10 +17,16 @@ use bevy::{
 };
 
 use lightyear::prelude::server::*;
+use lightyear::prelude::NetworkTarget;
 
 use rpg_account::{
     account::{Account, AccountInfo},
     character::{Character, CharacterInfo},
+};
+use rpg_core::{
+    passive_tree::PassiveSkillGraph,
+    storage::UnitStorage,
+    unit::{HeroInfo, Unit, UnitInfo, UnitKind},
 };
 use rpg_network_protocol::{protocol::*, *};
 
@@ -40,7 +47,7 @@ pub(crate) struct RpgAccount(pub(crate) Account);
 // FIXME there should be different message types for admin and player variants
 pub(crate) fn receive_account_create(
     mut account_create_reader: EventReader<MessageEvent<CSCreateAccount>>,
-    net_params: NetworkParamsRO,
+    mut net_params: NetworkParamsRW,
 ) {
     for event in account_create_reader.read() {
         let client = net_params.context.clients.get(event.context()).unwrap();
@@ -71,12 +78,15 @@ pub(crate) fn receive_account_create(
             let account = Account {
                 info: AccountInfo {
                     name: event.message().name.clone(),
+                    id: net_params.state.next_uid.get(),
                     character_info: vec![],
                 },
                 characters: vec![],
             };
 
             serde_json::to_writer(file, &account).unwrap();
+
+            net_params.state.next_uid.next();
 
             info!("writing account file to {file_path}");
             // Write account data
@@ -121,14 +131,75 @@ pub(crate) fn receive_account_load(
 }
 
 pub(crate) fn receive_character_create(
+    metadata: Res<MetadataResources>,
     mut character_create_reader: EventReader<MessageEvent<CSCreateCharacter>>,
-    net_params: NetworkParamsRO,
+    mut net_params: NetworkParamsRW,
+    mut account_q: Query<&mut RpgAccount>,
 ) {
     for event in character_create_reader.read() {
-        let client = net_params.context.clients.get(event.context()).unwrap();
+        let client_id = event.context();
+        let client = net_params.context.clients.get(client_id).unwrap();
         if !client.is_authenticated_player() {
             info!("unauthenticated client attempted to create character {client:?}");
             continue;
+        }
+
+        let create_msg = event.message();
+
+        for mut account in &mut account_q {
+            if account
+                .0
+                .info
+                .character_info
+                .iter()
+                .any(|c| c.name == event.message().name)
+            {
+                info!("character already exists");
+
+                net_params
+                    .server
+                    .send_message_to_target::<Channel1, SCCreateAccountError>(
+                        SCCreateAccountError,
+                        NetworkTarget::Only(vec![*client_id]),
+                    )
+                    .unwrap();
+            } else {
+                let unit_info = UnitInfo::Hero(HeroInfo::new(&metadata.rpg, create_msg.game_mode));
+                let mut unit = Unit::new(
+                    net_params.state.next_uid.get(),
+                    create_msg.class,
+                    UnitKind::Hero,
+                    unit_info,
+                    1,
+                    create_msg.name.clone(),
+                    None,
+                    &metadata.rpg,
+                );
+                unit.add_default_skills(&metadata.rpg);
+
+                net_params.state.next_uid.next();
+
+                account.0.info.character_info.push(CharacterInfo {
+                    name: create_msg.name.clone(),
+                    uid: unit.uid,
+                    hero_mode: create_msg.game_mode,
+                });
+                account.0.characters.push(Character {
+                    unit,
+                    passive_tree: PassiveSkillGraph::new(create_msg.class),
+                    storage: UnitStorage::default(),
+                });
+
+                net_params.state.next_uid.next();
+
+                net_params
+                    .server
+                    .send_message_to_target::<Channel1, SCCreateAccountSuccess>(
+                        SCCreateAccountSuccess(account.0.info.clone()),
+                        NetworkTarget::Only(vec![*client_id]),
+                    )
+                    .unwrap();
+            }
         }
     }
 }
