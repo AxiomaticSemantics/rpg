@@ -15,6 +15,46 @@ use lightyear::prelude::*;
 
 use rpg_network_protocol::{protocol::*, *};
 
+pub(crate) fn receive_account_create(
+    mut commands: Commands,
+    mut account_create_reader: EventReader<MessageEvent<CSCreateAccount>>,
+    mut context: ResMut<NetworkContext>,
+) {
+    for event in account_create_reader.read() {
+        //
+    }
+}
+
+pub(crate) fn receive_account_load(
+    mut commands: Commands,
+    mut account_load_reader: EventReader<MessageEvent<CSLoadAccount>>,
+    mut context: ResMut<NetworkContext>,
+) {
+    for event in account_load_reader.read() {
+        //
+    }
+}
+
+pub(crate) fn receive_character_create(
+    mut commands: Commands,
+    mut character_create_reader: EventReader<MessageEvent<CSCreateCharacter>>,
+    mut context: ResMut<NetworkContext>,
+) {
+    for event in character_create_reader.read() {
+        //
+    }
+}
+
+pub(crate) fn receive_character_load(
+    mut commands: Commands,
+    mut character_load_reader: EventReader<MessageEvent<CSLoadCharacter>>,
+    mut context: ResMut<NetworkContext>,
+) {
+    for event in character_load_reader.read() {
+        //
+    }
+}
+
 pub(crate) fn receive_connect_player(
     mut commands: Commands,
     mut connect_reader: EventReader<MessageEvent<CSConnectPlayer>>,

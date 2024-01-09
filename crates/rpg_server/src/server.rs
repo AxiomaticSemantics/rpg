@@ -1,12 +1,12 @@
 use crate::game;
 
 use bevy::{
-    app::{App, FixedUpdate, Plugin, PreUpdate, Startup, Update},
+    app::{App, FixedUpdate, Plugin, PreUpdate, Update},
     ecs::{
         entity::Entity,
         event::EventReader,
         schedule::IntoSystemConfigs,
-        system::{Commands, Res, ResMut, Resource},
+        system::{Commands, ResMut, Resource},
     },
     hierarchy::DespawnRecursiveExt,
     log::info,
@@ -16,7 +16,6 @@ use lightyear::prelude::server::*;
 use lightyear::prelude::*;
 
 use rpg_network_protocol::{protocol::*, *};
-use util::assets::json::JsonSource;
 
 use std::collections::HashMap;
 use std::net::{Ipv4Addr, SocketAddr};
@@ -32,15 +31,20 @@ impl Plugin for NetworkServerPlugin {
             .with_protocol_id(PROTOCOL_ID)
             .with_key(KEY);
 
-        /*let link_conditioner = LinkConditionerConfig {
+        let transport = TransportConfig::UdpSocket(server_addr);
+
+        #[cfg(feature = "net_debug")]
+        let link_conditioner = LinkConditionerConfig {
             incoming_latency: Duration::from_millis(10),
             incoming_jitter: Duration::from_millis(20),
             incoming_loss: 0.05,
-        };*/
+        };
+        #[cfg(feature = "net_debug")]
+        let io =
+            Io::from_config(IoConfig::from_transport(transport)).with_conditioner(link_conditioner);
 
-        let transport = TransportConfig::UdpSocket(server_addr);
+        #[cfg(not(feature = "net_debug"))]
         let io = Io::from_config(IoConfig::from_transport(transport));
-        //.with_conditioner(link_conditioner));
 
         let config = ServerConfig {
             shared: shared_config(),
@@ -59,7 +63,16 @@ impl Plugin for NetworkServerPlugin {
                     .in_set(FixedUpdateSet::Main),
             )
             .add_systems(PreUpdate, (handle_connections, handle_disconnections))
-            .add_systems(Update, game::receive_connect_player);
+            .add_systems(
+                Update,
+                (
+                    game::receive_account_create,
+                    game::receive_account_load,
+                    game::receive_character_create,
+                    game::receive_character_load,
+                    game::receive_connect_player,
+                ),
+            );
     }
 }
 
@@ -74,6 +87,7 @@ pub(crate) enum ClientType {
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
 pub(crate) enum ServerMode {
     #[default]
+    Offline,
     Idle,
     Lobby,
     Game,
@@ -152,8 +166,6 @@ pub(crate) fn handle_connections(
 
 /*
 server.send_message_to_target::<Channel1, _>(message, NetworkTarget::All)
-    .unwrap_or_else(|e| {
-        error!("Failed to send message: {:?}", e);
-    });
+    .unwrap_or_else(|e| error!("Failed to send message: {:?}", e));
 }
 */

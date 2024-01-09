@@ -149,6 +149,9 @@ pub struct SCHello;
 pub struct SCCreateAccount(pub bool);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCNoSuchAccount;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCAccountInfo {
     pub characters: Vec<Uid>,
 }
@@ -165,6 +168,7 @@ pub enum Messages {
     SCHello(SCHello),
     SCCreateAccount(SCCreateAccount),
     SCAccountInfo(SCAccountInfo),
+    SCNoSuchAccount(SCNoSuchAccount),
     SCMovePlayer(SCMovePlayer),
     SCRotPlayer(SCRotPlayer),
 
