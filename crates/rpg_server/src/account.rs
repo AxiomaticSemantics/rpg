@@ -2,21 +2,35 @@ use crate::server::{ClientType, NetworkContext, NetworkParamsRO, NetworkParamsRW
 
 use bevy::{
     ecs::{
+        bundle::Bundle,
+        component::Component,
         event::EventReader,
-        system::{Commands, Query, Res, ResMut},
+        system::{Commands, Query, ResMut},
     },
     log::info,
     math::Vec3,
+    prelude::{Deref, DerefMut},
     transform::{components::Transform, TransformBundle},
 };
 
 use lightyear::prelude::server::*;
 
+use rpg_account::account::Account;
 use rpg_network_protocol::{protocol::*, *};
 
 use util::fs::{open_read, open_write};
 
-use std::{fs::Metadata, path::Path};
+use serde_json::from_reader;
+
+use std::path::Path;
+
+#[derive(Bundle)]
+pub(crate) struct RpgAccountBundle {
+    pub account: RpgAccount,
+}
+
+#[derive(Debug, Deref, DerefMut, Component)]
+pub(crate) struct RpgAccount(pub(crate) Account);
 
 // FIXME there should be different message types for admin and player variants
 pub(crate) fn receive_account_create(
@@ -25,15 +39,15 @@ pub(crate) fn receive_account_create(
 ) {
     for event in account_create_reader.read() {
         let client = net_params.context.clients.get(event.context()).unwrap();
-        if client.is_authenticated() && client.is_player() {
-            info!("already authenticated cliented attempted to create account {client:?}");
+        if client.is_authenticated_player() {
+            info!("already authenticated client attempted to create account {client:?}");
             continue;
         }
 
         // Allow authenticated admins to create accounts
         if client.is_authenticated_admin() {}
 
-        let file_path = format!("save/server/accounts/{}", event.message().name);
+        let file_path = format!("save/server/accounts/{}.json", event.message().name);
         let path = Path::new(file_path.as_str());
         let file = open_read(path);
 
@@ -58,26 +72,50 @@ pub(crate) fn receive_account_load(
 ) {
     for event in account_load_reader.read() {
         let client = net_params.context.clients.get(event.context()).unwrap();
+        if !client.is_authenticated_player() {
+            info!("unauthenticated client attempted to load account {client:?}");
+            continue;
+        }
+
+        let file_path = format!("save/server/accounts/{}.json", event.message().name);
+        let path = Path::new(file_path.as_str());
+        let file = open_read(path);
+
+        if let Ok(file) = file {
+            let account: Result<Account, _> = from_reader(file);
+            if let Ok(account) = account {
+                commands.spawn(RpgAccountBundle {
+                    account: RpgAccount(account),
+                });
+            }
+        } else {
+        }
     }
 }
 
 pub(crate) fn receive_character_create(
-    mut commands: Commands,
     mut character_create_reader: EventReader<MessageEvent<CSCreateCharacter>>,
     net_params: NetworkParamsRO,
 ) {
     for event in character_create_reader.read() {
-        //
+        let client = net_params.context.clients.get(event.context()).unwrap();
+        if !client.is_authenticated_player() {
+            info!("unauthenticated client attempted to create character {client:?}");
+            continue;
+        }
     }
 }
 
 pub(crate) fn receive_character_load(
-    mut commands: Commands,
     mut character_load_reader: EventReader<MessageEvent<CSLoadCharacter>>,
     net_params: NetworkParamsRO,
 ) {
     for event in character_load_reader.read() {
-        //
+        let client = net_params.context.clients.get(event.context()).unwrap();
+        if !client.is_authenticated_player() {
+            info!("unauthenticated client attempted to load character {client:?}");
+            continue;
+        }
     }
 }
 
