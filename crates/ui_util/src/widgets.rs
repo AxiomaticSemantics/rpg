@@ -417,12 +417,10 @@ pub fn edit_text(
 
     for (entity, mut edit_text, mut text, style) in &mut edit_text_q {
         if entity != focused_element {
-            println!("skipping non-focused edit_text");
             continue;
         }
 
         if style.display == Display::None {
-            println!("skipping non-displayable edit_text");
             continue;
         }
 
