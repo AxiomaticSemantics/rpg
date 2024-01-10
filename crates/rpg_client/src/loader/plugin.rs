@@ -2,6 +2,7 @@ use crate::{
     assets::{AudioAssets, JsonAssets, TextureAssets},
     game::{self, plugin::GamePlugin, state_saver},
     menu::plugin::MenuPlugin,
+    net::plugin::{NetworkClientConfig, NetworkClientPlugin},
     splash::plugin::SplashScreenPlugin,
     state::AppState,
 };
@@ -42,6 +43,8 @@ use audio_manager::plugin::AudioManagerPlugin;
 use bevy_tweening::TweeningPlugin;
 use winit::window::Icon;
 
+use std::net::Ipv4Addr;
+
 #[derive(Component)]
 pub struct OutOfGameCamera;
 
@@ -71,7 +74,7 @@ impl Plugin for LoaderPlugin {
             .add_plugins(
                 DefaultPlugins
                     .set(LogPlugin {
-                        filter: "wgpu=warn,naga=warn,client3d=info".into(),
+                        filter: "wgpu=warn,naga=warn,rpg_client=debug".into(),
                         ..default()
                     })
                     .set(WindowPlugin {
@@ -98,6 +101,13 @@ impl Plugin for LoaderPlugin {
             .init_resource::<UiTheme>()
             .init_resource::<state_saver::SaveSlots>()
             // External plugins
+            .add_plugins(NetworkClientPlugin {
+                config: NetworkClientConfig {
+                    client_port: 0,
+                    server_port: 5000,
+                    server_addr: Ipv4Addr::LOCALHOST,
+                },
+            })
             .add_plugins(TweeningPlugin)
             .add_plugins(UiUtilPlugin)
             //.add_plugins(ConsolePlugin)

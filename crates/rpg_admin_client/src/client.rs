@@ -22,14 +22,14 @@ impl FromWorld for ConnectionTimer {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct NetworkClientPluginConfig {
+pub(crate) struct NetworkClientConfig {
     pub(crate) client_port: u16,
     pub(crate) server_addr: Ipv4Addr,
     pub(crate) server_port: u16,
 }
 
 pub struct NetworkClientPlugin {
-    pub(crate) config: NetworkClientPluginConfig,
+    pub(crate) config: NetworkClientConfig,
     pub(crate) client_id: ClientId,
 }
 
