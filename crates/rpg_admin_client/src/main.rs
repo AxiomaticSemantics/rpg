@@ -2,23 +2,23 @@
 //! - `cargo run --bin rpg_admin_client`
 mod client;
 
+use crate::client::{NetworkClientConfig, NetworkClientPlugin};
+
 use rpg_network_protocol::*;
 
-use std::net::Ipv4Addr;
+use bevy::{app::App, DefaultPlugins};
 
-use bevy::prelude::*;
-use bevy::DefaultPlugins;
 use clap::Parser;
-
-use crate::client::{NetworkClientPlugin, NetworkClientPluginConfig};
 use lightyear::netcode::ClientId;
+
+use std::net::Ipv4Addr;
 
 fn main() {
     let cli = Cli::parse();
 
     let client_plugin = NetworkClientPlugin {
         client_id: cli.client_id as ClientId,
-        config: NetworkClientPluginConfig {
+        config: NetworkClientConfig {
             client_port: cli.client_port,
             server_addr: cli.server_addr,
             server_port: cli.server_port,

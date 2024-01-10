@@ -1,6 +1,9 @@
 use crate::{
     assets::TextureAssets,
-    menu::{create::CreateRoot, credits::CreditsRoot, load::LoadRoot, settings::SettingsRoot},
+    menu::{
+        account::AccountRoot, create::CreateRoot, credits::CreditsRoot, load::LoadRoot,
+        settings::SettingsRoot,
+    },
     state::AppState,
 };
 
@@ -32,10 +35,10 @@ pub struct MainRoot;
 pub struct ExitButton;
 
 #[derive(Component)]
-pub struct CreateButton;
+pub struct AccountCreateButton;
 
 #[derive(Component)]
-pub struct LoadButton;
+pub struct AccountLoginButton;
 
 #[derive(Component)]
 pub struct SettingsButton;
@@ -108,7 +111,7 @@ pub fn spawn(
             });
 
             p.spawn((
-                CreateButton,
+                AccountCreateButton,
                 ImageButtonBundle {
                     marker: ImageButton,
                     image: ImageBundle {
@@ -125,11 +128,8 @@ pub fn spawn(
             ))
             .with_children(|p| {
                 p.spawn(
-                    TextBundle::from_section(
-                        "Create Character",
-                        ui_theme.text_style_regular.clone(),
-                    )
-                    .with_style(ui_theme.row_style.clone()),
+                    TextBundle::from_section("Create Account", ui_theme.text_style_regular.clone())
+                        .with_style(ui_theme.row_style.clone()),
                 );
             });
 
@@ -138,6 +138,35 @@ pub fn spawn(
                 ..default()
             });
 
+            p.spawn((
+                AccountLoginButton,
+                ImageButtonBundle {
+                    marker: ImageButton,
+                    image: ImageBundle {
+                        image: frame_image.clone(),
+                        background_color: Color::rgb(0.7, 0.0, 0.0).into(),
+                        style: Style {
+                            padding: UiRect::all(Val::Px(4.)),
+                            ..default()
+                        },
+                        ..default()
+                    },
+                    interaction: Interaction::None,
+                },
+            ))
+            .with_children(|p| {
+                p.spawn(
+                    TextBundle::from_section("Account Login", ui_theme.text_style_regular.clone())
+                        .with_style(ui_theme.row_style.clone()),
+                );
+            });
+
+            p.spawn(NodeBundle {
+                style: ui_theme.vertical_spacer.clone(),
+                ..default()
+            });
+
+            /*
             p.spawn((
                 LoadButton,
                 ImageButtonBundle {
@@ -165,6 +194,7 @@ pub fn spawn(
                 style: ui_theme.vertical_spacer.clone(),
                 ..default()
             });
+            */
 
             p.spawn((
                 SettingsButton,
@@ -266,11 +296,11 @@ pub fn exit_button(
     }
 }
 
-pub fn create_button(
-    interaction_q: Query<&Interaction, (Changed<Interaction>, With<CreateButton>)>,
+pub fn account_create_button(
+    interaction_q: Query<&Interaction, (Changed<Interaction>, With<AccountCreateButton>)>,
     mut menu_set: ParamSet<(
         Query<&mut Style, With<MainRoot>>,
-        Query<&mut Style, With<CreateRoot>>,
+        Query<&mut Style, With<AccountRoot>>,
     )>,
 ) {
     let interaction = interaction_q.get_single();
@@ -280,8 +310,8 @@ pub fn create_button(
     }
 }
 
-pub fn load_button(
-    interaction_q: Query<&Interaction, (Changed<Interaction>, With<LoadButton>)>,
+pub fn account_login_button(
+    interaction_q: Query<&Interaction, (Changed<Interaction>, With<AccountLoginButton>)>,
     mut menu_set: ParamSet<(
         Query<&mut Style, With<MainRoot>>,
         Query<&mut Style, With<LoadRoot>>,

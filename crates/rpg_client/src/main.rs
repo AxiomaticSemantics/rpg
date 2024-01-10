@@ -7,6 +7,7 @@ mod assets;
 mod game;
 mod loader;
 mod menu;
+mod net;
 mod random;
 mod splash;
 mod state;
