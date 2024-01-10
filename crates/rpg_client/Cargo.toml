@@ -43,6 +43,9 @@ fastrand = "2.0.1"
 version = "0.3"
 default-features = false
 
+[dependencies.lightyear]
+git = "https://github.com/AxiomaticSemantics/lightyear"
+
 [dependencies.bevy]
 git = "https://github.com/AxiomaticSemantics/bevy"
 features = [
