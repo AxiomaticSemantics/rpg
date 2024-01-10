@@ -11,6 +11,9 @@ use ui_util::{
 };
 
 use rpg_core::{class::Class, unit::HeroGameMode};
+use rpg_network_protocol::protocol::*;
+
+use lightyear::prelude::*;
 
 use bevy::{
     ecs::{
@@ -282,12 +285,33 @@ pub fn spawn(
 
 pub fn create_button(
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<AccountCreateButton>)>,
+    account_text_set: ParamSet<(
+        Query<&Text, With<AccountCreateName>>,
+        Query<&Text, With<AccountCreateEmail>>,
+        Query<&Text, With<AccountCreatePassword>>,
+    )>,
 ) {
+    for interaction in &interaction_q {
+        //
+        if *interaction != Interaction::Pressed {
+            continue;
+        }
+    }
 }
 
 pub fn login_button(
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<AccountLoginButton>)>,
+    account_text_set: ParamSet<(
+        Query<&Text, With<AccountLoginName>>,
+        Query<&Text, With<AccountLoginPassword>>,
+    )>,
 ) {
+    for interaction in &interaction_q {
+        //
+        if *interaction != Interaction::Pressed {
+            continue;
+        }
+    }
 }
 
 pub fn cancel_button(

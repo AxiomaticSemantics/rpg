@@ -6,7 +6,7 @@ use crate::client::{NetworkClientConfig, NetworkClientPlugin};
 
 use rpg_network_protocol::*;
 
-use bevy::app::{App, DefaultPlugins};
+use bevy::{app::App, DefaultPlugins};
 
 use clap::Parser;
 use lightyear::netcode::ClientId;
