@@ -1,4 +1,12 @@
-use bevy::app::{App, Plugin};
+use crate::state::AppState;
+
+use bevy::{
+    app::{App, FixedUpdate, Plugin, Update},
+    ecs::{
+        schedule::{common_conditions::in_state, IntoSystemConfigs},
+        system::Commands,
+    },
+};
 
 use lightyear::{
     client::{
@@ -10,7 +18,7 @@ use lightyear::{
         sync::SyncConfig,
     },
     netcode::ClientId,
-    shared::ping::manager::PingConfig,
+    shared::{ping::manager::PingConfig, sets::FixedUpdateSet},
     transport::io::*,
 };
 use rpg_network_protocol::{protocol::protocol, KEY, PROTOCOL_ID};
@@ -54,6 +62,17 @@ impl Plugin for NetworkClientPlugin {
         };
         let plugin_config = PluginConfig::new(config, io, protocol(), auth);
 
-        app.add_plugins(ClientPlugin::new(plugin_config));
+        app.add_plugins(ClientPlugin::new(plugin_config))
+            .add_systems(
+                Update,
+                (
+                    //input.in_set(FixedUpdateSet::Main),
+                    //(receive_player_rotation, receive_player_movement).after(input)
+                    t.in_set(FixedUpdateSet::Main)
+                )
+                .run_if(in_state(AppState::Game)),
+            );
     }
 }
+
+fn t(_: Commands) {}
