@@ -1,11 +1,11 @@
-use crate::{account, game};
+use crate::{account, game, state::AppState};
 
 use bevy::{
     app::{App, FixedUpdate, Plugin, PreUpdate, Update},
     ecs::{
         entity::Entity,
         event::EventReader,
-        schedule::IntoSystemConfigs,
+        schedule::{common_conditions::*, IntoSystemConfigs},
         system::{Commands, Res, ResMut, Resource, SystemParam},
     },
     hierarchy::DespawnRecursiveExt,
@@ -73,7 +73,8 @@ impl Plugin for NetworkServerPlugin {
                     account::receive_character_load,
                     account::receive_connect_player,
                     account::receive_connect_admin,
-                ),
+                )
+                    .run_if(in_state(AppState::Simulation)),
             );
     }
 }
@@ -205,11 +206,10 @@ pub(crate) fn handle_disconnections(
 pub(crate) fn handle_connections(
     mut connections: EventReader<ConnectEvent>,
     mut net_params: NetworkParamsRW,
-    mut server_state: ResMut<ServerState>,
 ) {
-    if connections.len() > 0 && server_state.mode == ServerMode::Idle {
+    if connections.len() > 0 && net_params.state.mode == ServerMode::Idle {
         info!("Setting server to Lobby mode");
-        server_state.mode = ServerMode::Lobby;
+        net_params.state.mode = ServerMode::Lobby;
     }
 
     for connection in connections.read() {

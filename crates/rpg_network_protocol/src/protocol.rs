@@ -110,6 +110,8 @@ pub struct CSLoadAccount {
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSCreateAccount {
     pub name: String,
+    pub email: String,
+    pub password: String,
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
