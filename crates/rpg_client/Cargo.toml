@@ -20,6 +20,7 @@ gizmos = ["bevy/bevy_gizmos"]
 [dependencies]
 rpg_core = { path = "../rpg_core" }
 rpg_world = { path = "../rpg_world" }
+rpg_network_protocol = { path = "../rpg_network_protocol" }
 
 # bevy plugins
 util = { path = "../util" }
