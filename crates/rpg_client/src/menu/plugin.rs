@@ -3,8 +3,8 @@ use crate::{
     game::state_saver::SaveSlots,
     loader::plugin::OutOfGameCamera,
     menu::{
-        self, create::CreateRoot, credits::CreditsRoot, load::LoadRoot, main::MainRoot,
-        settings::SettingsRoot,
+        self, account::AccountRoot, create::CreateRoot, credits::CreditsRoot, load::LoadRoot,
+        main::MainRoot, settings::SettingsRoot,
     },
     state::AppState,
 };
@@ -48,10 +48,13 @@ impl Plugin for MenuPlugin {
                 Update,
                 (
                     menu::main::exit_button,
-                    menu::main::create_button,
-                    menu::main::load_button,
+                    menu::main::account_create_button,
+                    menu::main::account_login_button,
                     menu::main::settings_button,
                     menu::main::credits_button,
+                    menu::account::cancel_button,
+                    menu::account::create_button,
+                    menu::account::login_button,
                     menu::create::cancel_button,
                     menu::create::create_class,
                     menu::create::set_game_mode,
@@ -73,10 +76,6 @@ fn display_menu(
     mut menu_set: ParamSet<(
         Query<&mut Style, With<UiRoot>>,
         Query<&mut Style, With<MainRoot>>,
-        Query<&mut Style, With<CreateRoot>>,
-        Query<&mut Style, With<LoadRoot>>,
-        Query<&mut Style, With<SettingsRoot>>,
-        Query<&mut Style, With<CreditsRoot>>,
     )>,
     mut camera_q: Query<&mut Camera, (With<Camera2d>, With<OutOfGameCamera>)>,
 ) {
@@ -87,10 +86,6 @@ fn display_menu(
 
     menu_set.p0().single_mut().display = Display::Flex;
     menu_set.p1().single_mut().display = Display::Flex;
-    menu_set.p2().single_mut().display = Display::None;
-    menu_set.p3().single_mut().display = Display::None;
-    menu_set.p4().single_mut().display = Display::None;
-    menu_set.p5().single_mut().display = Display::None;
 }
 
 fn spawn(
@@ -127,9 +122,7 @@ fn spawn(
 
     let button_bundle = ButtonBundle {
         style: Style {
-            //border: UiRect::all(ui_theme.border),
             margin: UiRect::all(ui_theme.margin),
-            //padding: UiRect::all(ui_theme.padding),
             justify_content: JustifyContent::Center,
             align_self: AlignSelf::Center,
             align_items: AlignItems::Center,
@@ -137,8 +130,6 @@ fn spawn(
         },
 
         background_color: Color::NONE.into(),
-        //border_color: ui_theme.border_color,
-        //background_color: ui_theme.button_theme.normal_background_color,
         ..default()
     };
 
@@ -166,6 +157,7 @@ fn spawn(
                 &button_bundle,
                 &ui_theme.frame_col_style,
             );
+            super::account::spawn(&textures, p, &ui_theme, &button_bundle, &frame_hidden);
             super::create::spawn(&textures, p, &ui_theme, &button_bundle, &frame_hidden);
             super::load::spawn(p, &ui_theme, &button_bundle, &frame_hidden, &save_slots);
             super::settings::spawn(p, &ui_theme, &button_bundle, &frame_hidden);
