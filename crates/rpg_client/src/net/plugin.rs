@@ -1,9 +1,10 @@
-use super::account;
+use super::{account, chat, game};
 use crate::state::AppState;
 
 use bevy::{
     app::{App, FixedUpdate, Plugin, Update},
     ecs::{
+        event::EventReader,
         schedule::{common_conditions::*, IntoSystemConfigs},
         system::{Commands, Res, ResMut, Resource},
         world::{FromWorld, World},
@@ -15,6 +16,7 @@ use bevy::{
 use lightyear::{
     client::{
         config::ClientConfig,
+        events::MessageEvent,
         interpolation::plugin::{InterpolationConfig, InterpolationDelay},
         plugin::{ClientPlugin, PluginConfig},
         prediction::plugin::PredictionConfig,
@@ -22,11 +24,12 @@ use lightyear::{
         sync::SyncConfig,
     },
     netcode::ClientId,
+    packet::message::Message,
     shared::{ping::manager::PingConfig, sets::FixedUpdateSet},
     transport::io::*,
 };
 use rpg_network_protocol::{
-    protocol::{protocol, Client},
+    protocol::{protocol, Client, *},
     KEY, PROTOCOL_ID,
 };
 
@@ -78,12 +81,20 @@ impl Plugin for NetworkClientPlugin {
                     //(receive_player_rotation, receive_player_movement).after(input)
                     t.in_set(FixedUpdateSet::Main),
                     reconnect,
+                    receive_server_hello,
                     account::receive_account_create_success,
                     account::receive_account_create_error,
                     account::receive_account_login_success,
                     account::receive_account_login_error,
                     account::receive_character_create_success,
                     account::receive_character_create_error,
+                    game::receive_player_rotation,
+                    game::receive_player_move,
+                    chat::receive_join_success,
+                    chat::receive_join_error,
+                    chat::receive_channel_join_success,
+                    chat::receive_channel_join_error,
+                    chat::receive_chat_message,
                 ),
             );
     }
@@ -98,23 +109,29 @@ impl FromWorld for ConnectionTimer {
     }
 }
 
-pub(crate) fn reconnect(
+fn reconnect(
     time: Res<Time>,
-    mut client: ResMut<Client>,
+    mut net_client: ResMut<Client>,
     mut connection_timer: ResMut<ConnectionTimer>,
 ) {
     let dt = time.delta();
     connection_timer.tick(dt);
 
-    if client.is_connected() {
+    if net_client.is_connected() {
         if !connection_timer.paused() {
             connection_timer.pause();
         }
     } else {
         if connection_timer.just_finished() {
-            client.connect();
+            net_client.connect();
         }
     }
+}
+
+fn receive_server_hello(
+    net_client: Res<Client>,
+    mut hello_events: EventReader<MessageEvent<SCHello>>,
+) {
 }
 
 fn t(_: Commands) {}

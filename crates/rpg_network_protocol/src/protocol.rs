@@ -212,6 +212,13 @@ pub struct SCChatMessage {
     pub message: String,
 }
 
+// Game Messages
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCPlayerJoinSuccess;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCPlayerJoinError;
+
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCMovePlayer(pub Vec3);
 
@@ -242,6 +249,8 @@ pub enum Messages {
     SCChatMessage(SCChatMessage),
 
     // Game Messages
+    SCPlayerJoinSuccess(SCPlayerJoinSuccess),
+    SCPlayerJoinError(SCPlayerJoinError),
     SCMovePlayer(SCMovePlayer),
     SCRotPlayer(SCRotPlayer),
 
