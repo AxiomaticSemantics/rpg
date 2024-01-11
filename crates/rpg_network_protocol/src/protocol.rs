@@ -188,7 +188,25 @@ pub struct SCAccountInfo {
 
 // Chat Messages
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCChatMessageChannel {
+pub struct SCChatJoinSuccess;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCChatJoinError;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCChatChannelJoinSuccess;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCChatChannelJoinError;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCChatChannelMessageSuccess;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCChatChannelMessageError;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCChatMessage {
     pub channel_id: u16,
     pub message_id: u64,
     pub message: String,
@@ -215,7 +233,13 @@ pub enum Messages {
     SCAccountInfo(SCAccountInfo),
 
     // Chat Messages
-    SCChatMessageChannel(SCChatMessageChannel),
+    SCChatJoinSuccess(SCChatJoinSuccess),
+    SCChatJoinError(SCChatJoinError),
+    SCChatChannelJoinSuccess(SCChatChannelJoinSuccess),
+    SCChatChannelJoinError(SCChatChannelJoinError),
+    SCChatChannelMessageSuccess(SCChatChannelMessageSuccess),
+    SCChatChannelMessageError(SCChatChannelMessageError),
+    SCChatMessage(SCChatMessage),
 
     // Game Messages
     SCMovePlayer(SCMovePlayer),
@@ -234,6 +258,7 @@ pub enum Messages {
     // Chat Messages
     CSChatMessageChannel(CSChatMessageChannel),
     CSChatJoinChannel(CSChatJoinChannel),
+
     // Game Messages
     CSCreateGame(CSCreateGame),
     CSJoinZone(CSJoinZone),
