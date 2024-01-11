@@ -168,6 +168,12 @@ pub struct SCCreateAccountSuccess(pub AccountInfo);
 pub struct SCCreateAccountError;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCLoginAccountSuccess(pub AccountInfo);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCLoginAccountError;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCCreateCharacterSuccess(pub CharacterInfo);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -201,6 +207,8 @@ pub enum Messages {
     SCHello(SCHello),
     SCCreateAccountSuccess(SCCreateAccountSuccess),
     SCCreateAccountError(SCCreateAccountError),
+    SCLoginAccountSuccess(SCLoginAccountSuccess),
+    SCLoginAccountError(SCLoginAccountError),
     SCCreateCharacterSuccess(SCCreateCharacterSuccess),
     SCCreateCharacterError(SCCreateCharacterError),
     SCAccountInfo(SCAccountInfo),

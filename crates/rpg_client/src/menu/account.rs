@@ -23,6 +23,7 @@ use bevy::{
         system::{ParamSet, Query, Res, ResMut, Resource},
     },
     hierarchy::{BuildChildren, ChildBuilder},
+    log::*,
     prelude::{Deref, DerefMut},
     text::Text,
     ui::{
@@ -147,7 +148,7 @@ pub fn spawn(
                                     Interaction::None,
                                     TextBundle {
                                         text: Text::from_section(
-                                            " ",
+                                            "",
                                             ui_theme.text_style_regular.clone(),
                                         ),
                                         style: Style {
@@ -181,10 +182,6 @@ pub fn spawn(
                             let mut edit_style = ui_theme.frame_row_style.clone();
 
                             edit_style.border = UiRect::all(ui_theme.border);
-                            //edit_style.padding = UiRect::all(ui_theme.padding);
-                            //edit_style.height = Val::Px(ui_theme.font_size_regular + 12.);
-                            //edit_style.align_items = AlignItems::Center;
-                            //edit_style.align_self = AlignSelf::Center;
 
                             p.spawn(NodeBundle {
                                 style: edit_style.clone(),
@@ -199,7 +196,7 @@ pub fn spawn(
                                     Interaction::None,
                                     TextBundle {
                                         text: Text::from_section(
-                                            " ",
+                                            "",
                                             ui_theme.text_style_regular.clone(),
                                         ),
                                         style: Style {
@@ -211,6 +208,53 @@ pub fn spawn(
                                         ..default()
                                     },
                                 ));
+                            });
+                        });
+                        p.spawn(NodeBundle {
+                            style: ui_theme.col_style.clone(),
+                            ..default()
+                        })
+                        .with_children(|p| {
+                            p.spawn(NodeBundle {
+                                style: ui_theme.frame_row_style.clone(),
+                                ..default()
+                            })
+                            .with_children(|p| {
+                                p.spawn((TextBundle::from_section(
+                                    "Password:",
+                                    ui_theme.text_style_regular.clone(),
+                                ),));
+
+                                let mut edit_style = ui_theme.frame_row_style.clone();
+
+                                edit_style.border = UiRect::all(ui_theme.border);
+
+                                p.spawn(NodeBundle {
+                                    style: edit_style.clone(),
+                                    border_color: ui_theme.frame_border_color,
+                                    background_color: ui_theme.menu_background_color,
+                                    ..default()
+                                })
+                                .with_children(|p| {
+                                    p.spawn((
+                                        AccountCreatePassword,
+                                        EditText::default(),
+                                        Interaction::None,
+                                        TextBundle {
+                                            text: Text::from_section(
+                                                "",
+                                                ui_theme.text_style_regular.clone(),
+                                            ),
+                                            style: Style {
+                                                height: Val::Px(ui_theme.font_size_regular + 12.),
+                                                width: Val::Px(128.0),
+                                                ..default()
+                                            },
+                                            focus_policy: FocusPolicy::Pass,
+                                            ..default()
+                                        },
+                                    ));
+                                });
                             });
                         });
                         /*
@@ -266,6 +310,20 @@ pub fn spawn(
                         */
                     });
                 });
+                p.spawn(NodeBundle {
+                    style: ui_theme.row_style.clone(),
+                    ..default()
+                })
+                .with_children(|p| {
+                    p.spawn((button.clone(), AccountCreateButton))
+                        .with_children(|p| {
+                            p.spawn(TextBundle::from_section(
+                                "Create",
+                                ui_theme.text_style_regular.clone(),
+                            ));
+                        });
+                    // });
+                });
             });
 
             p.spawn(NodeBundle {
@@ -284,8 +342,9 @@ pub fn spawn(
 }
 
 pub fn create_button(
+    mut net_client: ResMut<Client>,
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<AccountCreateButton>)>,
-    account_text_set: ParamSet<(
+    mut account_text_set: ParamSet<(
         Query<&Text, With<AccountCreateName>>,
         Query<&Text, With<AccountCreateEmail>>,
         Query<&Text, With<AccountCreatePassword>>,
@@ -296,10 +355,40 @@ pub fn create_button(
         if *interaction != Interaction::Pressed {
             continue;
         }
+
+        let name = account_text_set.p0().single().sections[0].value.clone();
+        let email = account_text_set.p1().single().sections[0].value.clone();
+        let password = account_text_set.p2().single().sections[0].value.clone();
+
+        if name.is_empty() {
+            info!("account create: no name provided, skipping");
+            continue;
+        }
+
+        if email.is_empty() {
+            info!("account create: no email provided, skipping");
+            continue;
+        }
+
+        if password.is_empty() {
+            info!("account create: no password provided skipping");
+            continue;
+        }
+
+        // TODO some basic validation of input
+        let create_msg = CSCreateAccount {
+            name,
+            email,
+            password,
+        };
+
+        net_client.send_message::<Channel1, _>(create_msg);
+        info!("sending create account message");
     }
 }
 
 pub fn login_button(
+    net_client: Res<Client>,
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<AccountLoginButton>)>,
     account_text_set: ParamSet<(
         Query<&Text, With<AccountLoginName>>,
