@@ -253,12 +253,15 @@ pub(crate) fn receive_hello(
         client
             .send_message::<Channel1, CSLoadAccount>(CSLoadAccount {
                 name: "TestAccount".into(),
+                password: "".into(),
             })
             .unwrap();
 
         client
             .send_message::<Channel1, CSCreateAccount>(CSCreateAccount {
                 name: "TestAccount".into(),
+                email: "test@test.com".into(),
+                password: "".into(),
             })
             .unwrap();
 
