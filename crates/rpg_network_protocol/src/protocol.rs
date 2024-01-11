@@ -9,7 +9,10 @@ use derive_more::{Add, Mul};
 use lightyear::prelude::*;
 use serde_derive::{Deserialize, Serialize};
 
-use rpg_account::{account::AccountInfo, character::CharacterInfo};
+use rpg_account::{
+    account::{Account, AccountInfo},
+    character::{Character, CharacterInfo},
+};
 use rpg_core::{class::Class, skill::SkillId, uid::Uid, unit::HeroGameMode};
 use rpg_world::zone::ZoneId;
 
@@ -163,34 +166,34 @@ pub struct CSUseSkillTargeted {
 pub struct SCHello;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCCreateAccountSuccess(pub AccountInfo);
+pub struct SCCreateAccountSuccess(pub Account);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCCreateAccountError;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCLoginAccountSuccess(pub AccountInfo);
+pub struct SCLoginAccountSuccess(pub Account);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCLoginAccountError;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCCreateCharacterSuccess(pub CharacterInfo);
+pub struct SCCreateCharacterSuccess(pub Character);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCCreateCharacterError;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCAccountInfo {
-    pub name: String,
-    pub characters: Vec<Option<Uid>>,
-}
+pub struct SCAccount(pub Account);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCCharacterInfo {
-    pub name: String,
-    pub characters: Vec<Option<Uid>>,
-}
+pub struct SCAccountInfo(pub AccountInfo);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCCharacter(pub Character);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCCharacterInfo(pub CharacterInfo);
 
 // Chat Messages
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -243,7 +246,9 @@ pub enum Messages {
     SCLoginAccountError(SCLoginAccountError),
     SCCreateCharacterSuccess(SCCreateCharacterSuccess),
     SCCreateCharacterError(SCCreateCharacterError),
+    SCAccount(SCAccount),
     SCAccountInfo(SCAccountInfo),
+    SCCharacter(SCCharacter),
     SCCharacterInfo(SCCharacterInfo),
 
     // Chat Messages
