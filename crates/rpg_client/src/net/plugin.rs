@@ -82,6 +82,8 @@ impl Plugin for NetworkClientPlugin {
                     account::receive_account_create_error,
                     account::receive_account_login_success,
                     account::receive_account_login_error,
+                    account::receive_character_create_success,
+                    account::receive_character_create_error,
                 ),
             );
     }
