@@ -186,6 +186,12 @@ pub struct SCAccountInfo {
     pub characters: Vec<Option<Uid>>,
 }
 
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCCharacterInfo {
+    pub name: String,
+    pub characters: Vec<Option<Uid>>,
+}
+
 // Chat Messages
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCChatJoinSuccess;
@@ -238,6 +244,7 @@ pub enum Messages {
     SCCreateCharacterSuccess(SCCreateCharacterSuccess),
     SCCreateCharacterError(SCCreateCharacterError),
     SCAccountInfo(SCAccountInfo),
+    SCCharacterInfo(SCCharacterInfo),
 
     // Chat Messages
     SCChatJoinSuccess(SCChatJoinSuccess),

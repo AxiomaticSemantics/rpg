@@ -88,6 +88,8 @@ impl Plugin for NetworkClientPlugin {
                     account::receive_account_login_error,
                     account::receive_character_create_success,
                     account::receive_character_create_error,
+                    game::receive_player_join_success,
+                    game::receive_player_join_error,
                     game::receive_player_rotation,
                     game::receive_player_move,
                     chat::receive_join_success,

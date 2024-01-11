@@ -10,21 +10,23 @@ use lightyear::client::{
     events::MessageEvent,
 };
 
-pub(crate) fn receive_player_move(mut move_events: EventReader<MessageEvent<SCMovePlayer>>) {
-    if PlayerPosition::mode() != ComponentSyncMode::Full {
-        return;
-    }
+pub(crate) fn receive_player_join_success(
+    mut join_events: EventReader<MessageEvent<SCPlayerJoinSuccess>>,
+) {
+}
 
+pub(crate) fn receive_player_join_error(
+    mut join_events: EventReader<MessageEvent<SCPlayerJoinError>>,
+) {
+}
+
+pub(crate) fn receive_player_move(mut move_events: EventReader<MessageEvent<SCMovePlayer>>) {
     for event in move_events.read() {
         info!("move");
     }
 }
 
 pub(crate) fn receive_player_rotation(mut rotation_events: EventReader<MessageEvent<SCRotPlayer>>) {
-    if PlayerPosition::mode() != ComponentSyncMode::Full {
-        return;
-    }
-
     for event in rotation_events.read() {
         info!("rotation");
     }
