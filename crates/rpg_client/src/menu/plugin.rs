@@ -3,8 +3,13 @@ use crate::{
     game::state_saver::SaveSlots,
     loader::plugin::OutOfGameCamera,
     menu::{
-        self, account::AccountRoot, create::CreateRoot, credits::CreditsRoot, load::LoadRoot,
-        main::MainRoot, settings::SettingsRoot,
+        self,
+        account::{AccountCreateRoot, AccountLoginRoot},
+        create::CreateRoot,
+        credits::CreditsRoot,
+        load::LoadRoot,
+        main::MainRoot,
+        settings::SettingsRoot,
     },
     state::AppState,
 };
@@ -52,7 +57,8 @@ impl Plugin for MenuPlugin {
                     menu::main::account_login_button,
                     menu::main::settings_button,
                     menu::main::credits_button,
-                    menu::account::cancel_button,
+                    menu::account::cancel_create_button,
+                    menu::account::cancel_login_button,
                     menu::account::create_button,
                     menu::account::login_button,
                     menu::create::cancel_button,
@@ -157,7 +163,8 @@ fn spawn(
                 &button_bundle,
                 &ui_theme.frame_col_style,
             );
-            super::account::spawn(&textures, p, &ui_theme, &button_bundle, &frame_hidden);
+            super::account::spawn_create(&textures, p, &ui_theme, &button_bundle, &frame_hidden);
+            super::account::spawn_login(&textures, p, &ui_theme, &button_bundle, &frame_hidden);
             super::create::spawn(&textures, p, &ui_theme, &button_bundle, &frame_hidden);
             super::load::spawn(p, &ui_theme, &button_bundle, &frame_hidden, &save_slots);
             super::settings::spawn(p, &ui_theme, &button_bundle, &frame_hidden);

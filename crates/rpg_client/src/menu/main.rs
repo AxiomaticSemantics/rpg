@@ -1,7 +1,10 @@
 use crate::{
     assets::TextureAssets,
     menu::{
-        account::AccountRoot, create::CreateRoot, credits::CreditsRoot, load::LoadRoot,
+        account::{AccountCreateRoot, AccountLoginRoot},
+        create::CreateRoot,
+        credits::CreditsRoot,
+        load::LoadRoot,
         settings::SettingsRoot,
     },
     state::AppState,
@@ -300,7 +303,7 @@ pub fn account_create_button(
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<AccountCreateButton>)>,
     mut menu_set: ParamSet<(
         Query<&mut Style, With<MainRoot>>,
-        Query<&mut Style, With<AccountRoot>>,
+        Query<&mut Style, With<AccountCreateRoot>>,
     )>,
 ) {
     let interaction = interaction_q.get_single();
@@ -314,7 +317,7 @@ pub fn account_login_button(
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<AccountLoginButton>)>,
     mut menu_set: ParamSet<(
         Query<&mut Style, With<MainRoot>>,
-        Query<&mut Style, With<LoadRoot>>,
+        Query<&mut Style, With<AccountLoginRoot>>,
     )>,
 ) {
     let interaction = interaction_q.get_single();
