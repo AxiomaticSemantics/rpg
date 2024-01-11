@@ -105,6 +105,7 @@ pub struct CSConnectAdmin;
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSLoadAccount {
     pub name: String,
+    pub password: String,
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
