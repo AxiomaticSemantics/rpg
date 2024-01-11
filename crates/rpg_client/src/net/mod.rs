@@ -1,4 +1,4 @@
-mod account;
-mod chat;
-mod game;
-pub mod plugin;
+pub(crate) mod account;
+pub(crate) mod chat;
+pub(crate) mod game;
+pub(crate) mod plugin;

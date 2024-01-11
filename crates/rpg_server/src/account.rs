@@ -179,23 +179,28 @@ pub(crate) fn receive_character_create(
 
                 net_params.state.next_uid.next();
 
-                account.0.info.character_info.push(CharacterInfo {
+                let character_info = CharacterInfo {
                     name: create_msg.name.clone(),
                     uid: unit.uid,
-                    hero_mode: create_msg.game_mode,
-                });
-                account.0.characters.push(Character {
+                    game_mode: create_msg.game_mode,
+                };
+
+                let character = Character {
+                    uid: unit.uid,
                     unit,
                     passive_tree: PassiveSkillGraph::new(create_msg.class),
                     storage: UnitStorage::default(),
-                });
+                };
+
+                account.0.info.character_info.push(character_info);
+                account.0.characters.push(character.clone());
 
                 net_params.state.next_uid.next();
 
                 net_params
                     .server
-                    .send_message_to_target::<Channel1, SCCreateAccountSuccess>(
-                        SCCreateAccountSuccess(account.0.info.clone()),
+                    .send_message_to_target::<Channel1, SCCreateCharacterSuccess>(
+                        SCCreateCharacterSuccess(character),
                         NetworkTarget::Only(vec![*client_id]),
                     )
                     .unwrap();
