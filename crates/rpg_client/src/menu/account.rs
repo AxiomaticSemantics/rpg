@@ -11,6 +11,10 @@ use ui_util::{
     widgets::EditText,
 };
 
+use rpg_account::{
+    account::{Account, AccountInfo},
+    character::CharacterSlot,
+};
 use rpg_core::{class::Class, uid::Uid, unit::HeroGameMode};
 use rpg_network_protocol::protocol::*;
 
@@ -19,11 +23,12 @@ use lightyear::prelude::*;
 use bevy::{
     ecs::{
         component::Component,
+        entity::Entity,
         query::{Changed, With},
         schedule::NextState,
-        system::{ParamSet, Query, Res, ResMut, Resource},
+        system::{Commands, ParamSet, Query, Res, ResMut, Resource},
     },
-    hierarchy::{BuildChildren, ChildBuilder},
+    hierarchy::{BuildChildren, ChildBuilder, Children, DespawnRecursiveExt},
     log::*,
     prelude::{Deref, DerefMut},
     text::Text,
@@ -82,6 +87,9 @@ pub struct AccountListContainer;
 
 #[derive(Component, Deref, DerefMut)]
 pub struct AccountListSelectedCharacterUid(pub Option<Uid>);
+
+#[derive(Debug, Component, Clone, Deref, DerefMut)]
+pub struct AccountCharacterSlot(pub CharacterSlot);
 
 pub fn spawn_create(
     textures: &TextureAssets,
@@ -471,6 +479,25 @@ pub fn spawn_list(
     let mut row_centered = ui_theme.row_style.clone();
     row_centered.align_self = AlignSelf::Center;
 
+    let row_bundle = NodeBundle {
+        style: ui_theme.row_style.clone(),
+        ..default()
+    };
+    let col_bundle = NodeBundle {
+        style: ui_theme.col_style.clone(),
+        ..default()
+    };
+
+    let mut slot_style = ui_theme.frame_col_style.clone();
+    slot_style.width = Val::Px(256.);
+    slot_style.height = Val::Px(48.);
+
+    let account_slot_node_bundle = NodeBundle {
+        style: slot_style.clone(),
+        background_color: ui_theme.button_theme.normal_background_color,
+        ..default()
+    };
+
     builder
         .spawn((
             AccountListRoot,
@@ -492,75 +519,42 @@ pub fn spawn_list(
                 })
                 .with_children(|p| {
                     p.spawn(
-                        TextBundle::from_section("Accounts", ui_theme.text_style_regular.clone())
+                        TextBundle::from_section("Characters", ui_theme.text_style_regular.clone())
                             .with_style(ui_theme.row_style.clone()),
                     );
                 });
 
                 // TODO create a container to place accounts in
 
-                p.spawn((
-                    AccountListContainer,
-                    NodeBundle {
-                        style: ui_theme.row_style.clone(),
-                        ..default()
-                    },
-                ));
-
-                /*
-                p.spawn(NodeBundle {
-                    style: ui_theme.row_style.clone(),
-                    ..default()
-                })
-                .with_children(|p| {
-                    p.spawn(NodeBundle {
-                        style: ui_theme.col_style.clone(),
-                        ..default()
-                    })
+                p.spawn((AccountListContainer, col_bundle.clone()))
                     .with_children(|p| {
-                        p.spawn(NodeBundle {
-                            style: ui_theme.frame_row_style.clone(),
-                            ..default()
-                        })
-                        .with_children(|p| {
-                            p.spawn((TextBundle::from_section(
-                                "Name:",
-                                ui_theme.text_style_regular.clone(),
-                            ),));
+                        for row in 0..6 {
+                            p.spawn(row_bundle.clone()).with_children(|p| {
+                                for col in 0..2 {
+                                    let slot = row * 2 + col;
 
-                            let mut edit_style = ui_theme.frame_row_style.clone();
-
-                            edit_style.border = UiRect::all(ui_theme.border);
-
-                            p.spawn(NodeBundle {
-                                style: edit_style.clone(),
-                                border_color: ui_theme.frame_border_color,
-                                background_color: ui_theme.menu_background_color,
-                                ..default()
-                            })
-                            .with_children(|p| {
-                                p.spawn((
-                                    AccountLoginName,
-                                    EditText::default(),
-                                    Interaction::None,
-                                    TextBundle {
-                                        text: Text::from_section(
-                                            "",
-                                            ui_theme.text_style_regular.clone(),
-                                        ),
-                                        style: Style {
-                                            height: Val::Px(ui_theme.font_size_regular + 12.),
-                                            width: Val::Px(128.0),
-                                            ..default()
-                                        },
-                                        focus_policy: FocusPolicy::Pass,
-                                        ..default()
-                                    },
-                                ));
+                                    p.spawn(col_bundle.clone()).with_children(|p| {
+                                        p.spawn((
+                                            AccountCharacterSlot(CharacterSlot(slot)),
+                                            Interaction::None,
+                                            account_slot_node_bundle.clone(),
+                                        ))
+                                        .with_children(
+                                            |p| {
+                                                p.spawn(
+                                                    TextBundle::from_section(
+                                                        "Empty Slot",
+                                                        ui_theme.text_style_regular.clone(),
+                                                    )
+                                                    .with_style(ui_theme.row_style.clone()),
+                                                );
+                                            },
+                                        );
+                                    });
+                                }
                             });
-                        });
+                        }
                     });
-                });*/
             });
 
             p.spawn(NodeBundle {
@@ -725,42 +719,28 @@ pub fn account_list_create_game_button(
         let account = account_q.single();
         let character = account
             .0
-            .info
-            .character_info
+            .characters
             .iter()
-            .find(|c| c.uid == selected_character_uid)
+            .find(|c| c.character.unit.uid == selected_character_uid)
             .unwrap();
 
         info!("sending create game request");
-        net_client.send_message::<Channel1, _>(CSCreateGame(character.game_mode));
+        net_client.send_message::<Channel1, _>(CSCreateGame(character.info.game_mode));
         return;
     }
 }
+
+/*
+let slot_string = format!(
+    "{} level {} {}",
+    character.unit.name, character.unit.level, character.unit.class
+);
+*/
 
 /*
 if _ {
     ui_image.texture = textures.icons["checkmark"].clone_weak();
 } else {
     ui_image.texture = textures.icons["transparent"].clone_weak();
-}
-
-pub fn create_class(
-    mut state: ResMut<NextState<AppState>>,
-    interaction_q: Query<
-        (&Interaction, &CreatePlayerClass),
-        (Changed<Interaction>, With<CreatePlayerClass>),
-    >,
-    mut menu_root_q: Query<&mut Style, With<UiRoot>>,
-    player_name_text_q: Query<&Text, With<CreatePlayerName>>,
-) {
-    let player_name_text = player_name_text_q.single();
-    if player_name_text.sections[0].value.is_empty() {
-        return;
-    }
-
-    if let Ok((Interaction::Pressed, create_class)) = interaction_q.get_single() {
-        menu_root_q.single_mut().display = Display::None;
-        state.set(AppState::GameSpawn);
-    }
 }
 */

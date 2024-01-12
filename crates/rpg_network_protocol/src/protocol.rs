@@ -11,7 +11,7 @@ use serde_derive::{Deserialize, Serialize};
 
 use rpg_account::{
     account::{Account, AccountInfo},
-    character::{Character, CharacterInfo},
+    character::{Character, CharacterInfo, CharacterSlot},
 };
 use rpg_core::{class::Class, skill::SkillId, uid::Uid, unit::HeroGameMode};
 use rpg_world::zone::ZoneId;
@@ -126,6 +126,7 @@ pub struct CSLoadCharacter {
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSCreateCharacter {
     pub name: String,
+    pub slot: CharacterSlot,
     pub class: Class,
     pub game_mode: HeroGameMode,
 }
