@@ -14,7 +14,6 @@ use bevy::{
 #[derive(Resource)]
 pub struct UiFont {
     pub prime: Handle<Font>,
-    pub fira_sans: Handle<Font>,
 }
 
 impl FromWorld for UiFont {
@@ -22,7 +21,6 @@ impl FromWorld for UiFont {
         let server = world.resource_mut::<AssetServer>();
 
         UiFont {
-            fira_sans: server.load("fonts/FiraNerd-Medium.ttf"),
             prime: server.load("fonts/courier_prime-regular.ttf"),
         }
     }

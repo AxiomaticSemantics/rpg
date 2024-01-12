@@ -82,14 +82,15 @@ impl FromWorld for AudioAssets {
         background_tracks.insert("bg_loop5", server.load("audio/bg_loop5.ogg"));
         background_tracks.insert("bg_loop6", server.load("audio/bg_loop6.ogg"));
         background_tracks.insert("bg_loop7", server.load("audio/bg_loop7.ogg"));
+        background_tracks.insert("bg_loop8", server.load("audio/bg_loop8.ogg"));
 
         background_tracks.insert("env_swamp", server.load("audio/env_swamp.ogg"));
 
         let mut foreground_tracks = HashMap::new();
-        foreground_tracks.insert("walk_grass_01", server.load("audio/walk_grass_01.ogg"));
-        foreground_tracks.insert("walk_rock_01", server.load("audio/walk_rock_01.ogg"));
+        //foreground_tracks.insert("walk_grass_01", server.load("audio/walk_grass_01.ogg"));
+        //foreground_tracks.insert("walk_rock_01", server.load("audio/walk_rock_01.ogg"));
 
-        foreground_tracks.insert("hit_blocked", server.load("audio/item_wood_01.ogg"));
+        foreground_tracks.insert("hit_blocked", server.load("audio/hit_blocked.ogg"));
         foreground_tracks.insert("hit_death", server.load("audio/creature_die_01.ogg"));
         foreground_tracks.insert("hit_soft", server.load("audio/creature_hurt_01.ogg"));
         foreground_tracks.insert("hit_hard", server.load("audio/creature_hurt_02.ogg"));
@@ -97,10 +98,13 @@ impl FromWorld for AudioAssets {
         foreground_tracks.insert("attack_proj1", server.load("audio/spell_01.ogg"));
         foreground_tracks.insert("attack_proj2", server.load("audio/spell_02.ogg"));
 
-        foreground_tracks.insert("item_drop_gem", server.load("audio/item_misc_05.ogg"));
-        foreground_tracks.insert("item_drop_potion", server.load("audio/item_misc_06.ogg"));
+        foreground_tracks.insert("item_drop_gem", server.load("audio/item_drop_gem.ogg"));
+        foreground_tracks.insert(
+            "item_drop_potion",
+            server.load("audio/item_drop_potion.ogg"),
+        );
 
-        foreground_tracks.insert("item_pickup", server.load("audio/item_misc_04.ogg"));
+        foreground_tracks.insert("item_pickup", server.load("audio/item_pickup.ogg"));
 
         Self {
             background_tracks,

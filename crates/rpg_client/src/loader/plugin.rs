@@ -164,7 +164,7 @@ fn set_window_icon(windows: NonSend<WinitWindows>, window_q: Query<Entity, With<
     let entity = window_q.single();
     let primary = windows.get_window(entity).unwrap();
     let path = format!(
-        "{}/assets/textures/app_icon.png",
+        "{}/assets/icon/app_icon.png",
         std::env::var("BEVY_ASSET_ROOT").unwrap()
     );
 
