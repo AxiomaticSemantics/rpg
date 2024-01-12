@@ -54,19 +54,19 @@ impl FromWorld for RenderResources {
         let mut textures = HashMap::<&'static str, Handle<Image>>::new();
 
         let asset_server = world.resource_mut::<AssetServer>();
-        textures.insert("aura_01", asset_server.load("textures/circle3.png"));
+        textures.insert("aura_01", asset_server.load("textures/aura_01.png"));
 
         textures.insert(
             "aura_02_c",
-            asset_server.load("textures/tiles/Lava004_1K-PNG_Color.png"),
+            asset_server.load("textures/lava/lava_01_color.png"),
         );
         textures.insert(
             "aura_02_e",
-            asset_server.load("textures/tiles/Lava004_1K-PNG_Emission.png"),
+            asset_server.load("textures/lava/lava_01_emission.png"),
         );
         textures.insert(
             "aura_02_n",
-            asset_server.load("textures/tiles/Lava004_1K-PNG_NormalGL.png"),
+            asset_server.load("textures/lava/lava_01_normal.png"),
         );
 
         textures.insert(

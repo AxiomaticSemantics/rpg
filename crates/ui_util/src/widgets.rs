@@ -635,7 +635,7 @@ fn _spawn_scrolling_list(mut commands: Commands, ui_font: Res<UiFont>) {
             TextBundle::from_section(
                 "Scrolling list",
                 TextStyle {
-                    font: ui_font.fira_sans.clone(),
+                    font: ui_font.prime.clone(),
                     font_size: 24.,
                     color: Color::WHITE,
                 },
@@ -676,7 +676,7 @@ fn _spawn_scrolling_list(mut commands: Commands, ui_font: Res<UiFont>) {
                             TextBundle::from_section(
                                 format!("Item {:}", i + 1),
                                 TextStyle {
-                                    font: ui_font.fira_sans.clone(),
+                                    font: ui_font.prime.clone(),
                                     font_size: 20.,
                                     color: Color::WHITE,
                                 },
