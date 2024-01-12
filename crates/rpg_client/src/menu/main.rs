@@ -282,6 +282,7 @@ pub fn spawn(
                         .with_style(ui_theme.row_style.clone()),
                 );
             });
+
             p.spawn(NodeBundle {
                 style: ui_theme.vertical_spacer.clone(),
                 ..default()

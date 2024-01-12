@@ -1,7 +1,7 @@
 use crate::{
     assets::TextureAssets,
     game::plugin::{GameState, PlayerOptions},
-    menu::main::MainRoot,
+    menu::{create::CreateRoot, main::MainRoot},
     net::account::RpgAccount,
     state::AppState,
 };
@@ -50,25 +50,25 @@ pub struct AccountLoginRoot;
 pub struct AccountListRoot;
 
 #[derive(Component)]
-pub struct AccountCreateName;
+pub struct CreateName;
 
 #[derive(Component)]
-pub struct AccountCreateEmail;
+pub struct CreateEmail;
 
 #[derive(Component)]
-pub struct AccountCreatePassword;
+pub struct CreatePassword;
 
 #[derive(Component)]
-pub struct AccountLoginName;
+pub struct LoginName;
 
 #[derive(Component)]
-pub struct AccountLoginPassword;
+pub struct LoginPassword;
 
 #[derive(Component)]
-pub struct AccountCreateButton;
+pub struct CreateButton;
 
 #[derive(Component)]
-pub struct AccountLoginButton;
+pub struct LoginButton;
 
 #[derive(Component)]
 pub struct CancelCreateButton;
@@ -77,18 +77,24 @@ pub struct CancelCreateButton;
 pub struct CancelLoginButton;
 
 #[derive(Component)]
-pub struct AccountListCancelButton;
+pub struct ListCancelButton;
 
 #[derive(Component)]
-pub struct AccountListCreateGameButton;
+pub struct ListCreateGameButton;
 
 #[derive(Component)]
-pub struct AccountListContainer;
+pub struct ListJoinGameButton;
 
-#[derive(Component, Deref, DerefMut)]
-pub struct AccountListSelectedCharacterUid(pub Option<Uid>);
+#[derive(Component)]
+pub struct ListCreateCharacterButton;
 
-#[derive(Debug, Component, Clone, Deref, DerefMut)]
+#[derive(Component)]
+pub struct ListContainer;
+
+#[derive(Resource, Default, Deref, DerefMut)]
+pub struct SelectedCharacterSlot(pub Option<CharacterSlot>);
+
+#[derive(Debug, Component, Clone, Resource, Deref, DerefMut)]
 pub struct AccountCharacterSlot(pub CharacterSlot);
 
 pub fn spawn_create(
@@ -162,7 +168,7 @@ pub fn spawn_create(
                             })
                             .with_children(|p| {
                                 p.spawn((
-                                    AccountCreateName,
+                                    CreateName,
                                     EditText::default(),
                                     Interaction::None,
                                     TextBundle {
@@ -210,7 +216,7 @@ pub fn spawn_create(
                             })
                             .with_children(|p| {
                                 p.spawn((
-                                    AccountCreateEmail,
+                                    CreateEmail,
                                     EditText::default(),
                                     Interaction::None,
                                     TextBundle {
@@ -258,7 +264,7 @@ pub fn spawn_create(
                             })
                             .with_children(|p| {
                                 p.spawn((
-                                    AccountCreatePassword,
+                                    CreatePassword,
                                     EditText::default(),
                                     Interaction::None,
                                     TextBundle {
@@ -286,13 +292,12 @@ pub fn spawn_create(
                 ..default()
             })
             .with_children(|p| {
-                p.spawn((button.clone(), AccountCreateButton))
-                    .with_children(|p| {
-                        p.spawn(TextBundle::from_section(
-                            "Create",
-                            ui_theme.text_style_regular.clone(),
-                        ));
-                    });
+                p.spawn((button.clone(), CreateButton)).with_children(|p| {
+                    p.spawn(TextBundle::from_section(
+                        "Create",
+                        ui_theme.text_style_regular.clone(),
+                    ));
+                });
                 p.spawn((button.clone(), CancelCreateButton))
                     .with_children(|p| {
                         p.spawn(TextBundle::from_section(
@@ -375,7 +380,7 @@ pub fn spawn_login(
                             })
                             .with_children(|p| {
                                 p.spawn((
-                                    AccountLoginName,
+                                    LoginName,
                                     EditText::default(),
                                     Interaction::None,
                                     TextBundle {
@@ -423,7 +428,7 @@ pub fn spawn_login(
                             })
                             .with_children(|p| {
                                 p.spawn((
-                                    AccountLoginPassword,
+                                    LoginPassword,
                                     EditText::default(),
                                     Interaction::None,
                                     TextBundle {
@@ -451,13 +456,12 @@ pub fn spawn_login(
                 ..default()
             })
             .with_children(|p| {
-                p.spawn((button.clone(), AccountLoginButton))
-                    .with_children(|p| {
-                        p.spawn(TextBundle::from_section(
-                            "Login",
-                            ui_theme.text_style_regular.clone(),
-                        ));
-                    });
+                p.spawn((button.clone(), LoginButton)).with_children(|p| {
+                    p.spawn(TextBundle::from_section(
+                        "Login",
+                        ui_theme.text_style_regular.clone(),
+                    ));
+                });
                 p.spawn((button.clone(), CancelLoginButton))
                     .with_children(|p| {
                         p.spawn(TextBundle::from_section(
@@ -526,7 +530,7 @@ pub fn spawn_list(
 
                 // TODO create a container to place accounts in
 
-                p.spawn((AccountListContainer, col_bundle.clone()))
+                p.spawn((ListContainer, col_bundle.clone()))
                     .with_children(|p| {
                         for row in 0..6 {
                             p.spawn(row_bundle.clone()).with_children(|p| {
@@ -562,18 +566,22 @@ pub fn spawn_list(
                 ..default()
             })
             .with_children(|p| {
-                p.spawn((
-                    button.clone(),
-                    AccountListSelectedCharacterUid(None),
-                    AccountListCreateGameButton,
-                ))
-                .with_children(|p| {
-                    p.spawn(TextBundle::from_section(
-                        "Create Game",
-                        ui_theme.text_style_regular.clone(),
-                    ));
-                });
-                p.spawn((button.clone(), AccountListCancelButton))
+                p.spawn((button.clone(), ListCreateCharacterButton))
+                    .with_children(|p| {
+                        p.spawn(TextBundle::from_section(
+                            "Create Character",
+                            ui_theme.text_style_regular.clone(),
+                        ));
+                    });
+
+                p.spawn((button.clone(), ListCreateGameButton))
+                    .with_children(|p| {
+                        p.spawn(TextBundle::from_section(
+                            "Create Game",
+                            ui_theme.text_style_regular.clone(),
+                        ));
+                    });
+                p.spawn((button.clone(), ListCancelButton))
                     .with_children(|p| {
                         p.spawn(TextBundle::from_section(
                             "Cancel",
@@ -586,11 +594,11 @@ pub fn spawn_list(
 
 pub fn create_button(
     mut net_client: ResMut<Client>,
-    interaction_q: Query<&Interaction, (Changed<Interaction>, With<AccountCreateButton>)>,
+    interaction_q: Query<&Interaction, (Changed<Interaction>, With<CreateButton>)>,
     mut account_text_set: ParamSet<(
-        Query<&Text, With<AccountCreateName>>,
-        Query<&Text, With<AccountCreateEmail>>,
-        Query<&Text, With<AccountCreatePassword>>,
+        Query<&Text, With<CreateName>>,
+        Query<&Text, With<CreateEmail>>,
+        Query<&Text, With<CreatePassword>>,
     )>,
 ) {
     for interaction in &interaction_q {
@@ -632,10 +640,10 @@ pub fn create_button(
 
 pub fn login_button(
     mut net_client: ResMut<Client>,
-    interaction_q: Query<&Interaction, (Changed<Interaction>, With<AccountLoginButton>)>,
+    interaction_q: Query<&Interaction, (Changed<Interaction>, With<LoginButton>)>,
     mut account_text_set: ParamSet<(
-        Query<&Text, With<AccountLoginName>>,
-        Query<&Text, With<AccountLoginPassword>>,
+        Query<&Text, With<LoginName>>,
+        Query<&Text, With<LoginPassword>>,
     )>,
 ) {
     for interaction in &interaction_q {
@@ -682,7 +690,7 @@ pub fn cancel_login_button(
 }
 
 pub fn cancel_account_list_button(
-    interaction_q: Query<&Interaction, (Changed<Interaction>, With<AccountListCancelButton>)>,
+    interaction_q: Query<&Interaction, (Changed<Interaction>, With<ListCancelButton>)>,
     mut menu_set: ParamSet<(
         Query<&mut Style, With<MainRoot>>,
         Query<&mut Style, With<AccountListRoot>>,
@@ -695,12 +703,33 @@ pub fn cancel_account_list_button(
     }
 }
 
-pub fn account_list_create_game_button(
+pub fn list_create_character_button(
     mut net_client: ResMut<Client>,
-    interaction_q: Query<
-        (&AccountListSelectedCharacterUid, &Interaction),
-        (Changed<Interaction>, With<AccountListCreateGameButton>),
-    >,
+    selected_character_slot: Res<SelectedCharacterSlot>,
+    interaction_q: Query<&Interaction, (Changed<Interaction>, With<ListCreateCharacterButton>)>,
+    mut menu_set: ParamSet<(
+        Query<&mut Style, With<CreateRoot>>,
+        Query<&mut Style, With<AccountListRoot>>,
+    )>,
+    account_q: Query<&RpgAccount>,
+) {
+    let interaction = interaction_q.get_single();
+    if let Ok(Interaction::Pressed) = interaction {
+        menu_set.p0().single_mut().display = Display::Flex;
+        menu_set.p1().single_mut().display = Display::None;
+
+        let Some(selected_character_slot) = selected_character_slot.0 else {
+            return;
+        };
+
+        let account = account_q.single();
+    }
+}
+
+pub fn list_join_game_button(
+    mut net_client: ResMut<Client>,
+    selected_character_slot: Res<SelectedCharacterSlot>,
+    interaction_q: Query<&Interaction, (Changed<Interaction>, With<ListJoinGameButton>)>,
     mut menu_set: ParamSet<(
         Query<&mut Style, With<MainRoot>>,
         Query<&mut Style, With<AccountListRoot>>,
@@ -708,39 +737,54 @@ pub fn account_list_create_game_button(
     account_q: Query<&RpgAccount>,
 ) {
     let interaction = interaction_q.get_single();
-    if let Ok((selected_character_uid, Interaction::Pressed)) = interaction {
+    if let Ok(Interaction::Pressed) = interaction {
         menu_set.p0().single_mut().display = Display::None;
         menu_set.p1().single_mut().display = Display::None;
+    }
+}
 
-        let Some(selected_character_uid) = selected_character_uid.0 else {
+pub fn list_create_game_button(
+    mut net_client: ResMut<Client>,
+    selected_character_slot: Res<SelectedCharacterSlot>,
+    interaction_q: Query<&Interaction, (Changed<Interaction>, With<ListCreateGameButton>)>,
+    mut menu_set: ParamSet<(
+        Query<&mut Style, With<MainRoot>>,
+        Query<&mut Style, With<AccountListRoot>>,
+    )>,
+    account_q: Query<&RpgAccount>,
+) {
+    let interaction = interaction_q.get_single();
+    if let Ok(Interaction::Pressed) = interaction {
+        let Some(selected_character_slot) = selected_character_slot.0 else {
             return;
         };
+
+        //menu_set.p0().single_mut().display = Display::None;
+        //menu_set.p1().single_mut().display = Display::None;
 
         let account = account_q.single();
         let character = account
             .0
             .characters
             .iter()
-            .find(|c| c.character.unit.uid == selected_character_uid)
+            .find(|c| c.info.slot == selected_character_slot)
             .unwrap();
 
         info!("sending create game request");
         net_client.send_message::<Channel1, _>(CSCreateGame(character.info.game_mode));
-        return;
     }
 }
 
-/*
-let slot_string = format!(
-    "{} level {} {}",
-    character.unit.name, character.unit.level, character.unit.class
-);
-*/
-
-/*
-if _ {
-    ui_image.texture = textures.icons["checkmark"].clone_weak();
-} else {
-    ui_image.texture = textures.icons["transparent"].clone_weak();
+pub fn list_cancel_button(
+    interaction_q: Query<&Interaction, (Changed<Interaction>, With<ListCancelButton>)>,
+    mut menu_set: ParamSet<(
+        Query<&mut Style, With<AccountListRoot>>,
+        Query<&mut Style, With<AccountLoginRoot>>,
+    )>,
+) {
+    let interaction = interaction_q.get_single();
+    if let Ok(Interaction::Pressed) = interaction {
+        menu_set.p0().single_mut().display = Display::None;
+        menu_set.p1().single_mut().display = Display::Flex;
+    }
 }
-*/

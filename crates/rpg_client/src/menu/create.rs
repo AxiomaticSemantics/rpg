@@ -1,7 +1,7 @@
 use crate::{
     assets::TextureAssets,
     game::plugin::{GameState, PlayerOptions},
-    menu::main::MainRoot,
+    menu::{account::AccountListRoot, main::MainRoot},
     state::AppState,
 };
 
@@ -241,7 +241,7 @@ pub fn spawn(
 pub fn cancel_button(
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<CancelButton>)>,
     mut menu_set: ParamSet<(
-        Query<&mut Style, With<MainRoot>>,
+        Query<&mut Style, With<AccountListRoot>>,
         Query<&mut Style, With<CreateRoot>>,
     )>,
 ) {
