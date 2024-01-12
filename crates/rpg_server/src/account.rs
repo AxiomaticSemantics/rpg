@@ -21,7 +21,7 @@ use lightyear::prelude::NetworkTarget;
 
 use rpg_account::{
     account::{Account, AccountInfo},
-    character::{Character, CharacterInfo},
+    character::{Character, CharacterInfo, CharacterRecord},
 };
 use rpg_core::{
     passive_tree::PassiveSkillGraph,
@@ -77,9 +77,9 @@ pub(crate) fn receive_account_create(
 
             let account = Account {
                 info: AccountInfo {
+                    character_slots: 12,
                     name: event.message().name.clone(),
                     uid: net_params.state.next_uid.get(),
-                    character_info: vec![],
                 },
                 characters: vec![],
             };
@@ -100,7 +100,8 @@ pub(crate) fn receive_account_load(
     mut net_params: NetworkParamsRW,
 ) {
     for event in account_load_reader.read() {
-        let client = net_params.context.clients.get_mut(event.context()).unwrap();
+        let client_id = event.context();
+        let client = net_params.context.clients.get_mut(client_id).unwrap();
         if client.is_authenticated_player() {
             info!("authenticated player attempted to load account {client:?}");
             continue;
@@ -118,11 +119,20 @@ pub(crate) fn receive_account_load(
             let account: Result<Account, _> = serde_json::from_reader(file);
             if let Ok(account) = account {
                 client.auth_status = AuthorizationStatus::Authenticated;
+                // FIXME assign a client id and send it to the client
+                client.client_type = ClientType::Player(*client_id);
                 info!("spawning RpgAccount for {client:?}");
 
                 commands.spawn(RpgAccountBundle {
-                    account: RpgAccount(account),
+                    account: RpgAccount(account.clone()),
                 });
+
+                net_params.server.send_message_to_target::<Channel1, _>(
+                    SCLoginAccountSuccess(account.clone()),
+                    NetworkTarget::Only(vec![*client_id]),
+                );
+            } else {
+                info!("unable to deserialize account: {file_path}");
             }
         } else {
             info!("account does not exist {client:?}");
@@ -149,10 +159,9 @@ pub(crate) fn receive_character_create(
         for mut account in &mut account_q {
             if account
                 .0
-                .info
-                .character_info
+                .characters
                 .iter()
-                .any(|c| c.name == event.message().name)
+                .any(|c| c.info.name == event.message().name)
             {
                 info!("character already exists");
 
@@ -181,18 +190,20 @@ pub(crate) fn receive_character_create(
 
                 let character_info = CharacterInfo {
                     name: create_msg.name.clone(),
+                    slot: create_msg.slot,
                     uid: unit.uid,
                     game_mode: create_msg.game_mode,
                 };
 
-                let character = Character {
-                    uid: unit.uid,
-                    unit,
-                    passive_tree: PassiveSkillGraph::new(create_msg.class),
-                    storage: UnitStorage::default(),
+                let character = CharacterRecord {
+                    info: character_info,
+                    character: Character {
+                        unit,
+                        passive_tree: PassiveSkillGraph::new(create_msg.class),
+                        storage: UnitStorage::default(),
+                    },
                 };
 
-                account.0.info.character_info.push(character_info);
                 account.0.characters.push(character.clone());
 
                 net_params.state.next_uid.next();
@@ -200,7 +211,7 @@ pub(crate) fn receive_character_create(
                 net_params
                     .server
                     .send_message_to_target::<Channel1, SCCreateCharacterSuccess>(
-                        SCCreateCharacterSuccess(character),
+                        SCCreateCharacterSuccess(character.character),
                         NetworkTarget::Only(vec![*client_id]),
                     )
                     .unwrap();

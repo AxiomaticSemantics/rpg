@@ -46,30 +46,44 @@ pub struct MenuPlugin;
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
         println!("Initializing menu plugin.");
-        app.init_resource::<menu::load::SelectedSaveSlot>()
+        app.init_resource::<menu::account::SelectedCharacterSlot>()
             .add_systems(OnEnter(AppState::MenuLoad), spawn)
             .add_systems(OnEnter(AppState::Menu), display_menu)
             .add_systems(
                 Update,
                 (
-                    menu::main::exit_button,
-                    menu::main::account_create_button,
-                    menu::main::account_login_button,
-                    menu::main::settings_button,
-                    menu::main::credits_button,
-                    menu::account::cancel_create_button,
-                    menu::account::cancel_login_button,
-                    menu::account::create_button,
-                    menu::account::login_button,
-                    menu::create::cancel_button,
-                    menu::create::create_class,
-                    menu::create::set_game_mode,
-                    menu::load::cancel_button,
-                    menu::load::select_save_slot,
-                    menu::load::load_button,
-                    menu::settings::cancel_button,
-                    menu::settings::controls_button,
-                    menu::settings::audio_button,
+                    (
+                        menu::main::exit_button,
+                        menu::main::account_create_button,
+                        menu::main::account_login_button,
+                        menu::main::settings_button,
+                        menu::main::credits_button,
+                    ),
+                    (
+                        menu::account::cancel_create_button,
+                        menu::account::cancel_login_button,
+                        menu::account::create_button,
+                        menu::account::login_button,
+                        menu::account::list_create_character_button,
+                        menu::account::list_create_game_button,
+                        menu::account::list_join_game_button,
+                        menu::account::list_cancel_button,
+                    ),
+                    (
+                        menu::create::cancel_button,
+                        menu::create::create_class,
+                        menu::create::set_game_mode,
+                    ),
+                    /*(
+                        menu::load::cancel_button,
+                        menu::load::select_save_slot,
+                        menu::load::load_button,
+                    ),*/
+                    (
+                        menu::settings::cancel_button,
+                        menu::settings::controls_button,
+                        menu::settings::audio_button,
+                    ),
                     menu::credits::cancel_button,
                 )
                     .run_if(in_state(AppState::Menu)),

@@ -1,13 +1,18 @@
-use crate::menu::account::{AccountCreateRoot, AccountListContainer, AccountListRoot};
+use crate::menu::account::{
+    self, AccountCharacterSlot, AccountCreateRoot, AccountListRoot, AccountLoginRoot,
+};
 
 use bevy::{
     ecs::{
         component::Component,
+        entity::Entity,
         event::EventReader,
         query::With,
-        system::{Commands, ParamSet, Query},
+        system::{Commands, ParamSet, Query, Res},
     },
+    hierarchy::Children,
     log::info,
+    text::Text,
     ui::{Display, Style},
 };
 
@@ -16,6 +21,7 @@ use rpg_account::{
     character::{Character, CharacterInfo},
 };
 use rpg_network_protocol::protocol::*;
+use ui_util::style::UiTheme;
 
 use lightyear::client::{
     components::{ComponentSyncMode, SyncComponent},
@@ -27,22 +33,39 @@ pub(crate) struct RpgAccount(pub(crate) Account);
 
 pub(crate) fn receive_account_create_success(
     mut commands: Commands,
-    mut account_menu_set: ParamSet<(
+    ui_theme: Res<UiTheme>,
+    mut style_set: ParamSet<(
         Query<&mut Style, With<AccountCreateRoot>>,
         Query<&mut Style, With<AccountListRoot>>,
+        Query<(&mut Text, &mut Style, &AccountCharacterSlot)>,
     )>,
     mut account_events: EventReader<MessageEvent<SCCreateAccountSuccess>>,
-    mut account_container_q: Query<&mut AccountListContainer>,
 ) {
     for event in account_events.read() {
         info!("account creation success");
 
         let account_msg = event.message();
 
+        for character_record in account_msg.0.characters.iter() {
+            for (mut slot_text, mut slot_style, slot) in &mut style_set.p2() {
+                if slot.0 != character_record.info.slot {
+                    continue;
+                }
+
+                let slot_string = format!(
+                    "{} level {} {}",
+                    character_record.character.unit.name,
+                    character_record.character.unit.level,
+                    character_record.character.unit.class
+                );
+                slot_text.sections[0].value = slot_string;
+            }
+        }
+
         commands.spawn(RpgAccount(account_msg.0.clone()));
 
-        account_menu_set.p0().single_mut().display = Display::None;
-        account_menu_set.p1().single_mut().display = Display::Flex;
+        style_set.p0().single_mut().display = Display::None;
+        style_set.p1().single_mut().display = Display::Flex;
         return;
     }
 }
@@ -58,23 +81,41 @@ pub(crate) fn receive_account_create_error(
 
 pub(crate) fn receive_account_login_success(
     mut commands: Commands,
-    mut account_menu_set: ParamSet<(
-        Query<&mut Style, With<AccountCreateRoot>>,
+    ui_theme: Res<UiTheme>,
+    mut style_set: ParamSet<(
+        Query<&mut Style, With<AccountLoginRoot>>,
         Query<&mut Style, With<AccountListRoot>>,
+        Query<(&mut Text, &mut Style, &AccountCharacterSlot)>,
     )>,
     mut account_events: EventReader<MessageEvent<SCLoginAccountSuccess>>,
     mut account_q: Query<&mut RpgAccount>,
-    mut account_container_q: Query<&mut AccountListContainer>,
 ) {
     for event in account_events.read() {
         info!("login success");
 
         let account_msg = event.message();
 
+        for character_record in account_msg.0.characters.iter() {
+            for (mut slot_text, mut slot_style, slot) in &mut style_set.p2() {
+                if slot.0 != character_record.info.slot {
+                    info!("{slot:?} {:?}", character_record.info.slot);
+                    continue;
+                }
+
+                let slot_string = format!(
+                    "{} level {} {}",
+                    character_record.character.unit.name,
+                    character_record.character.unit.level,
+                    character_record.character.unit.class
+                );
+                slot_text.sections[0].value = slot_string;
+            }
+        }
+
         commands.spawn(RpgAccount(account_msg.0.clone()));
 
-        account_menu_set.p0().single_mut().display = Display::None;
-        account_menu_set.p1().single_mut().display = Display::Flex;
+        style_set.p0().single_mut().display = Display::None;
+        style_set.p1().single_mut().display = Display::Flex;
         return;
     }
 }
