@@ -32,7 +32,6 @@ git = "https://github.com/AxiomaticSemantics/bevy"
 features = [
   "bevy_asset",
   "multi-threaded",
-  "dynamic_linking",
 ]
 optional = false
 default-features = false

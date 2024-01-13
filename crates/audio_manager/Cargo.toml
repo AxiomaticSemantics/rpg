@@ -14,10 +14,7 @@ workspace = true
 #version = "0.12" 
 git = "https://github.com/AxiomaticSemantics/bevy"
 features = [
- # "bevy_asset",
   "bevy_audio",
- # "vorbis",
-#  "dynamic_linking"
 ]
 optional = false
 default-features = false

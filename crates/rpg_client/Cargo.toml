@@ -73,7 +73,6 @@ features = [
   "subpixel_glyph_atlas",
   "animation",
   "multi-threaded",
-  "dynamic_linking"
 ]
 optional = false
 default-features = false

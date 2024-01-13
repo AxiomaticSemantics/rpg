@@ -36,7 +36,6 @@ features = [
         "x11",
         "tonemapping_luts",
 	"multi-threaded",
-	"dynamic_linking"
 ]
 optional = false
 default-features = false

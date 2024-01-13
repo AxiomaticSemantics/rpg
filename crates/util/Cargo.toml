@@ -20,7 +20,6 @@ thiserror = "1.0.50"
 git = "https://github.com/AxiomaticSemantics/bevy"
 features = [
   "bevy_asset",
-  "dynamic_linking"
 ]
 optional = false
 default-features = false
