@@ -1,7 +1,10 @@
 use crate::{
     assets::TextureAssets,
     game::plugin::{GameState, PlayerOptions},
-    menu::{account::AccountListRoot, main::MainRoot},
+    menu::{
+        account::{AccountListRoot, SelectedCharacterSlot},
+        main::MainRoot,
+    },
     state::AppState,
 };
 
@@ -11,6 +14,7 @@ use ui_util::{
 };
 
 use rpg_core::{class::Class, unit::HeroGameMode};
+use rpg_network_protocol::protocol::*;
 
 use bevy::{
     ecs::{
@@ -20,6 +24,7 @@ use bevy::{
         system::{ParamSet, Query, Res, ResMut, Resource},
     },
     hierarchy::{BuildChildren, ChildBuilder},
+    log::info,
     prelude::{Deref, DerefMut},
     text::Text,
     ui::{
@@ -274,8 +279,10 @@ pub fn set_game_mode(
 }
 
 pub fn create_class(
+    mut net_client: ResMut<Client>,
     mut state: ResMut<NextState<AppState>>,
     mut game_state: ResMut<GameState>,
+    selected_character_slot: Res<SelectedCharacterSlot>,
     interaction_q: Query<
         (&Interaction, &CreatePlayerClass),
         (Changed<Interaction>, With<CreatePlayerClass>),
@@ -284,20 +291,39 @@ pub fn create_class(
     mut menu_root_q: Query<&mut Style, With<UiRoot>>,
     player_name_text_q: Query<&Text, With<CreatePlayerName>>,
 ) {
-    let player_name_text = player_name_text_q.single();
-    if player_name_text.sections[0].value.is_empty() {
+    if !net_client.is_connected() {
         return;
     }
 
     if let Ok((Interaction::Pressed, create_class)) = interaction_q.get_single() {
+        if selected_character_slot.is_none() {
+            info!("no slot selected");
+            return;
+        }
+        let player_name_text = player_name_text_q.single();
+        if player_name_text.sections[0].value.is_empty() {
+            info!("no player name provided");
+            return;
+        }
+
         let game_mode = game_mode_q.single();
         game_state.player_config = Some(PlayerOptions {
-            name: "Player".to_string(),
+            name: player_name_text.sections[0].value.clone(),
             class: create_class.0,
             game_mode: game_mode.0,
         });
 
-        menu_root_q.single_mut().display = Display::None;
-        state.set(AppState::GameSpawn);
+        //menu_root_q.single_mut().display = Display::None;
+
+        let create_msg = CSCreateCharacter {
+            name: player_name_text.sections[0].value.clone(),
+            class: create_class.0,
+            game_mode: game_mode.0,
+            slot: selected_character_slot.0.unwrap(),
+        };
+
+        net_client.send_message::<Channel1, _>(create_msg).unwrap();
+
+        //state.set(AppState::GameSpawn);
     }
 }

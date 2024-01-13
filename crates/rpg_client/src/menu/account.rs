@@ -95,7 +95,7 @@ pub struct ListContainer;
 #[derive(Resource, Default, Deref, DerefMut)]
 pub struct SelectedCharacterSlot(pub Option<CharacterSlot>);
 
-#[derive(Debug, Component, Clone, Resource, Deref, DerefMut)]
+#[derive(Debug, Component, Clone, Deref, DerefMut)]
 pub struct AccountCharacterSlot(pub CharacterSlot);
 
 pub fn spawn_create(
@@ -712,7 +712,6 @@ pub fn list_create_character_button(
         Query<&mut Style, With<AccountListRoot>>,
         Query<(&mut Style, &Interaction), (Changed<Interaction>, With<ListCreateCharacterButton>)>,
     )>,
-    account_q: Query<&RpgAccount>,
 ) {
     let mut interaction = style_set.p2();
     if let Ok((style, Interaction::Pressed)) = interaction.get_single_mut() {
@@ -723,8 +722,6 @@ pub fn list_create_character_button(
 
         style_set.p0().single_mut().display = Display::Flex;
         style_set.p1().single_mut().display = Display::None;
-
-        let account = account_q.single();
     }
 }
 
@@ -744,6 +741,21 @@ pub fn list_join_game_button(
             info!("no character slot selected");
             return;
         };
+
+        let account = account_q.single();
+        let character_record = account
+            .0
+            .characters
+            .iter()
+            .find(|c| c.info.slot == selected_character_slot)
+            .unwrap();
+
+        net_client
+            .send_message::<Channel1, _>(CSJoinGame {
+                game_mode: character_record.info.game_mode,
+                slot: selected_character_slot,
+            })
+            .unwrap();
 
         style_set.p0().single_mut().display = Display::None;
         style_set.p1().single_mut().display = Display::None;
@@ -779,7 +791,12 @@ pub fn list_create_game_button(
             .unwrap();
 
         info!("sending create game request");
-        net_client.send_message::<Channel1, _>(CSCreateGame(character.info.game_mode));
+        net_client
+            .send_message::<Channel1, _>(CSCreateGame {
+                game_mode: character.info.game_mode,
+                slot: selected_character_slot,
+            })
+            .unwrap();
     }
 }
 
@@ -830,6 +847,26 @@ pub fn list_select_slot(
         if selected_character_slot.0 == Some(slot.0) {
             if bg_color.0 != ui_theme.button_theme.pressed_background_color.0 {
                 *bg_color = ui_theme.button_theme.pressed_background_color;
+            }
+        }
+    }
+}
+
+fn update_character_list(
+    account_q: Query<&RpgAccount, Changed<RpgAccount>>,
+    mut slot_q: Query<(&mut Text, &AccountCharacterSlot)>,
+) {
+    if let Ok(account) = account_q.get_single() {
+        for character in account.0.characters.iter() {
+            for (mut text, slot) in &mut slot_q {
+                if slot.0 == character.info.slot {
+                    text.sections[0].value = format!(
+                        "{} {:?} {}",
+                        character.info.name,
+                        character.info.game_mode,
+                        character.character.unit.level
+                    );
+                }
             }
         }
     }

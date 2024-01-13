@@ -75,11 +75,6 @@ impl Plugin for MenuPlugin {
                         menu::create::create_class,
                         menu::create::set_game_mode,
                     ),
-                    /*(
-                        menu::load::cancel_button,
-                        menu::load::select_save_slot,
-                        menu::load::load_button,
-                    ),*/
                     (
                         menu::settings::cancel_button,
                         menu::settings::controls_button,

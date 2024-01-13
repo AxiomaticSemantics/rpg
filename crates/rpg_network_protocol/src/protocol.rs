@@ -11,7 +11,7 @@ use serde_derive::{Deserialize, Serialize};
 
 use rpg_account::{
     account::{Account, AccountInfo},
-    character::{Character, CharacterInfo, CharacterSlot},
+    character::{Character, CharacterInfo, CharacterRecord, CharacterSlot},
 };
 use rpg_core::{class::Class, skill::SkillId, uid::Uid, unit::HeroGameMode};
 use rpg_world::zone::ZoneId;
@@ -140,7 +140,16 @@ pub struct CSChatJoinChannel(pub String);
 
 // Game Messages
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CSCreateGame(pub HeroGameMode);
+pub struct CSCreateGame {
+    pub game_mode: HeroGameMode,
+    pub slot: CharacterSlot,
+}
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSJoinGame {
+    pub game_mode: HeroGameMode,
+    pub slot: CharacterSlot,
+}
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSJoinZone(pub ZoneId);
@@ -164,7 +173,7 @@ pub struct CSUseSkillTargeted {
 
 // Account Messages
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCHello;
+pub struct SCHello(pub ClientId);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCCreateAccountSuccess(pub Account);
@@ -179,7 +188,7 @@ pub struct SCLoginAccountSuccess(pub Account);
 pub struct SCLoginAccountError;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCCreateCharacterSuccess(pub Character);
+pub struct SCCreateCharacterSuccess(pub CharacterRecord);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCCreateCharacterError;
@@ -191,7 +200,7 @@ pub struct SCAccount(pub Account);
 pub struct SCAccountInfo(pub AccountInfo);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCCharacter(pub Character);
+pub struct SCCharacter(pub CharacterRecord);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCCharacterInfo(pub CharacterInfo);
@@ -283,6 +292,7 @@ pub enum Messages {
 
     // Game Messages
     CSCreateGame(CSCreateGame),
+    CSJoinGame(CSJoinGame),
     CSJoinZone(CSJoinZone),
     CSRotPlayer(CSRotPlayer),
     CSMovePlayer(CSMovePlayer),

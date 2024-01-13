@@ -18,7 +18,7 @@ use bevy::{
 
 use rpg_account::{
     account::{Account, AccountInfo},
-    character::{Character, CharacterInfo},
+    character::{Character, CharacterInfo, CharacterRecord},
 };
 use rpg_network_protocol::protocol::*;
 use ui_util::style::UiTheme;
@@ -28,11 +28,10 @@ use lightyear::client::{
     events::MessageEvent,
 };
 
-#[derive(Component)]
+#[derive(Default, Component)]
 pub(crate) struct RpgAccount(pub(crate) Account);
 
 pub(crate) fn receive_account_create_success(
-    mut commands: Commands,
     ui_theme: Res<UiTheme>,
     mut style_set: ParamSet<(
         Query<&mut Style, With<AccountCreateRoot>>,
@@ -62,10 +61,10 @@ pub(crate) fn receive_account_create_success(
             }
         }
 
-        commands.spawn(RpgAccount(account_msg.0.clone()));
-
         style_set.p0().single_mut().display = Display::None;
         style_set.p1().single_mut().display = Display::Flex;
+
+        account_events.clear();
         return;
     }
 }
@@ -76,6 +75,9 @@ pub(crate) fn receive_account_create_error(
 ) {
     for event in account_events.read() {
         info!("account creation error");
+
+        account_events.clear();
+        return;
     }
 }
 
@@ -90,6 +92,8 @@ pub(crate) fn receive_account_login_success(
     mut account_events: EventReader<MessageEvent<SCLoginAccountSuccess>>,
     mut account_q: Query<&mut RpgAccount>,
 ) {
+    let mut account = account_q.single_mut();
+
     for event in account_events.read() {
         info!("login success");
 
@@ -112,10 +116,12 @@ pub(crate) fn receive_account_login_success(
             }
         }
 
-        commands.spawn(RpgAccount(account_msg.0.clone()));
+        account.0 = account_msg.0.clone();
 
         style_set.p0().single_mut().display = Display::None;
         style_set.p1().single_mut().display = Display::Flex;
+
+        account_events.clear();
         return;
     }
 }
@@ -126,6 +132,9 @@ pub(crate) fn receive_account_login_error(
 ) {
     for event in account_events.read() {
         info!("login error");
+
+        account_events.clear();
+        return;
     }
 }
 
@@ -133,8 +142,33 @@ pub(crate) fn receive_character_create_success(
     mut account_events: EventReader<MessageEvent<SCCreateCharacterSuccess>>,
     mut account_q: Query<&mut RpgAccount>,
 ) {
+    let mut account = account_q.single_mut();
+
     for event in account_events.read() {
-        info!("character creation success");
+        let create_msg = event.message();
+
+        info!("character creation success {:?}", create_msg.0.info);
+
+        let mut character_record = account
+            .0
+            .characters
+            .iter_mut()
+            .find(|c| c.info.slot == create_msg.0.info.slot);
+
+        if let Some(character_record) = character_record {
+            character_record.character = create_msg.0.character.clone();
+            character_record.info = create_msg.0.info.clone();
+        } else {
+            let character_record = CharacterRecord {
+                info: create_msg.0.info.clone(),
+                character: create_msg.0.character.clone(),
+            };
+
+            account.0.characters.push(character_record);
+        }
+
+        account_events.clear();
+        return;
     }
 }
 
@@ -144,5 +178,8 @@ pub(crate) fn receive_character_create_error(
 ) {
     for event in account_events.read() {
         info!("character creation error");
+
+        account_events.clear();
+        return;
     }
 }
