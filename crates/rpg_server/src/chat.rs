@@ -15,7 +15,7 @@ use bevy::{
     prelude::{Deref, DerefMut},
 };
 
-use lightyear::server::events::MessageEvent;
+use lightyear::{server::events::MessageEvent, shared::replication::components::NetworkTarget};
 
 pub(crate) fn receive_chat_join(
     mut commands: Commands,
@@ -23,13 +23,17 @@ pub(crate) fn receive_chat_join(
     mut net_params: NetworkParamsRW,
 ) {
     for event in join_reader.read() {
-        let client = net_params.context.clients.get(event.context()).unwrap();
-        if client.is_authenticated_player() {
-            info!("already authenticated client attempted to create account {client:?}");
+        let client_id = event.context();
+        let client = net_params.context.clients.get(client_id).unwrap();
+        if !client.is_authenticated() {
+            info!("unauthenticated client attempted to join chat: {client:?}");
             continue;
         }
 
-        // Allow authenticated admins to create accounts
-        if client.is_authenticated_admin() {}
+        // TODO Handle rejections for banned accounts etc.
+        net_params.server.send_message_to_target::<Channel1, _>(
+            SCChatJoinSuccess(0),
+            NetworkTarget::Only(vec![*client_id]),
+        );
     }
 }

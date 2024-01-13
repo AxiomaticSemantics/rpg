@@ -210,13 +210,15 @@ pub struct SCCharacterInfo(pub CharacterInfo);
 
 // Chat Messages
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCChatJoinSuccess;
+pub struct SCChatJoinSuccess(pub u64);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCChatJoinError;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCChatChannelJoinSuccess;
+pub struct SCChatChannelJoinSuccess {
+    pub recent_message_ids: Vec<u64>,
+}
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCChatChannelJoinError;
