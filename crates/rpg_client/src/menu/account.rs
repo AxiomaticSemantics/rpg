@@ -22,6 +22,7 @@ use lightyear::prelude::*;
 
 use bevy::{
     ecs::{
+        change_detection::{DetectChanges, Ref},
         component::Component,
         entity::Entity,
         query::{Changed, With},
@@ -34,8 +35,8 @@ use bevy::{
     text::Text,
     ui::{
         node_bundles::{ButtonBundle, ImageBundle, NodeBundle, TextBundle},
-        AlignItems, AlignSelf, Display, FocusPolicy, Interaction, JustifyContent, Style, UiImage,
-        UiRect, Val,
+        AlignItems, AlignSelf, BackgroundColor, Display, FocusPolicy, Interaction, JustifyContent,
+        Style, UiImage, UiRect, Val,
     },
     utils::default,
 };
@@ -706,21 +707,22 @@ pub fn cancel_account_list_button(
 pub fn list_create_character_button(
     mut net_client: ResMut<Client>,
     selected_character_slot: Res<SelectedCharacterSlot>,
-    interaction_q: Query<&Interaction, (Changed<Interaction>, With<ListCreateCharacterButton>)>,
-    mut menu_set: ParamSet<(
+    mut style_set: ParamSet<(
         Query<&mut Style, With<CreateRoot>>,
         Query<&mut Style, With<AccountListRoot>>,
+        Query<(&mut Style, &Interaction), (Changed<Interaction>, With<ListCreateCharacterButton>)>,
     )>,
     account_q: Query<&RpgAccount>,
 ) {
-    let interaction = interaction_q.get_single();
-    if let Ok(Interaction::Pressed) = interaction {
-        menu_set.p0().single_mut().display = Display::Flex;
-        menu_set.p1().single_mut().display = Display::None;
-
+    let mut interaction = style_set.p2();
+    if let Ok((style, Interaction::Pressed)) = interaction.get_single_mut() {
         let Some(selected_character_slot) = selected_character_slot.0 else {
+            info!("no character slot selected");
             return;
         };
+
+        style_set.p0().single_mut().display = Display::Flex;
+        style_set.p1().single_mut().display = Display::None;
 
         let account = account_q.single();
     }
@@ -729,17 +731,22 @@ pub fn list_create_character_button(
 pub fn list_join_game_button(
     mut net_client: ResMut<Client>,
     selected_character_slot: Res<SelectedCharacterSlot>,
-    interaction_q: Query<&Interaction, (Changed<Interaction>, With<ListJoinGameButton>)>,
-    mut menu_set: ParamSet<(
+    mut style_set: ParamSet<(
         Query<&mut Style, With<MainRoot>>,
         Query<&mut Style, With<AccountListRoot>>,
+        Query<(&Style, &Interaction), (Changed<Interaction>, With<ListJoinGameButton>)>,
     )>,
     account_q: Query<&RpgAccount>,
 ) {
-    let interaction = interaction_q.get_single();
-    if let Ok(Interaction::Pressed) = interaction {
-        menu_set.p0().single_mut().display = Display::None;
-        menu_set.p1().single_mut().display = Display::None;
+    let mut interaction = style_set.p2();
+    if let Ok((style, Interaction::Pressed)) = interaction.get_single_mut() {
+        let Some(selected_character_slot) = selected_character_slot.0 else {
+            info!("no character slot selected");
+            return;
+        };
+
+        style_set.p0().single_mut().display = Display::None;
+        style_set.p1().single_mut().display = Display::None;
     }
 }
 
@@ -756,6 +763,7 @@ pub fn list_create_game_button(
     let interaction = interaction_q.get_single();
     if let Ok(Interaction::Pressed) = interaction {
         let Some(selected_character_slot) = selected_character_slot.0 else {
+            info!("no character slot selected");
             return;
         };
 
@@ -786,5 +794,43 @@ pub fn list_cancel_button(
     if let Ok(Interaction::Pressed) = interaction {
         menu_set.p0().single_mut().display = Display::None;
         menu_set.p1().single_mut().display = Display::Flex;
+    }
+}
+
+pub fn list_select_slot(
+    ui_theme: Res<UiTheme>,
+    mut selected_character_slot: ResMut<SelectedCharacterSlot>,
+    mut slot_q: Query<(
+        &mut Style,
+        &mut BackgroundColor,
+        Ref<Interaction>,
+        &AccountCharacterSlot,
+    )>,
+) {
+    for (mut style, mut bg_color, interaction, slot) in &mut slot_q {
+        match *interaction {
+            Interaction::Pressed => {
+                if interaction.is_changed() && selected_character_slot.0 != Some(slot.0) {
+                    info!("setting selected character slot to {slot:?}");
+                    selected_character_slot.0 = Some(slot.0);
+                }
+            }
+            Interaction::Hovered => {
+                if bg_color.0 != ui_theme.button_theme.hovered_background_color.0 {
+                    *bg_color = ui_theme.button_theme.hovered_background_color;
+                }
+            }
+            Interaction::None => {
+                if bg_color.0 != ui_theme.button_theme.normal_background_color.0 {
+                    *bg_color = ui_theme.button_theme.normal_background_color;
+                }
+            }
+        }
+
+        if selected_character_slot.0 == Some(slot.0) {
+            if bg_color.0 != ui_theme.button_theme.pressed_background_color.0 {
+                *bg_color = ui_theme.button_theme.pressed_background_color;
+            }
+        }
     }
 }
