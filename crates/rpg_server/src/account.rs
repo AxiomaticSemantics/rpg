@@ -58,7 +58,10 @@ pub(crate) fn receive_account_create(
         }
 
         // Allow authenticated admins to create accounts
-        if client.is_authenticated_admin() {}
+        if client.is_admin() && !client.is_authenticated() {
+            panic!("unauthenticated admin: {client:?}");
+            continue;
+        }
 
         let file_path = format!(
             "{}/server/accounts/{}.json",
@@ -92,7 +95,6 @@ pub(crate) fn receive_account_create(
             net_params.state.next_uid.next();
 
             info!("writing account file to {file_path}");
-            // Write account data
         }
     }
 }
@@ -222,14 +224,14 @@ pub(crate) fn receive_character_create(
                 let file_path = format!(
                     "{}/server/accounts/{}.json",
                     env::var("RPG_SAVE_ROOT").unwrap(),
-                    event.message().name
+                    account.0.info.name
                 );
                 let path = Path::new(file_path.as_str());
                 let Ok(file) = open_write(path) else {
                     info!("unable to open account file for writing");
                     continue;
                 };
-                serde_json::to_writer(file, &account.0);
+                serde_json::to_writer(file, &account.0).unwrap();
             }
         }
     }
@@ -300,5 +302,37 @@ pub(crate) fn receive_connect_admin(
         client.client_type = ClientType::Admin(*client_id);
 
         info!("client type set to admin");
+    }
+}
+
+pub(crate) fn receive_game_create(
+    net_params: NetworkParamsRO,
+    mut create_events: EventReader<MessageEvent<CSCreateGame>>,
+) {
+    for create in create_events.read() {
+        let client_id = create.context();
+        let client = net_params.context.clients.get(client_id).unwrap();
+        if !client.is_authenticated_player() {
+            continue;
+        };
+
+        let create_msg = create.message();
+        info!("create game {create_msg:?}");
+    }
+}
+
+pub(crate) fn receive_game_join(
+    net_params: NetworkParamsRO,
+    mut create_events: EventReader<MessageEvent<CSJoinGame>>,
+) {
+    for create in create_events.read() {
+        let client_id = create.context();
+        let client = net_params.context.clients.get(client_id).unwrap();
+        if !client.is_authenticated_player() {
+            continue;
+        };
+
+        let create_msg = create.message();
+        info!("join game {create_msg:?}");
     }
 }

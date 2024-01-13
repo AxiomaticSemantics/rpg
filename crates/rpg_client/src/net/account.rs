@@ -191,3 +191,51 @@ pub(crate) fn receive_character_create_error(
         return;
     }
 }
+
+pub(crate) fn receive_game_join_success(
+    mut join_events: EventReader<MessageEvent<SCGameJoinSuccess>>,
+    mut account_q: Query<&mut RpgAccount>,
+) {
+    for event in join_events.read() {
+        info!("game join success");
+
+        join_events.clear();
+        return;
+    }
+}
+
+pub(crate) fn receive_game_join_error(
+    mut join_events: EventReader<MessageEvent<SCGameJoinError>>,
+    mut account_q: Query<&mut RpgAccount>,
+) {
+    for event in join_events.read() {
+        info!("game join error");
+
+        join_events.clear();
+        return;
+    }
+}
+
+pub(crate) fn receive_game_create_success(
+    mut create_events: EventReader<MessageEvent<SCGameCreateSuccess>>,
+    mut account_q: Query<&mut RpgAccount>,
+) {
+    for event in create_events.read() {
+        info!("game create success");
+
+        create_events.clear();
+        return;
+    }
+}
+
+pub(crate) fn receive_game_create_error(
+    mut create_events: EventReader<MessageEvent<SCGameCreateError>>,
+    mut account_q: Query<&mut RpgAccount>,
+) {
+    for event in create_events.read() {
+        info!("game create error");
+
+        create_events.clear();
+        return;
+    }
+}

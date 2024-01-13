@@ -77,7 +77,7 @@ impl<'a> MapEntities<'a> for PlayerParent {
     }
 }
 
-#[component_protocol(protocol = "MyProtocol")]
+#[component_protocol(protocol = "RpgProtocol")]
 pub enum Components {
     #[sync(once)]
     Id(NetworkClientId),
@@ -131,17 +131,6 @@ pub struct CSCreateCharacter {
     pub game_mode: HeroGameMode,
 }
 
-// Chat Messages
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CSChatJoin;
-
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CSChatMessageChannel(pub String);
-
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CSChatJoinChannel(pub String);
-
-// Game Messages
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSCreateGame {
     pub game_mode: HeroGameMode,
@@ -154,6 +143,17 @@ pub struct CSJoinGame {
     pub slot: CharacterSlot,
 }
 
+// Chat Messages
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSChatJoin;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSChatMessageChannel(pub String);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSChatJoinChannel(pub String);
+
+// Game Messages
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSJoinZone(pub ZoneId);
 
@@ -208,6 +208,18 @@ pub struct SCCharacter(pub CharacterRecord);
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCCharacterInfo(pub CharacterInfo);
 
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCGameCreateSuccess;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCGameCreateError;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCGameJoinSuccess;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCGameJoinError;
+
 // Chat Messages
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCChatJoinSuccess(pub u64);
@@ -249,7 +261,7 @@ pub struct SCMovePlayer(pub Vec3);
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCRotPlayer(pub Vec3);
 
-#[message_protocol(protocol = "MyProtocol")]
+#[message_protocol(protocol = "RpgProtocol")]
 pub enum Messages {
     // Server -> Client
 
@@ -265,6 +277,10 @@ pub enum Messages {
     SCAccountInfo(SCAccountInfo),
     SCCharacter(SCCharacter),
     SCCharacterInfo(SCCharacterInfo),
+    SCGameCreateSuccess(SCGameCreateSuccess),
+    SCGameCreateError(SCGameCreateError),
+    SCGameJoinSuccess(SCGameJoinSuccess),
+    SCGameJoinError(SCGameJoinError),
 
     // Chat Messages
     SCChatJoinSuccess(SCChatJoinSuccess),
@@ -290,6 +306,8 @@ pub enum Messages {
     CSLoadAccount(CSLoadAccount),
     CSLoadCharacter(CSLoadCharacter),
     CSCreateCharacter(CSCreateCharacter),
+    CSCreateGame(CSCreateGame),
+    CSJoinGame(CSJoinGame),
 
     // Chat Messages
     CSChatJoin(CSChatJoin),
@@ -297,8 +315,6 @@ pub enum Messages {
     CSChatJoinChannel(CSChatJoinChannel),
 
     // Game Messages
-    CSCreateGame(CSCreateGame),
-    CSJoinGame(CSJoinGame),
     CSJoinZone(CSJoinZone),
     CSRotPlayer(CSRotPlayer),
     CSMovePlayer(CSMovePlayer),
@@ -309,13 +325,13 @@ pub enum Messages {
 // Protocol
 
 protocolize! {
-    Self = MyProtocol,
+    Self = RpgProtocol,
     Message = Messages,
     Component = Components,
 }
 
-pub fn protocol() -> MyProtocol {
-    let mut protocol = MyProtocol::default();
+pub fn protocol() -> RpgProtocol {
+    let mut protocol = RpgProtocol::default();
     protocol.add_channel::<Channel1>(ChannelSettings {
         mode: ChannelMode::OrderedReliable(ReliableSettings::default()),
         direction: ChannelDirection::Bidirectional,
