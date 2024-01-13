@@ -218,6 +218,18 @@ pub(crate) fn receive_character_create(
                     .unwrap();
 
                 account.0.characters.push(character);
+
+                let file_path = format!(
+                    "{}/server/accounts/{}.json",
+                    env::var("RPG_SAVE_ROOT").unwrap(),
+                    event.message().name
+                );
+                let path = Path::new(file_path.as_str());
+                let Ok(file) = open_write(path) else {
+                    info!("unable to open account file for writing");
+                    continue;
+                };
+                serde_json::to_writer(file, &account.0);
             }
         }
     }
