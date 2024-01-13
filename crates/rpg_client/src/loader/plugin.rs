@@ -105,7 +105,7 @@ impl Plugin for LoaderPlugin {
                 config: NetworkClientConfig {
                     client_port: 0,
                     server_port: 5000,
-                    server_addr: Ipv4Addr::LOCALHOST,
+                    server_addr: Ipv4Addr::new(192, 168, 0, 102),
                 },
             })
             .add_plugins(TweeningPlugin)
