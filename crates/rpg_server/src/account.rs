@@ -46,6 +46,7 @@ pub(crate) struct RpgAccount(pub(crate) Account);
 
 // FIXME there should be different message types for admin and player variants
 pub(crate) fn receive_account_create(
+    mut commands: Commands,
     mut account_create_reader: EventReader<MessageEvent<CSCreateAccount>>,
     mut net_params: NetworkParamsRW,
 ) {
@@ -85,6 +86,8 @@ pub(crate) fn receive_account_create(
             };
 
             serde_json::to_writer(file, &account).unwrap();
+
+            commands.spawn(RpgAccount(account));
 
             net_params.state.next_uid.next();
 
@@ -161,7 +164,7 @@ pub(crate) fn receive_character_create(
                 .0
                 .characters
                 .iter()
-                .any(|c| c.info.name == event.message().name)
+                .any(|c| c.info.slot == event.message().slot)
             {
                 info!("character already exists");
 
@@ -204,22 +207,23 @@ pub(crate) fn receive_character_create(
                     },
                 };
 
-                account.0.characters.push(character.clone());
-
                 net_params.state.next_uid.next();
 
                 net_params
                     .server
                     .send_message_to_target::<Channel1, SCCreateCharacterSuccess>(
-                        SCCreateCharacterSuccess(character.character),
+                        SCCreateCharacterSuccess(character.clone()),
                         NetworkTarget::Only(vec![*client_id]),
                     )
                     .unwrap();
+
+                account.0.characters.push(character);
             }
         }
     }
 }
 
+/*
 pub(crate) fn receive_character_load(
     mut character_load_reader: EventReader<MessageEvent<CSLoadCharacter>>,
     net_params: NetworkParamsRO,
@@ -230,8 +234,10 @@ pub(crate) fn receive_character_load(
             info!("unauthenticated client attempted to load character {client:?}");
             continue;
         }
+        let load_msg = event.message();
+
     }
-}
+}*/
 
 pub(crate) fn receive_connect_player(
     mut commands: Commands,

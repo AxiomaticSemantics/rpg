@@ -169,36 +169,6 @@ pub fn spawn(
                 ..default()
             });
 
-            /*
-            p.spawn((
-                LoadButton,
-                ImageButtonBundle {
-                    marker: ImageButton,
-                    image: ImageBundle {
-                        image: frame_image.clone(),
-                        background_color: Color::rgb(0.7, 0.0, 0.0).into(),
-                        style: Style {
-                            padding: UiRect::all(Val::Px(4.)),
-                            ..default()
-                        },
-                        ..default()
-                    },
-                    interaction: Interaction::None,
-                },
-            ))
-            .with_children(|p| {
-                p.spawn(
-                    TextBundle::from_section("Load Character", ui_theme.text_style_regular.clone())
-                        .with_style(ui_theme.row_style.clone()),
-                );
-            });
-
-            p.spawn(NodeBundle {
-                style: ui_theme.vertical_spacer.clone(),
-                ..default()
-            });
-            */
-
             p.spawn((
                 SettingsButton,
                 ImageButtonBundle {

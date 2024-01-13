@@ -2,7 +2,7 @@ use super::{account, chat, game};
 use crate::state::AppState;
 
 use bevy::{
-    app::{App, FixedUpdate, Plugin, Update},
+    app::{App, FixedUpdate, Plugin, Startup, Update},
     ecs::{
         event::EventReader,
         schedule::{common_conditions::*, IntoSystemConfigs},
@@ -44,7 +44,6 @@ pub struct NetworkClientConfig {
 
 pub struct NetworkClientPlugin {
     pub config: NetworkClientConfig,
-    // pub client_id: ClientId,
 }
 
 impl Plugin for NetworkClientPlugin {
@@ -66,7 +65,6 @@ impl Plugin for NetworkClientPlugin {
             ping: PingConfig::default(),
             sync: SyncConfig::default(),
             prediction: PredictionConfig::default(),
-            // we are sending updates every frame (60fps), let's add a delay of 6 network-ticks
             interpolation: InterpolationConfig::default()
                 .with_delay(InterpolationDelay::default().with_send_interval_ratio(2.0)),
         };
@@ -74,12 +72,13 @@ impl Plugin for NetworkClientPlugin {
 
         app.add_plugins(ClientPlugin::new(plugin_config))
             .init_resource::<ConnectionTimer>()
+            .add_systems(Startup, setup)
             .add_systems(
                 Update,
                 (
                     //input.in_set(FixedUpdateSet::Main),
-                    //(receive_player_rotation, receive_player_movement).after(input)
-                    t.in_set(FixedUpdateSet::Main),
+                    (game::receive_player_rotation, game::receive_player_move) //.after(input)
+                        .in_set(FixedUpdateSet::Main),
                     reconnect,
                     receive_server_hello,
                     account::receive_account_create_success,
@@ -90,8 +89,6 @@ impl Plugin for NetworkClientPlugin {
                     account::receive_character_create_error,
                     game::receive_player_join_success,
                     game::receive_player_join_error,
-                    game::receive_player_rotation,
-                    game::receive_player_move,
                     chat::receive_join_success,
                     chat::receive_join_error,
                     chat::receive_channel_join_success,
@@ -130,10 +127,12 @@ fn reconnect(
     }
 }
 
+fn setup(mut commands: Commands) {
+    commands.spawn(account::RpgAccount::default());
+}
+
 fn receive_server_hello(
     net_client: Res<Client>,
     mut hello_events: EventReader<MessageEvent<SCHello>>,
 ) {
 }
-
-fn t(_: Commands) {}

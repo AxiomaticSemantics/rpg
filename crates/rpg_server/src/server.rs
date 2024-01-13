@@ -70,7 +70,6 @@ impl Plugin for NetworkServerPlugin {
                     account::receive_account_create,
                     account::receive_account_load,
                     account::receive_character_create,
-                    account::receive_character_load,
                     account::receive_connect_player,
                     account::receive_connect_admin,
                 )
@@ -213,25 +212,21 @@ pub(crate) fn handle_connections(
     }
 
     for connection in connections.read() {
-        let client_id = connection.context();
+        let client_id = *connection.context();
 
         net_params
             .context
             .clients
-            .insert(*client_id, Client::default());
+            .insert(client_id, Client::default());
 
         net_params
             .server
             .send_message_to_target::<Channel1, SCHello>(
-                SCHello,
-                NetworkTarget::Only(vec![*client_id]),
+                SCHello(client_id),
+                NetworkTarget::Only(vec![client_id]),
             )
             .unwrap();
+
+        info!("sending hello to {client_id}");
     }
 }
-
-/*
-server.send_message_to_target::<Channel1, _>(message, NetworkTarget::All)
-    .unwrap_or_else(|e| error!("Failed to send message: {:?}", e));
-}
-*/
