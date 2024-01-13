@@ -26,7 +26,6 @@ git = "https://github.com/AxiomaticSemantics/lightyear"
 git = "https://github.com/AxiomaticSemantics/bevy"
 features = [
   "multi-threaded",
-  "dynamic_linking",
 ]
 optional = false
 default-features = false
