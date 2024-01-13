@@ -1,10 +1,11 @@
-use crate::server::{ClientType, NetworkContext, NetworkParamsRW};
+use crate::server::{ClientType, NetworkContext, NetworkParamsRO, NetworkParamsRW};
 
 use bevy::{
     ecs::{
         event::EventReader,
         system::{Query, Res, ResMut},
     },
+    log::info,
     math::Vec3,
     transform::components::Transform,
 };
@@ -13,6 +14,22 @@ use lightyear::prelude::server::*;
 use lightyear::prelude::*;
 
 use rpg_network_protocol::protocol::*;
+
+pub(crate) fn create_game(
+    net_params: NetworkParamsRO,
+    mut create_events: EventReader<MessageEvent<CSCreateGame>>,
+) {
+    for create in create_events.read() {
+        let client_id = create.context();
+        let client = net_params.context.clients.get(client_id).unwrap();
+        if !client.is_authenticated_player() {
+            continue;
+        };
+
+        let create_msg = create.message();
+        info!("create game {create_msg:?}");
+    }
+}
 
 /// Move player
 pub(crate) fn movement_request(

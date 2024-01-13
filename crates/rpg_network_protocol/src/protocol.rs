@@ -140,7 +140,16 @@ pub struct CSChatJoinChannel(pub String);
 
 // Game Messages
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CSCreateGame(pub HeroGameMode);
+pub struct CSCreateGame {
+    pub game_mode: HeroGameMode,
+    pub slot: CharacterSlot,
+}
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSJoinGame {
+    pub game_mode: HeroGameMode,
+    pub slot: CharacterSlot,
+}
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSJoinZone(pub ZoneId);
@@ -283,6 +292,7 @@ pub enum Messages {
 
     // Game Messages
     CSCreateGame(CSCreateGame),
+    CSJoinGame(CSJoinGame),
     CSJoinZone(CSJoinZone),
     CSRotPlayer(CSRotPlayer),
     CSMovePlayer(CSMovePlayer),

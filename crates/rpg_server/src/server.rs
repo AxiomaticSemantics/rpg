@@ -67,6 +67,7 @@ impl Plugin for NetworkServerPlugin {
             .add_systems(
                 Update,
                 (
+                    game::create_game,
                     account::receive_account_create,
                     account::receive_account_load,
                     account::receive_character_create,
