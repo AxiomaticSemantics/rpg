@@ -69,6 +69,7 @@ impl Plugin for MenuPlugin {
                         menu::account::list_join_game_button,
                         menu::account::list_cancel_button,
                         menu::account::list_select_slot,
+                        menu::account::update_character_list,
                     ),
                     (
                         menu::create::cancel_button,

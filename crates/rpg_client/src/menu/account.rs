@@ -542,19 +542,12 @@ pub fn spawn_list(
                                         p.spawn((
                                             AccountCharacterSlot(CharacterSlot(slot)),
                                             Interaction::None,
-                                            account_slot_node_bundle.clone(),
-                                        ))
-                                        .with_children(
-                                            |p| {
-                                                p.spawn(
-                                                    TextBundle::from_section(
-                                                        "Empty Slot",
-                                                        ui_theme.text_style_regular.clone(),
-                                                    )
-                                                    .with_style(ui_theme.row_style.clone()),
-                                                );
-                                            },
-                                        );
+                                            TextBundle::from_section(
+                                                "Empty Slot",
+                                                ui_theme.text_style_regular.clone(),
+                                            )
+                                            .with_style(slot_style.clone()),
+                                        ));
                                     });
                                 }
                             });
@@ -852,20 +845,33 @@ pub fn list_select_slot(
     }
 }
 
-fn update_character_list(
+pub fn update_character_list(
     account_q: Query<&RpgAccount, Changed<RpgAccount>>,
     mut slot_q: Query<(&mut Text, &AccountCharacterSlot)>,
 ) {
     if let Ok(account) = account_q.get_single() {
+        info!("account changed, updating character slots");
+
         for character in account.0.characters.iter() {
+            info!(
+                "character uid: {:?} slot: {:?}",
+                character.info.uid, character.info.slot
+            );
+
             for (mut text, slot) in &mut slot_q {
                 if slot.0 == character.info.slot {
-                    text.sections[0].value = format!(
+                    info!("slot match, updating");
+
+                    let slot_string = format!(
                         "{} {:?} {}",
                         character.info.name,
                         character.info.game_mode,
                         character.character.unit.level
                     );
+
+                    if text.sections[0].value != slot_string {
+                        text.sections[0].value = slot_string;
+                    }
                 }
             }
         }

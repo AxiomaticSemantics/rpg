@@ -39,11 +39,17 @@ pub(crate) fn receive_account_create_success(
         Query<(&mut Text, &mut Style, &AccountCharacterSlot)>,
     )>,
     mut account_events: EventReader<MessageEvent<SCCreateAccountSuccess>>,
+    mut account_q: Query<&mut RpgAccount>,
 ) {
+    let mut account = account_q.single_mut();
+
     for event in account_events.read() {
         info!("account creation success");
 
         let account_msg = event.message();
+
+        account.0.info = account_msg.0.info.clone();
+        account.0.characters = account_msg.0.characters.clone();
 
         for character_record in account_msg.0.characters.iter() {
             for (mut slot_text, mut slot_style, slot) in &mut style_set.p2() {
@@ -57,7 +63,10 @@ pub(crate) fn receive_account_create_success(
                     character_record.character.unit.level,
                     character_record.character.unit.class
                 );
-                slot_text.sections[0].value = slot_string;
+
+                if slot_text.sections[0].value != slot_string {
+                    slot_text.sections[0].value = slot_string;
+                }
             }
         }
 
@@ -102,7 +111,6 @@ pub(crate) fn receive_account_login_success(
         for character_record in account_msg.0.characters.iter() {
             for (mut slot_text, mut slot_style, slot) in &mut style_set.p2() {
                 if slot.0 != character_record.info.slot {
-                    info!("{slot:?} {:?}", character_record.info.slot);
                     continue;
                 }
 

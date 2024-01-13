@@ -1,12 +1,15 @@
 //! Run with
 //! - `cargo run`
 //! - `cargo run -- port 42069`
-mod account;
 mod assets;
-mod game;
 mod server;
 mod state;
+
 mod world;
+
+mod account;
+mod chat;
+mod game;
 
 use crate::assets::{load_metadata, JsonAssets};
 use crate::state::AppState;

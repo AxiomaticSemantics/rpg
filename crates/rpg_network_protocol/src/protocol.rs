@@ -133,6 +133,9 @@ pub struct CSCreateCharacter {
 
 // Chat Messages
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSChatJoin;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSChatMessageChannel(pub String);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -287,6 +290,7 @@ pub enum Messages {
     CSCreateCharacter(CSCreateCharacter),
 
     // Chat Messages
+    CSChatJoin(CSChatJoin),
     CSChatMessageChannel(CSChatMessageChannel),
     CSChatJoinChannel(CSChatJoinChannel),
 
