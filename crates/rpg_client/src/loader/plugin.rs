@@ -26,7 +26,7 @@ use bevy::{
         schedule::{common_conditions::in_state, IntoSystemConfigs, NextState, OnEnter},
         system::{Commands, NonSend, Query, ResMut},
     },
-    log::LogPlugin,
+    log::{warn, LogPlugin},
     render::{
         camera::{Camera, ClearColorConfig},
         color::Color,
@@ -187,9 +187,12 @@ fn set_window_icon(windows: NonSend<WinitWindows>, window_q: Query<Entity, With<
     );
 
     let icon_buf = std::io::Cursor::new(path.as_str());
-    let Ok(image) = image::load(icon_buf, image::ImageFormat::Png) else {
-        println!("Failed to set window icon");
-        return;
+    let image = match image::load(icon_buf, image::ImageFormat::Png) {
+        Ok(icon) => icon,
+        Err(err) => {
+            warn!("Failed to load window icon: {err:?}");
+            return;
+        }
     };
 
     let image = image.into_rgba8();
