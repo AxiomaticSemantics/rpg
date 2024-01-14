@@ -39,11 +39,17 @@ pub(crate) fn receive_account_create_success(
         Query<(&mut Text, &mut Style, &AccountCharacterSlot)>,
     )>,
     mut account_events: EventReader<MessageEvent<SCCreateAccountSuccess>>,
+    mut account_q: Query<&mut RpgAccount>,
 ) {
+    let mut account = account_q.single_mut();
+
     for event in account_events.read() {
         info!("account creation success");
 
         let account_msg = event.message();
+
+        account.0.info = account_msg.0.info.clone();
+        account.0.characters = account_msg.0.characters.clone();
 
         for character_record in account_msg.0.characters.iter() {
             for (mut slot_text, mut slot_style, slot) in &mut style_set.p2() {
@@ -57,7 +63,10 @@ pub(crate) fn receive_account_create_success(
                     character_record.character.unit.level,
                     character_record.character.unit.class
                 );
-                slot_text.sections[0].value = slot_string;
+
+                if slot_text.sections[0].value != slot_string {
+                    slot_text.sections[0].value = slot_string;
+                }
             }
         }
 
@@ -102,7 +111,6 @@ pub(crate) fn receive_account_login_success(
         for character_record in account_msg.0.characters.iter() {
             for (mut slot_text, mut slot_style, slot) in &mut style_set.p2() {
                 if slot.0 != character_record.info.slot {
-                    info!("{slot:?} {:?}", character_record.info.slot);
                     continue;
                 }
 
@@ -180,6 +188,54 @@ pub(crate) fn receive_character_create_error(
         info!("character creation error");
 
         account_events.clear();
+        return;
+    }
+}
+
+pub(crate) fn receive_game_join_success(
+    mut join_events: EventReader<MessageEvent<SCGameJoinSuccess>>,
+    mut account_q: Query<&mut RpgAccount>,
+) {
+    for event in join_events.read() {
+        info!("game join success");
+
+        join_events.clear();
+        return;
+    }
+}
+
+pub(crate) fn receive_game_join_error(
+    mut join_events: EventReader<MessageEvent<SCGameJoinError>>,
+    mut account_q: Query<&mut RpgAccount>,
+) {
+    for event in join_events.read() {
+        info!("game join error");
+
+        join_events.clear();
+        return;
+    }
+}
+
+pub(crate) fn receive_game_create_success(
+    mut create_events: EventReader<MessageEvent<SCGameCreateSuccess>>,
+    mut account_q: Query<&mut RpgAccount>,
+) {
+    for event in create_events.read() {
+        info!("game create success");
+
+        create_events.clear();
+        return;
+    }
+}
+
+pub(crate) fn receive_game_create_error(
+    mut create_events: EventReader<MessageEvent<SCGameCreateError>>,
+    mut account_q: Query<&mut RpgAccount>,
+) {
+    for event in create_events.read() {
+        info!("game create error");
+
+        create_events.clear();
         return;
     }
 }
