@@ -35,13 +35,13 @@ impl Channel {
         }
     }
 
-    pub fn add_client(&mut self, id: AccountId) {
+    pub fn add_subscriber(&mut self, id: AccountId) {
         if !self.clients.contains(&id) {
             self.clients.push(id);
         }
     }
 
-    pub fn remove_client(&mut self, id: AccountId) {
+    pub fn remove_subscriber(&mut self, id: AccountId) {
         self.clients.retain(|c| *c != id);
     }
 
