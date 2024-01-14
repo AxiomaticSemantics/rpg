@@ -132,6 +132,12 @@ pub struct CSCreateCharacter {
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSLobbyJoin;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSLobbyLeave;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSCreateGame {
     pub game_mode: HeroGameMode,
     pub slot: CharacterSlot,
@@ -209,6 +215,18 @@ pub struct SCCharacter(pub CharacterRecord);
 pub struct SCCharacterInfo(pub CharacterInfo);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCLobbyJoinSuccess;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCLobbyJoinError;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCLobbyLeaveSuccess;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCLobbyLeaveError;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCGameCreateSuccess;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -277,6 +295,10 @@ pub enum Messages {
     SCAccountInfo(SCAccountInfo),
     SCCharacter(SCCharacter),
     SCCharacterInfo(SCCharacterInfo),
+    SCLobbyJoinSuccess(SCLobbyJoinSuccess),
+    SCLobbyJoinError(SCLobbyJoinError),
+    SCLobbyLeaveSuccess(SCLobbyLeaveSuccess),
+    SCLobbyLeaveError(SCLobbyLeaveError),
     SCGameCreateSuccess(SCGameCreateSuccess),
     SCGameCreateError(SCGameCreateError),
     SCGameJoinSuccess(SCGameJoinSuccess),
@@ -306,6 +328,8 @@ pub enum Messages {
     CSLoadAccount(CSLoadAccount),
     CSLoadCharacter(CSLoadCharacter),
     CSCreateCharacter(CSCreateCharacter),
+    CSLobbyJoin(CSLobbyJoin),
+    CSLobbyLeave(CSLobbyLeave),
     CSCreateGame(CSCreateGame),
     CSJoinGame(CSJoinGame),
 
