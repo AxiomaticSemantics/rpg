@@ -84,7 +84,7 @@ pub(crate) fn receive_account_create(
                 info: AccountInfo {
                     character_slots: 12,
                     name: event.message().name.clone(),
-                    uid: net_params.state.next_uid.get(),
+                    id: net_params.state.next_account_id,
                 },
                 characters: vec![],
             };
@@ -126,7 +126,7 @@ pub(crate) fn receive_account_load(
             if let Ok(account) = account {
                 client.auth_status = AuthorizationStatus::Authenticated;
                 // FIXME assign a client id and send it to the client
-                client.client_type = ClientType::Player(*client_id);
+                client.client_type = ClientType::Player;
                 info!("spawning RpgAccount for {client:?}");
 
                 commands.spawn(RpgAccountBundle {
@@ -270,7 +270,7 @@ pub(crate) fn receive_connect_player(
             continue;
         }
 
-        client.client_type = ClientType::Player(*client_id);
+        client.client_type = ClientType::Player;
 
         client.entity = commands
             .spawn((
@@ -300,7 +300,7 @@ pub(crate) fn receive_connect_admin(
             continue;
         }
 
-        client.client_type = ClientType::Admin(*client_id);
+        client.client_type = ClientType::Admin;
 
         info!("client type set to admin");
     }

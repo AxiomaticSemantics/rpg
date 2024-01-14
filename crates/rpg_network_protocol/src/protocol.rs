@@ -9,10 +9,12 @@ use derive_more::{Add, Mul};
 use lightyear::prelude::*;
 use serde_derive::{Deserialize, Serialize};
 
+// TODO split these up into multiple protocols once the basic design is settled
 use rpg_account::{
     account::{Account, AccountInfo},
     character::{Character, CharacterInfo, CharacterRecord, CharacterSlot},
 };
+use rpg_chat::chat::{ChannelId, MessageId};
 use rpg_core::{class::Class, skill::SkillId, uid::Uid, unit::HeroGameMode};
 use rpg_world::zone::ZoneId;
 
@@ -58,24 +60,6 @@ pub struct PlayerPosition(pub Vec3);
     Component, Message, Serialize, Deserialize, Clone, Debug, PartialEq, Deref, DerefMut, Add, Mul,
 )]
 pub struct PlayerDirection(pub Vec3);
-
-// This component, when replicated, needs to have the inner entity mapped from the Server world
-// to the client World.
-// This can be done by adding a `#[message(custom_map)]` attribute to the component, and then
-// deriving the `MapEntities` trait for the component.
-#[derive(Component, Message, Deserialize, Serialize, Clone, Debug, PartialEq)]
-#[message(custom_map)]
-pub struct PlayerParent(pub Entity);
-
-impl<'a> MapEntities<'a> for PlayerParent {
-    fn map_entities(&mut self, entity_mapper: Box<dyn EntityMapper + 'a>) {
-        self.0.map_entities(entity_mapper);
-    }
-
-    fn entities(&self) -> EntityHashSet<Entity> {
-        EntityHashSet::from_iter(vec![self.0])
-    }
-}
 
 #[component_protocol(protocol = "RpgProtocol")]
 pub enum Components {
@@ -154,10 +138,20 @@ pub struct CSJoinGame {
 pub struct CSChatJoin;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CSChatMessageChannel(pub String);
+pub struct CSChatLeave;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CSChatJoinChannel(pub String);
+pub struct CSChatChannelMessage {
+    pub channel_id: ChannelId,
+    pub message_id: MessageId,
+    pub message: String,
+}
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSChatChannelJoin(pub String);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSChatChannelLeave(pub ChannelId);
 
 // Game Messages
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -246,12 +240,18 @@ pub struct SCChatJoinSuccess(pub u64);
 pub struct SCChatJoinError;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCChatLeave;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCChatChannelJoinSuccess {
-    pub recent_message_ids: Vec<u64>,
+    pub recent_message_ids: Vec<MessageId>,
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCChatChannelJoinError;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCChatChannelLeave;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCChatChannelMessageSuccess;
@@ -261,8 +261,8 @@ pub struct SCChatChannelMessageError;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCChatMessage {
-    pub channel_id: u16,
-    pub message_id: u64,
+    pub channel_id: ChannelId,
+    pub message_id: MessageId,
     pub message: String,
 }
 
@@ -307,8 +307,10 @@ pub enum Messages {
     // Chat Messages
     SCChatJoinSuccess(SCChatJoinSuccess),
     SCChatJoinError(SCChatJoinError),
+    SCChatLeave(SCChatLeave),
     SCChatChannelJoinSuccess(SCChatChannelJoinSuccess),
     SCChatChannelJoinError(SCChatChannelJoinError),
+    SCChatChannelLeave(SCChatChannelLeave),
     SCChatChannelMessageSuccess(SCChatChannelMessageSuccess),
     SCChatChannelMessageError(SCChatChannelMessageError),
     SCChatMessage(SCChatMessage),
@@ -335,8 +337,10 @@ pub enum Messages {
 
     // Chat Messages
     CSChatJoin(CSChatJoin),
-    CSChatMessageChannel(CSChatMessageChannel),
-    CSChatJoinChannel(CSChatJoinChannel),
+    CSChatLeave(CSChatLeave),
+    CSChatChannelMessage(CSChatChannelMessage),
+    CSChatChannelJoin(CSChatChannelJoin),
+    CSChatChannelLeave(CSChatChannelLeave),
 
     // Game Messages
     CSJoinZone(CSJoinZone),

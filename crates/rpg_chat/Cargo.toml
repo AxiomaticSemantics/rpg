@@ -1,0 +1,17 @@
+[package]
+resolver = "2"
+name = "rpg_chat"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+rpg_account = { path = "../rpg_account" }
+
+serde = { workspace = true }
+serde_derive = { workspace = true }

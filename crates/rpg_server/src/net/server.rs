@@ -1,4 +1,4 @@
-use super::{account, game};
+use super::{account, chat, game, lobby};
 use crate::state::AppState;
 
 use bevy::{
@@ -6,7 +6,7 @@ use bevy::{
     ecs::{
         entity::Entity,
         event::EventReader,
-        schedule::{common_conditions::*, IntoSystemConfigs},
+        schedule::{common_conditions::*, Condition, IntoSystemConfigs},
         system::{Commands, Res, ResMut, Resource, SystemParam},
     },
     hierarchy::DespawnRecursiveExt,
@@ -16,6 +16,7 @@ use bevy::{
 use lightyear::prelude::server::*;
 use lightyear::prelude::*;
 
+use rpg_account::account::AccountId;
 use rpg_core::uid::NextUid;
 use rpg_network_protocol::{protocol::*, *};
 
@@ -62,20 +63,31 @@ impl Plugin for NetworkServerPlugin {
                 FixedUpdate,
                 (game::rotation_request, game::movement_request)
                     .chain()
-                    .in_set(FixedUpdateSet::Main),
+                    .in_set(FixedUpdateSet::Main)
+                    .run_if(in_state(AppState::Simulation)),
             )
             .add_systems(PreUpdate, (handle_connections, handle_disconnections))
             .add_systems(
                 Update,
                 (
-                    account::receive_game_create,
-                    account::receive_account_create,
-                    account::receive_account_load,
-                    account::receive_character_create,
-                    account::receive_connect_player,
-                    account::receive_connect_admin,
-                )
-                    .run_if(in_state(AppState::Simulation)),
+                    (
+                        account::receive_game_create,
+                        account::receive_account_create,
+                        account::receive_account_load,
+                        account::receive_character_create,
+                        account::receive_connect_player,
+                        account::receive_connect_admin,
+                        lobby::receive_lobby_join,
+                        lobby::receive_lobby_leave,
+                    )
+                        .run_if(in_state(AppState::Lobby)),
+                    (
+                        chat::receive_chat_channel_message,
+                        chat::receive_chat_join,
+                        chat::receive_chat_leave,
+                    )
+                        .run_if(in_state(AppState::Lobby).or_else(in_state(AppState::Simulation))),
+                ),
             );
     }
 }
@@ -98,8 +110,8 @@ pub(crate) struct NetworkParamsRW<'w> {
 pub(crate) enum ClientType {
     #[default]
     Unknown,
-    Player(ClientId),
-    Admin(ClientId),
+    Player,
+    Admin,
 }
 
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
@@ -114,6 +126,7 @@ pub(crate) enum ServerMode {
 #[derive(Default, Resource)]
 pub(crate) struct ServerState {
     pub(crate) mode: ServerMode,
+    pub(crate) next_account_id: AccountId,
     pub(crate) next_uid: NextUid,
 }
 
@@ -149,7 +162,7 @@ impl Client {
     }
 
     pub(crate) fn is_player(&self) -> bool {
-        if let ClientType::Player(_) = self.client_type {
+        if let ClientType::Player = self.client_type {
             true
         } else {
             false
@@ -157,7 +170,7 @@ impl Client {
     }
 
     pub(crate) fn is_admin(&self) -> bool {
-        if let ClientType::Admin(_) = self.client_type {
+        if let ClientType::Admin = self.client_type {
             true
         } else {
             false

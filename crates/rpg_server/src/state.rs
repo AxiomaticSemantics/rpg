@@ -4,5 +4,6 @@ use bevy::ecs::schedule::States;
 pub(crate) enum AppState {
     #[default]
     LoadAssets,
+    Lobby,
     Simulation,
 }
