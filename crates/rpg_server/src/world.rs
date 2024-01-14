@@ -1,4 +1,4 @@
-use crate::server::{ServerMode, ServerState};
+use crate::net::server::{ServerMode, ServerState};
 
 use bevy::{
     app::{App, Plugin, Update},

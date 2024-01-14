@@ -2,25 +2,28 @@
 //! - `cargo run`
 //! - `cargo run -- port 42069`
 mod assets;
-mod server;
+mod net;
 mod state;
 
 mod world;
 
-mod account;
-mod chat;
-mod game;
-
-use crate::assets::{load_metadata, JsonAssets};
-use crate::state::AppState;
-use crate::{server::NetworkServerPlugin, world::ServerWorldPlugin};
+use crate::{
+    assets::{load_metadata, JsonAssets},
+    net::server::NetworkServerPlugin,
+    state::AppState,
+    world::ServerWorldPlugin,
+};
 
 use rpg_network_protocol::*;
 use util::plugin::UtilityPlugin;
 
 use bevy::{
-    app::ScheduleRunnerPlugin, asset::AssetPlugin, ecs::schedule::common_conditions::in_state,
-    log::LogPlugin, prelude::*,
+    app::{App, PluginGroup, ScheduleRunnerPlugin, Update},
+    asset::AssetPlugin,
+    core::TaskPoolPlugin,
+    ecs::schedule::{common_conditions::in_state, IntoSystemConfigs},
+    log::LogPlugin,
+    MinimalPlugins,
 };
 
 use clap::Parser;
