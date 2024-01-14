@@ -1,5 +1,13 @@
+//! Run with
+//! - `cargo run`
+//! - `cargo run -- --addr 192.168.0.1 --port 42069`
+
 #![cfg_attr(
-    all(target_os = "windows", not(debug_assertions)),
+    all(
+        feature = "disable_windows_console",
+        target_os = "windows",
+        not(debug_assertions)
+    ),
     windows_subsystem = "windows"
 )]
 

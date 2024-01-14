@@ -118,7 +118,7 @@ impl Plugin for LoaderPlugin {
             .add_plugins(NetworkClientPlugin {
                 config: NetworkClientConfig {
                     client_port: 0,
-                    server_port: if cli.port != 0 { cli.port } else { 5000 },
+                    server_port: cli.port,
                     server_addr: if cli.addr != Ipv4Addr::UNSPECIFIED {
                         cli.addr
                     } else {
