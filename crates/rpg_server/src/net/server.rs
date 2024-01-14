@@ -1,4 +1,5 @@
-use crate::{account, game, state::AppState};
+use super::{account, game};
+use crate::state::AppState;
 
 use bevy::{
     app::{App, FixedUpdate, Plugin, PreUpdate, Update},

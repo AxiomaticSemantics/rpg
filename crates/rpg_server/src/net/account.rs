@@ -1,6 +1,7 @@
-use crate::{
-    assets::MetadataResources,
-    server::{AuthorizationStatus, ClientType, NetworkContext, NetworkParamsRO, NetworkParamsRW},
+use crate::assets::MetadataResources;
+
+use super::server::{
+    AuthorizationStatus, ClientType, NetworkContext, NetworkParamsRO, NetworkParamsRW,
 };
 
 use bevy::{
