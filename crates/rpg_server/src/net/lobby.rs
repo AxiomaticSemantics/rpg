@@ -17,9 +17,9 @@ use bevy::{
 
 use lightyear::{server::events::MessageEvent, shared::replication::components::NetworkTarget};
 
-pub(crate) fn receive_chat_join(
+pub(crate) fn receive_lobby_join(
     mut commands: Commands,
-    mut join_reader: EventReader<MessageEvent<CSChatJoin>>,
+    mut join_reader: EventReader<MessageEvent<CSLobbyJoin>>,
     mut net_params: NetworkParamsRW,
 ) {
     for event in join_reader.read() {
@@ -32,55 +32,28 @@ pub(crate) fn receive_chat_join(
 
         // TODO Handle rejections for banned accounts etc.
         net_params.server.send_message_to_target::<Channel1, _>(
-            SCChatJoinSuccess(0),
+            SCLobbyJoinSuccess,
             NetworkTarget::Only(vec![*client_id]),
         );
     }
 }
 
-pub(crate) fn receive_chat_leave(
+pub(crate) fn receive_lobby_leave(
     mut commands: Commands,
-    mut leave_reader: EventReader<MessageEvent<CSChatLeave>>,
+    mut join_reader: EventReader<MessageEvent<CSLobbyLeave>>,
     mut net_params: NetworkParamsRW,
 ) {
-    for event in leave_reader.read() {
+    for event in join_reader.read() {
         let client_id = event.context();
         let client = net_params.context.clients.get(client_id).unwrap();
         if !client.is_authenticated() {
-            info!("unauthenticated client attempted to leave chat: {client:?}");
+            info!("unauthenticated client attempted to join chat: {client:?}");
             continue;
         }
 
         // TODO Handle rejections for banned accounts etc.
         net_params.server.send_message_to_target::<Channel1, _>(
-            SCChatLeave,
-            NetworkTarget::Only(vec![*client_id]),
-        );
-    }
-}
-
-pub(crate) fn receive_chat_channel_message(
-    mut commands: Commands,
-    mut message_reader: EventReader<MessageEvent<CSChatChannelMessage>>,
-    mut net_params: NetworkParamsRW,
-) {
-    for event in message_reader.read() {
-        let client_id = event.context();
-        let client = net_params.context.clients.get(client_id).unwrap();
-        if !client.is_authenticated() {
-            info!("unauthenticated client attempted to message chat: {client:?}");
-            continue;
-        }
-
-        let channel_msg = event.message();
-        // TODO Handle rejections for banned accounts etc.
-
-        net_params.server.send_message_to_target::<Channel1, _>(
-            SCChatMessage {
-                channel_id: channel_msg.channel_id,
-                message_id: channel_msg.message_id,
-                message: channel_msg.message.clone(),
-            },
+            SCLobbyLeaveSuccess,
             NetworkTarget::Only(vec![*client_id]),
         );
     }

@@ -1,15 +1,19 @@
 //! Run with
 //! - `cargo run`
-//! - `cargo run -- port 42069`
+//! - `cargo run -- --port 42069`
 
 mod assets;
 mod net;
 mod state;
 
+mod chat;
+mod lobby;
+
 mod world;
 
 use crate::{
     assets::{load_metadata, JsonAssets},
+    chat::Chat,
     net::server::NetworkServerPlugin,
     state::AppState,
     world::ServerWorldPlugin,
@@ -28,12 +32,15 @@ use bevy::{
 };
 
 use clap::Parser;
-use std::time::Duration;
+
+use std::{net::Ipv4Addr, time::Duration};
 
 #[derive(Parser, PartialEq, Debug)]
 struct Cli {
     #[arg(short, long, default_value_t = SERVER_PORT)]
     port: u16,
+    #[arg(short, long, default_value_t = Ipv4Addr::UNSPECIFIED)]
+    addr: Ipv4Addr,
 }
 
 fn main() {
@@ -52,6 +59,7 @@ fn main() {
         .add_plugins(AssetPlugin::default())
         .add_plugins(UtilityPlugin)
         .init_resource::<JsonAssets>()
+        .init_resource::<Chat>()
         .add_systems(Update, load_metadata.run_if(in_state(AppState::LoadAssets)))
         .add_plugins(NetworkServerPlugin { port: cli.port })
         .add_plugins(ServerWorldPlugin)

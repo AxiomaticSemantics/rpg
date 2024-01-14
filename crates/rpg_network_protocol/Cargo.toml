@@ -14,6 +14,7 @@ workspace = true
 rpg_core = { path = "../rpg_core" }
 rpg_world = { path = "../rpg_world" }
 rpg_account = { path = "../rpg_account" }
+rpg_chat = { path = "../rpg_chat" }
 
 serde = { workspace = true }
 serde_derive = { workspace = true }
