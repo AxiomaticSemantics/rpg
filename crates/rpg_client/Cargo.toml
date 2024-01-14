@@ -35,7 +35,7 @@ serde_json = { workspace = true }
 
 image = { version = "0.24", features = ["png"], default-features = false }
 winit = { version = "0.29", features = ["x11"], default-features = false }
-clap = { version = "4.2.7", features = ["std", "derive"], default-features = false }
+clap = { version = "4.4.13", features = ["std", "derive"], default-features = false }
 #ab_glyph = "0.2.21"
 thiserror = "1.0"
 fastrand = "2.0.1"
