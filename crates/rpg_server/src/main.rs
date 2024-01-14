@@ -1,10 +1,13 @@
 //! Run with
 //! - `cargo run`
-//! - `cargo run -- port 42069`
+//! - `cargo run -- --port 42069`
 
 mod assets;
 mod net;
 mod state;
+
+mod chat;
+mod lobby;
 
 mod world;
 
