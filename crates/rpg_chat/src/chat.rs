@@ -2,10 +2,10 @@ use rpg_account::account::AccountId;
 
 use serde_derive::{Deserialize as De, Serialize as Ser};
 
-#[derive(Ser, De, Copy, Clone, PartialEq, Debug)]
+#[derive(Ser, De, Hash, Copy, Clone, PartialEq, Eq, Debug)]
 pub struct MessageId(pub u64);
 
-#[derive(Ser, De, Copy, Clone, PartialEq, Debug)]
+#[derive(Ser, De, Hash, Copy, Clone, PartialEq, Eq, Debug)]
 pub struct ChannelId(pub u64);
 
 #[derive(Ser, De, PartialEq, Debug)]
@@ -17,14 +17,18 @@ pub struct Message {
 
 #[derive(Ser, De, PartialEq, Debug)]
 pub struct Channel {
+    pub name: String,
+    pub id: ChannelId,
     pub clients: Vec<AccountId>,
     pub messages: Vec<Message>,
     pub recent_message_ids: Vec<MessageId>,
 }
 
 impl Channel {
-    pub fn new() -> Self {
+    pub fn new(name: String, id: ChannelId) -> Self {
         Self {
+            name,
+            id,
             clients: vec![],
             messages: vec![],
             recent_message_ids: vec![],
