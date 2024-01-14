@@ -1,7 +1,7 @@
 use rpg_account::account::AccountId;
 use rpg_chat::chat::{Channel, ChannelId, MessageId};
 
-use bevy::ecs::system::Resource;
+use bevy::ecs::system::{Res, ResMut, Resource};
 
 use lightyear::netcode::ClientId;
 
@@ -10,9 +10,21 @@ use std::collections::HashMap;
 #[derive(Default, Resource)]
 pub(crate) struct Chat {
     channels: HashMap<ChannelId, Channel>,
+    next_channel_id: ChannelId,
 }
 
 impl Chat {
+    pub(crate) fn new() -> Self {
+        Self {
+            channels: HashMap::default(),
+            next_channel_id: ChannelId(1),
+        }
+    }
+
+    pub(crate) fn channel_exists(&self, channel_id: ChannelId) -> bool {
+        self.channels.contains_key(&channel_id)
+    }
+
     pub(crate) fn add_channel(&mut self, channel: Channel) {
         self.channels.insert(channel.id, channel);
     }
@@ -32,4 +44,9 @@ impl Chat {
             channel.remove_subscriber(account_id);
         }
     }
+}
+
+pub(crate) fn setup(mut chat: ResMut<Chat>) {
+    let default_channel = Channel::new("Default".into(), ChannelId(0));
+    chat.add_channel(default_channel);
 }

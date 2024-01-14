@@ -2,10 +2,10 @@ use rpg_account::account::AccountId;
 
 use serde_derive::{Deserialize as De, Serialize as Ser};
 
-#[derive(Ser, De, Hash, Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Ser, De, Default, Hash, Copy, Clone, PartialEq, Eq, Debug)]
 pub struct MessageId(pub u64);
 
-#[derive(Ser, De, Hash, Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Ser, De, Default, Hash, Copy, Clone, PartialEq, Eq, Debug)]
 pub struct ChannelId(pub u64);
 
 #[derive(Ser, De, PartialEq, Debug)]

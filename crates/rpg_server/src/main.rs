@@ -23,7 +23,7 @@ use rpg_network_protocol::*;
 use util::plugin::UtilityPlugin;
 
 use bevy::{
-    app::{App, PluginGroup, ScheduleRunnerPlugin, Update},
+    app::{App, PluginGroup, ScheduleRunnerPlugin, Startup, Update},
     asset::AssetPlugin,
     core::TaskPoolPlugin,
     ecs::schedule::{common_conditions::in_state, IntoSystemConfigs},
@@ -60,6 +60,7 @@ fn main() {
         .add_plugins(UtilityPlugin)
         .init_resource::<JsonAssets>()
         .init_resource::<Chat>()
+        .add_systems(Startup, chat::setup)
         .add_systems(Update, load_metadata.run_if(in_state(AppState::LoadAssets)))
         .add_plugins(NetworkServerPlugin { port: cli.port })
         .add_plugins(ServerWorldPlugin)
