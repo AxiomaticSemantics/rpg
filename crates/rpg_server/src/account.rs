@@ -323,16 +323,16 @@ pub(crate) fn receive_game_create(
 
 pub(crate) fn receive_game_join(
     net_params: NetworkParamsRO,
-    mut create_events: EventReader<MessageEvent<CSJoinGame>>,
+    mut join_events: EventReader<MessageEvent<CSJoinGame>>,
 ) {
-    for create in create_events.read() {
+    for join in join_events.read() {
         let client_id = create.context();
         let client = net_params.context.clients.get(client_id).unwrap();
         if !client.is_authenticated_player() {
             continue;
         };
 
-        let create_msg = create.message();
-        info!("join game {create_msg:?}");
+        let join_msg = join.message();
+        info!("join game {join_msg:?}");
     }
 }
