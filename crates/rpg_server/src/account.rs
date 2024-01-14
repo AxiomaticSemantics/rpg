@@ -326,7 +326,7 @@ pub(crate) fn receive_game_join(
     mut join_events: EventReader<MessageEvent<CSJoinGame>>,
 ) {
     for join in join_events.read() {
-        let client_id = create.context();
+        let client_id = join.context();
         let client = net_params.context.clients.get(client_id).unwrap();
         if !client.is_authenticated_player() {
             continue;
