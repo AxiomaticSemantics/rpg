@@ -39,11 +39,23 @@ use bevy::{
     DefaultPlugins,
 };
 
+use rpg_network_protocol::SERVER_PORT;
+
 use audio_manager::plugin::AudioManagerPlugin;
 use bevy_tweening::TweeningPlugin;
 use winit::window::Icon;
 
+use clap::Parser;
+
 use std::net::Ipv4Addr;
+
+#[derive(Parser, PartialEq, Debug)]
+struct Cli {
+    #[arg(short, long, default_value_t = Ipv4Addr::UNSPECIFIED)]
+    pub addr: Ipv4Addr,
+    #[arg(short, long, default_value_t = SERVER_PORT)]
+    pub port: u16,
+}
 
 #[derive(Component)]
 pub struct OutOfGameCamera;
@@ -53,6 +65,8 @@ pub struct LoaderPlugin;
 impl Plugin for LoaderPlugin {
     fn build(&self, app: &mut App) {
         println!("Initializing loader plugin.");
+
+        let cli = Cli::parse();
 
         #[cfg(all(debug_assertions, feature = "diagnostics"))]
         {
@@ -104,8 +118,12 @@ impl Plugin for LoaderPlugin {
             .add_plugins(NetworkClientPlugin {
                 config: NetworkClientConfig {
                     client_port: 0,
-                    server_port: 5000,
-                    server_addr: Ipv4Addr::new(192, 168, 0, 102),
+                    server_port: if cli.port != 0 { cli.port } else { 5000 },
+                    server_addr: if cli.addr != Ipv4Addr::UNSPECIFIED {
+                        cli.addr
+                    } else {
+                        Ipv4Addr::new(192, 168, 0, 102)
+                    },
                 },
             })
             .add_plugins(TweeningPlugin)
