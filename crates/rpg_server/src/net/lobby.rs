@@ -1,6 +1,4 @@
-use super::server::{
-    AuthorizationStatus, ClientType, NetworkContext, NetworkParamsRO, NetworkParamsRW,
-};
+use super::server::{ClientType, NetworkContext, NetworkParamsRO, NetworkParamsRW};
 use crate::lobby::LobbyManager;
 
 use rpg_lobby::lobby::Lobby;

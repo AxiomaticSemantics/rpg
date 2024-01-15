@@ -1,8 +1,6 @@
 use crate::assets::MetadataResources;
 
-use super::server::{
-    AuthorizationStatus, ClientType, NetworkContext, NetworkParamsRO, NetworkParamsRW,
-};
+use super::server::{ClientType, NetworkContext, NetworkParamsRO, NetworkParamsRW};
 
 use bevy::{
     ecs::{
@@ -12,9 +10,7 @@ use bevy::{
         system::{Commands, Query, Res, ResMut},
     },
     log::info,
-    math::Vec3,
     prelude::{Deref, DerefMut},
-    transform::{components::Transform, TransformBundle},
 };
 
 use lightyear::prelude::server::*;
@@ -100,12 +96,20 @@ pub(crate) fn receive_account_create(
     }
 }
 
-pub(crate) fn receive_account_load(
+pub(crate) fn receive_admin_login(
     mut commands: Commands,
-    mut account_load_reader: EventReader<MessageEvent<CSLoadAccount>>,
+    mut login_reader: EventReader<MessageEvent<CSLoadAccount>>,
     mut net_params: NetworkParamsRW,
 ) {
-    for event in account_load_reader.read() {
+    // TODO
+}
+
+pub(crate) fn receive_account_login(
+    mut commands: Commands,
+    mut login_reader: EventReader<MessageEvent<CSLoadAccount>>,
+    mut net_params: NetworkParamsRW,
+) {
+    for event in login_reader.read() {
         let client_id = event.context();
         let client = net_params.context.clients.get_mut(client_id).unwrap();
         if client.is_authenticated_player() {
@@ -124,15 +128,25 @@ pub(crate) fn receive_account_load(
         if let Ok(file) = file {
             let account: Result<Account, _> = serde_json::from_reader(file);
             if let Ok(account) = account {
-                client.auth_status = AuthorizationStatus::Authenticated;
                 // FIXME assign a client id and send it to the client
                 client.client_type = ClientType::Player;
+                client.account_id = Some(account.info.id);
                 info!("spawning RpgAccount for {client:?}");
 
                 commands.spawn(RpgAccountBundle {
                     account: RpgAccount(account.clone()),
                 });
 
+                /*
+                client.entity = commands
+                    .spawn((
+                        protocol::NetworkPlayerBundle::new(*client_id, Vec3::ZERO, Vec3::ZERO),
+                        TransformBundle::from_transform(
+                            Transform::from_translation(Vec3::ZERO).looking_to(Vec3::NEG_Z, Vec3::Y),
+                        ),
+                    ))
+                    .id();
+                        */
                 net_params.server.send_message_to_target::<Channel1, _>(
                     SCLoginAccountSuccess(account.clone()),
                     NetworkTarget::Only(vec![*client_id]),
@@ -235,74 +249,6 @@ pub(crate) fn receive_character_create(
                 serde_json::to_writer(file, &account.0).unwrap();
             }
         }
-    }
-}
-
-/* FIXME Unsure if this message will return or not
-pub(crate) fn receive_character_load(
-    mut character_load_reader: EventReader<MessageEvent<CSLoadCharacter>>,
-    net_params: NetworkParamsRO,
-) {
-    for event in character_load_reader.read() {
-        let client = net_params.context.clients.get(event.context()).unwrap();
-        if !client.is_authenticated_player() {
-            info!("unauthenticated client attempted to load character {client:?}");
-            continue;
-        }
-        let load_msg = event.message();
-
-    }
-}*/
-
-pub(crate) fn receive_connect_player(
-    mut commands: Commands,
-    mut connect_reader: EventReader<MessageEvent<CSConnectPlayer>>,
-    mut net_params: NetworkParamsRW,
-) {
-    for player in connect_reader.read() {
-        let client_id = player.context();
-        let client = net_params.context.clients.get_mut(client_id).unwrap();
-        if client.client_type != ClientType::Unknown {
-            info!(
-                "client type {:?} attempted to authorize as player while already authorized",
-                client.client_type
-            );
-            continue;
-        }
-
-        client.client_type = ClientType::Player;
-
-        client.entity = commands
-            .spawn((
-                protocol::NetworkPlayerBundle::new(*client_id, Vec3::ZERO, Vec3::ZERO),
-                TransformBundle::from_transform(
-                    Transform::from_translation(Vec3::ZERO).looking_to(Vec3::NEG_Z, Vec3::Y),
-                ),
-            ))
-            .id();
-
-        info!("client type set to player");
-    }
-}
-
-pub(crate) fn receive_connect_admin(
-    mut connect_reader: EventReader<MessageEvent<CSConnectAdmin>>,
-    mut context: ResMut<NetworkContext>,
-) {
-    for admin in connect_reader.read() {
-        let client_id = admin.context();
-        let client = context.clients.get_mut(client_id).unwrap();
-        if client.client_type != ClientType::Unknown {
-            info!(
-                "client type {:?} attempted to authorize as admin while already authorized",
-                client.client_type
-            );
-            continue;
-        }
-
-        client.client_type = ClientType::Admin;
-
-        info!("client type set to admin");
     }
 }
 

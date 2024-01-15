@@ -71,12 +71,11 @@ impl Plugin for NetworkServerPlugin {
                 Update,
                 (
                     (
-                        account::receive_game_create,
                         account::receive_account_create,
-                        account::receive_account_load,
+                        account::receive_account_login,
+                        account::receive_admin_login,
                         account::receive_character_create,
-                        account::receive_connect_player,
-                        account::receive_connect_admin,
+                        account::receive_game_create,
                         lobby::receive_lobby_create,
                         lobby::receive_lobby_join,
                         lobby::receive_lobby_leave,
@@ -131,37 +130,24 @@ pub(crate) struct ServerState {
     pub(crate) next_uid: NextUid,
 }
 
-#[derive(Default, Debug, PartialEq, Eq)]
-pub enum AuthorizationStatus {
-    #[default]
-    Unauthenticated,
-    Authenticated,
-}
-
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Client {
     pub(crate) entity: Entity,
     pub(crate) client_type: ClientType,
     pub(crate) account_id: Option<AccountId>,
-    pub(crate) auth_status: AuthorizationStatus,
 }
 
 impl Client {
-    pub(crate) fn new(
-        entity: Entity,
-        client_type: ClientType,
-        auth_status: AuthorizationStatus,
-    ) -> Self {
+    pub(crate) fn new(entity: Entity, client_type: ClientType) -> Self {
         Self {
             entity,
             account_id: None,
             client_type,
-            auth_status,
         }
     }
 
     pub(crate) fn is_authenticated(&self) -> bool {
-        self.auth_status == AuthorizationStatus::Authenticated
+        self.account_id.is_some() && (self.is_player() || self.is_admin())
     }
 
     pub(crate) fn is_player(&self) -> bool {
@@ -187,7 +173,6 @@ impl Default for Client {
             entity: Entity::PLACEHOLDER,
             client_type: ClientType::Unknown,
             account_id: None,
-            auth_status: AuthorizationStatus::Unauthenticated,
         }
     }
 }
