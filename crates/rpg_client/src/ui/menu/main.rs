@@ -1,13 +1,13 @@
 use crate::{
     assets::TextureAssets,
-    menu::{
+    state::AppState,
+    ui::menu::{
         account::{AccountCreateRoot, AccountLoginRoot},
         create::CreateRoot,
         credits::CreditsRoot,
         load::LoadRoot,
         settings::SettingsRoot,
     },
-    state::AppState,
 };
 
 use ui_util::{

@@ -1,9 +1,9 @@
 use crate::{
     assets::TextureAssets,
     game::plugin::{GameState, PlayerOptions},
-    menu::{create::CreateRoot, main::MainRoot},
     net::account::RpgAccount,
     state::AppState,
+    ui::menu::{create::CreateRoot, main::MainRoot},
 };
 
 use ui_util::{

@@ -2,7 +2,8 @@ use crate::{
     assets::TextureAssets,
     game::state_saver::SaveSlots,
     loader::plugin::OutOfGameCamera,
-    menu::{
+    state::AppState,
+    ui::menu::{
         self,
         account::{AccountCreateRoot, AccountLoginRoot},
         create::CreateRoot,
@@ -11,7 +12,6 @@ use crate::{
         main::MainRoot,
         settings::SettingsRoot,
     },
-    state::AppState,
 };
 
 /*

@@ -1,4 +1,4 @@
-use crate::menu::account::{
+use crate::ui::menu::account::{
     self, AccountCharacterSlot, AccountCreateRoot, AccountListRoot, AccountLoginRoot,
 };
 

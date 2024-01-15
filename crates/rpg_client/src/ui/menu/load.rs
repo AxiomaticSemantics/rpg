@@ -3,8 +3,8 @@ use crate::{
         plugin::{GameState, PlayerOptions},
         state_saver::{LoadCharacter, SaveSlot, SaveSlotId, SaveSlots},
     },
-    menu::main::MainRoot,
     state::AppState,
+    ui::menu::main::MainRoot,
 };
 
 use rpg_core::unit::HeroGameMode;

@@ -1,10 +1,10 @@
 use crate::{
     assets::{AudioAssets, JsonAssets, TextureAssets},
     game::{self, plugin::GamePlugin, state_saver},
-    menu::plugin::MenuPlugin,
     net::plugin::{NetworkClientConfig, NetworkClientPlugin},
     splash::plugin::SplashScreenPlugin,
     state::AppState,
+    ui::menu::plugin::MenuPlugin,
 };
 
 //use console_plugin::plugin::ConsolePlugin;

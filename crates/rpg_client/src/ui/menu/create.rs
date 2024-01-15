@@ -1,11 +1,11 @@
 use crate::{
     assets::TextureAssets,
     game::plugin::{GameState, PlayerOptions},
-    menu::{
+    state::AppState,
+    ui::menu::{
         account::{AccountListRoot, SelectedCharacterSlot},
         main::MainRoot,
     },
-    state::AppState,
 };
 
 use ui_util::{

@@ -18,7 +18,6 @@ rpg_chat = { path = "../rpg_chat" }
 
 serde = { workspace = true }
 serde_derive = { workspace = true }
-derive_more = "0.99.17"
 
 [dependencies.lightyear]
 git = "https://github.com/AxiomaticSemantics/lightyear"

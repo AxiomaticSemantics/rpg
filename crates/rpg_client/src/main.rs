@@ -1,6 +1,10 @@
+//! rpg_client
+//!
+//! Most loading happens in `LoaderPlugin`
+//!
 //! Run with
-//! - `cargo run`
-//! - `cargo run -- --addr 192.168.0.1 --port 42069`
+//! - `cargo run -p rpg_client`
+//! - `cargo run -p rpg_client -- --addr 192.168.0.1 --port 42069`
 
 #![cfg_attr(
     all(
@@ -14,11 +18,11 @@
 mod assets;
 mod game;
 mod loader;
-mod menu;
 mod net;
 mod random;
 mod splash;
 mod state;
+mod ui;
 
 use bevy::app::App;
 
