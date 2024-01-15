@@ -1,5 +1,5 @@
 # Credits
 
 ## Assets
-
-* Bevy icon: Copyright (c) 2020-2023 Carter Anderson (used with permission)
+* Courier Prime Font designed by Alan Dague-Greene released under the Open Font License (OFL) license.
+* Bevy icon: Copyright (c) 2020-2024 Carter Anderson (used with permission)
