@@ -2,7 +2,7 @@
 resolver = "2"
 name = "audio_manager"
 version = "0.1.0"
-description = "What would have been a game someday."
+description = "A basic audio plugin for rpg_client."
 license = "MIT OR Apache-2.0"
 authors.workspace = true
 edition.workspace = true
@@ -11,10 +11,7 @@ edition.workspace = true
 workspace = true
 
 [dependencies.bevy]
-#version = "0.12" 
 git = "https://github.com/AxiomaticSemantics/bevy"
-features = [
-  "bevy_audio",
-]
+features = [ "bevy_audio" ]
 optional = false
 default-features = false
