@@ -2,16 +2,15 @@ use bevy::{
     app::{App, Plugin, Startup},
     audio::{AudioSink, AudioSource, GlobalVolume},
     ecs::{component::Component, system::ResMut},
+    log::info,
     prelude::{Deref, DerefMut},
 };
 
 pub struct AudioManagerPlugin;
 
 impl Plugin for AudioManagerPlugin {
-    fn build(&self, app: &mut App) {
-        println!("Initializing audio plugin.");
-
-        app.add_systems(Startup, setup);
+    fn build(&self, _app: &mut App) {
+        info!("Initializing audio plugin.");
     }
 }
 
@@ -25,7 +24,3 @@ pub struct ForegroundAudio;
 
 #[derive(Default, Debug, Component, Deref, DerefMut)]
 pub struct AudioActions(pub Vec<String>);
-
-fn setup(mut volume: ResMut<GlobalVolume>) {
-    *volume.volume = 0.5;
-}
