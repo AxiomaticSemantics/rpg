@@ -22,9 +22,8 @@ fn main() {
     let client_plugin = NetworkClientPlugin {
         client_id: cli.client_id as ClientId,
         config: NetworkClientConfig {
-            client_port: cli.client_port,
-            server_addr: cli.server_addr,
-            server_port: cli.server_port,
+            server_addr: cli.addr,
+            server_port: cli.port,
         },
     };
     let mut app = App::new();
@@ -38,12 +37,9 @@ pub(crate) struct Cli {
     #[arg(short, long, default_value_t = 0)]
     client_id: u16,
 
-    #[arg(long, default_value_t = CLIENT_PORT)]
-    client_port: u16,
-
     #[arg(long, default_value_t = Ipv4Addr::LOCALHOST)]
-    server_addr: Ipv4Addr,
+    addr: Ipv4Addr,
 
     #[arg(short, long, default_value_t = SERVER_PORT)]
-    server_port: u16,
+    port: u16,
 }

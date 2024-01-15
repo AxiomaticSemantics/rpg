@@ -23,7 +23,6 @@ impl FromWorld for ConnectionTimer {
 
 #[derive(Debug, Clone)]
 pub(crate) struct NetworkClientConfig {
-    pub(crate) client_port: u16,
     pub(crate) server_addr: Ipv4Addr,
     pub(crate) server_port: u16,
 }
@@ -42,7 +41,7 @@ impl Plugin for NetworkClientPlugin {
             private_key: KEY,
             protocol_id: PROTOCOL_ID,
         };
-        let client_addr = SocketAddr::new(Ipv4Addr::UNSPECIFIED.into(), self.config.client_port);
+        let client_addr = SocketAddr::new(Ipv4Addr::UNSPECIFIED.into(), 0);
         /* FIXME add as testing feature
         let link_conditioner = LinkConditionerConfig {
             incoming_latency: Duration::from_millis(200),
