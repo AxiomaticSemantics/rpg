@@ -1,4 +1,4 @@
-use super::server::{ClientType, NetworkContext, NetworkParamsRO, NetworkParamsRW};
+use super::server::{NetworkParamsRO, NetworkParamsRW};
 use crate::lobby::LobbyManager;
 
 use rpg_lobby::lobby::Lobby;
@@ -6,13 +6,10 @@ use rpg_network_protocol::protocol::*;
 
 use bevy::{
     ecs::{
-        bundle::Bundle,
-        component::Component,
         event::EventReader,
         system::{Commands, Query, Res, ResMut},
     },
     log::info,
-    prelude::{Deref, DerefMut},
 };
 
 use lightyear::{server::events::MessageEvent, shared::replication::components::NetworkTarget};

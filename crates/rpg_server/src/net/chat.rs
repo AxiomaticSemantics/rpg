@@ -1,6 +1,6 @@
 use super::{
-    account::RpgAccount,
-    server::{ClientType, NetworkContext, NetworkParamsRO, NetworkParamsRW},
+    account::AccountInstance,
+    server::{NetworkParamsRO, NetworkParamsRW},
 };
 use crate::chat::ChatManager;
 
@@ -10,13 +10,10 @@ use rpg_network_protocol::protocol::*;
 
 use bevy::{
     ecs::{
-        bundle::Bundle,
-        component::Component,
         event::EventReader,
         system::{Commands, Query, Res, ResMut},
     },
     log::info,
-    prelude::{Deref, DerefMut},
 };
 
 use lightyear::{server::events::MessageEvent, shared::replication::components::NetworkTarget};
@@ -26,7 +23,7 @@ pub(crate) fn receive_chat_join(
     mut chat: ResMut<ChatManager>,
     mut join_reader: EventReader<MessageEvent<CSChatJoin>>,
     mut net_params: NetworkParamsRW,
-    account_q: Query<&RpgAccount>,
+    account_q: Query<&AccountInstance>,
 ) {
     for event in join_reader.read() {
         let client_id = event.context();

@@ -3,8 +3,6 @@ use rpg_lobby::lobby::{Lobby, LobbyId};
 
 use bevy::ecs::system::Resource;
 
-use lightyear::netcode::ClientId;
-
 #[derive(Default, Resource)]
 pub(crate) struct LobbyManager {
     pub(crate) lobbies: Vec<Lobby>,

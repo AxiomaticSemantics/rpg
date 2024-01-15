@@ -13,7 +13,7 @@ use rpg_account::{
     character::{CharacterInfo, CharacterRecord, CharacterSlot},
 };
 use rpg_chat::chat::{ChannelId, MessageId};
-use rpg_core::{class::Class, skill::SkillId, uid::Uid, unit::HeroGameMode};
+use rpg_core::{class::Class, skill::SkillId, unit::HeroGameMode};
 use rpg_lobby::lobby::{Lobby, LobbyId};
 use rpg_world::zone::ZoneId;
 
@@ -87,15 +87,16 @@ pub struct CSLoadAccount {
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CSCreateAccount {
+pub struct CSLoadAdminAccount {
     pub name: String,
-    pub email: String,
     pub password: String,
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CSLoadCharacter {
-    pub uid: Uid,
+pub struct CSCreateAccount {
+    pub name: String,
+    pub email: String,
+    pub password: String,
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -333,7 +334,7 @@ pub enum Messages {
     CSConnectAdmin(CSConnectAdmin),
     CSCreateAccount(CSCreateAccount),
     CSLoadAccount(CSLoadAccount),
-    CSLoadCharacter(CSLoadCharacter),
+    CSLoadAdminAccount(CSLoadAdminAccount),
     CSCreateCharacter(CSCreateCharacter),
     CSLobbyCreate(CSLobbyCreate),
     CSLobbyJoin(CSLobbyJoin),
