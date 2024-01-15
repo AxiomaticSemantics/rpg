@@ -82,6 +82,7 @@ pub(crate) fn receive_chat_channel_message(
     mut commands: Commands,
     mut message_reader: EventReader<MessageEvent<CSChatChannelMessage>>,
     mut net_params: NetworkParamsRW,
+    mut chat: ResMut<Chat>,
 ) {
     for event in message_reader.read() {
         let client_id = event.context();
@@ -94,13 +95,32 @@ pub(crate) fn receive_chat_channel_message(
         let channel_msg = event.message();
         // TODO Handle rejections for banned accounts etc.
 
+        let Some(channel) = chat.get_channel(channel_msg.channel_id) else {
+            continue;
+        };
+
+        let subscriber_ids = channel
+            .subscribers
+            .iter()
+            .map(|s| {
+                let client = net_params
+                    .context
+                    .clients
+                    .iter()
+                    .find(|c| c.1.account_id.unwrap() == *s)
+                    .unwrap();
+
+                *client.0
+            })
+            .collect();
+
         net_params.server.send_message_to_target::<Channel1, _>(
             SCChatMessage {
                 channel_id: channel_msg.channel_id,
                 message_id: channel_msg.message_id,
                 message: channel_msg.message.clone(),
             },
-            NetworkTarget::Only(vec![*client_id]),
+            NetworkTarget::Only(subscriber_ids),
         );
     }
 }

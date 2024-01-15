@@ -9,8 +9,8 @@ use std::collections::HashMap;
 
 #[derive(Default, Resource)]
 pub(crate) struct Chat {
-    channels: HashMap<ChannelId, Channel>,
-    next_channel_id: ChannelId,
+    pub(crate) channels: HashMap<ChannelId, Channel>,
+    pub(crate) next_channel_id: ChannelId,
 }
 
 impl Chat {
@@ -23,6 +23,14 @@ impl Chat {
 
     pub(crate) fn channel_exists(&self, channel_id: ChannelId) -> bool {
         self.channels.contains_key(&channel_id)
+    }
+
+    pub(crate) fn get_channel(&self, id: ChannelId) -> Option<&Channel> {
+        self.channels.get(&id)
+    }
+
+    pub(crate) fn get_channel_mut(&mut self, id: ChannelId) -> Option<&mut Channel> {
+        self.channels.get_mut(&id)
     }
 
     pub(crate) fn add_channel(&mut self, channel: Channel) {
