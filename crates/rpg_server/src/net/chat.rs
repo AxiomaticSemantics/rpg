@@ -1,6 +1,6 @@
 use super::{
     account::RpgAccount,
-    server::{AuthorizationStatus, ClientType, NetworkContext, NetworkParamsRO, NetworkParamsRW},
+    server::{ClientType, NetworkContext, NetworkParamsRO, NetworkParamsRW},
 };
 use crate::chat::ChatManager;
 
