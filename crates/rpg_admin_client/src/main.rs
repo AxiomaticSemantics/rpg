@@ -1,5 +1,8 @@
+//! This is currently a testing playground.
 //! Run with
 //! - `cargo run --bin rpg_admin_client`
+//! - `cargo run --bin rpg_admin_client -- --port 5000 --addr 127.0.0.1`
+
 mod client;
 
 use crate::client::{NetworkClientConfig, NetworkClientPlugin};
