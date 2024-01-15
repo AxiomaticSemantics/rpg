@@ -34,7 +34,7 @@ pub(crate) fn receive_lobby_create(
         }
 
         if let Some(lobby_id) = lobby_manager.add_lobby("Default Test Lobby".into()) {
-            lobby_manager.add_client(lobby_id, *client_id);
+            lobby_manager.add_account(lobby_id, client.account_id.unwrap());
 
             net_params.server.send_message_to_target::<Channel1, _>(
                 SCLobbyCreateSuccess,

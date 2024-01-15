@@ -211,6 +211,14 @@ impl NetworkContext {
             }
         })
     }
+
+    pub fn is_client_authenticated(&self, id: ClientId) -> bool {
+        if let Some(client) = self.clients.get(&id) {
+            client.is_authenticated()
+        } else {
+            false
+        }
+    }
 }
 
 pub(crate) fn handle_disconnections(

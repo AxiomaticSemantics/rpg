@@ -2,7 +2,7 @@
 resolver = "2"
 name = "util"
 version = "0.1.0"
-description = "What would have been a game someday."
+description = "A utility plugin used by multiple binary crates."
 license = "MIT OR Apache-2.0"
 authors.workspace = true
 edition.workspace = true
@@ -18,8 +18,6 @@ thiserror = "1.0.50"
 
 [dependencies.bevy]
 git = "https://github.com/AxiomaticSemantics/bevy"
-features = [
-  "bevy_asset",
-]
+features = [ "bevy_asset" ]
 optional = false
 default-features = false
