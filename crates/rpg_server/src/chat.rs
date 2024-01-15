@@ -8,12 +8,12 @@ use lightyear::netcode::ClientId;
 use std::collections::HashMap;
 
 #[derive(Default, Resource)]
-pub(crate) struct Chat {
+pub(crate) struct ChatManager {
     pub(crate) channels: HashMap<ChannelId, Channel>,
     pub(crate) next_channel_id: ChannelId,
 }
 
-impl Chat {
+impl ChatManager {
     pub(crate) fn new() -> Self {
         Self {
             channels: HashMap::default(),
@@ -54,7 +54,7 @@ impl Chat {
     }
 }
 
-pub(crate) fn setup(mut chat: ResMut<Chat>) {
+pub(crate) fn setup(mut chat: ResMut<ChatManager>) {
     let default_channel = Channel::new("Default".into(), ChannelId(0));
     chat.add_channel(default_channel);
 }

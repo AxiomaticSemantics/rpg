@@ -54,14 +54,13 @@ pub struct PlayerDirection(pub Vec3);
 
 #[component_protocol(protocol = "RpgProtocol")]
 pub enum Components {}
-/*  #[sync(once)]
+/*
+    #[sync(once)]
     Id(NetworkClientId),
     #[sync(full)]
     PlayerPosition(PlayerPosition),
     #[sync(full)]
     PlayerDirection(PlayerDirection),
-    #[sync(once)]
-    PlayerColor(PlayerColor),
 */
 
 // Channels
@@ -107,6 +106,9 @@ pub struct CSCreateCharacter {
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSLobbyCreate;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSLobbyJoin;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -137,6 +139,9 @@ pub struct CSChatChannelMessage {
     pub message_id: MessageId,
     pub message: String,
 }
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSChatChannelCreate(pub String);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSChatChannelJoin(pub String);
@@ -198,6 +203,12 @@ pub struct SCCharacter(pub CharacterRecord);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCCharacterInfo(pub CharacterInfo);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCLobbyCreateSuccess;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCLobbyCreateError;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCLobbyJoinSuccess;
@@ -286,6 +297,8 @@ pub enum Messages {
     SCAccountInfo(SCAccountInfo),
     SCCharacter(SCCharacter),
     SCCharacterInfo(SCCharacterInfo),
+    SCLobbyCreateSuccess(SCLobbyCreateSuccess),
+    SCLobbyCreateError(SCLobbyCreateError),
     SCLobbyJoinSuccess(SCLobbyJoinSuccess),
     SCLobbyJoinError(SCLobbyJoinError),
     SCLobbyLeaveSuccess(SCLobbyLeaveSuccess),
@@ -321,6 +334,7 @@ pub enum Messages {
     CSLoadAccount(CSLoadAccount),
     CSLoadCharacter(CSLoadCharacter),
     CSCreateCharacter(CSCreateCharacter),
+    CSLobbyCreate(CSLobbyCreate),
     CSLobbyJoin(CSLobbyJoin),
     CSLobbyLeave(CSLobbyLeave),
     CSCreateGame(CSCreateGame),
@@ -330,6 +344,7 @@ pub enum Messages {
     CSChatJoin(CSChatJoin),
     CSChatLeave(CSChatLeave),
     CSChatChannelMessage(CSChatChannelMessage),
+    CSChatChannelCreate(CSChatChannelCreate),
     CSChatChannelJoin(CSChatChannelJoin),
     CSChatChannelLeave(CSChatChannelLeave),
 

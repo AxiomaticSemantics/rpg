@@ -12,10 +12,7 @@ use bevy::{
 
 use rpg_network_protocol::protocol::*;
 
-use lightyear::client::{
-    components::{ComponentSyncMode, SyncComponent},
-    events::MessageEvent,
-};
+use lightyear::client::events::MessageEvent;
 
 pub(crate) fn receive_player_join_success(
     mut state: ResMut<NextState<AppState>>,

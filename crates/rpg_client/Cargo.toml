@@ -2,7 +2,7 @@
 resolver = "2"
 name = "rpg_client"
 version = "0.1.0"
-description = "A prototype Action RPG"
+description = "A prototype Action RPG client"
 license = "MIT OR Apache-2.0"
 authors.workspace = true
 edition.workspace = true
@@ -18,16 +18,20 @@ default = ["gizmos"]
 gizmos = ["bevy/bevy_gizmos"]
 
 [dependencies]
+# internal libraries
 rpg_core = { path = "../rpg_core" }
 rpg_world = { path = "../rpg_world" }
 rpg_account = { path = "../rpg_account" }
-rpg_network_protocol = { path = "../rpg_network_protocol" }
+rpg_chat = { path = "../rpg_chat" }
 
 # bevy plugins
+rpg_network_protocol = { path = "../rpg_network_protocol" }
+
 util = { path = "../util" }
 ui_util = { path = "../ui_util" }
 audio_manager = { path = "../audio_manager" }
 
+# external dependencies
 petgraph = { workspace = true }
 serde = { workspace = true }
 serde_derive = { workspace = true }
@@ -62,7 +66,6 @@ features = [
   "bevy_gltf",
   "bevy_gilrs",
   "vorbis",
-  "basis-universal",
   "png",
   "x11",
   "hdr",

@@ -1,9 +1,12 @@
 use crate::{
     assets::TextureAssets,
-    game::plugin::{GameState, PlayerOptions},
     net::account::RpgAccount,
     state::AppState,
-    ui::menu::{create::CreateRoot, main::MainRoot},
+    ui::{
+        chat::ChatRoot,
+        lobby::LobbyRoot,
+        menu::{create::CreateRoot, main::MainRoot},
+    },
 };
 
 use ui_util::{
@@ -91,6 +94,9 @@ pub struct ListCreateCharacterButton;
 
 #[derive(Component)]
 pub struct ListContainer;
+
+#[derive(Component)]
+pub struct LobbyCreateButton;
 
 #[derive(Resource, Default, Deref, DerefMut)]
 pub struct SelectedCharacterSlot(pub Option<CharacterSlot>);
@@ -568,10 +574,10 @@ pub fn spawn_list(
                         ));
                     });
 
-                p.spawn((button.clone(), ListCreateGameButton))
+                p.spawn((button.clone(), LobbyCreateButton))
                     .with_children(|p| {
                         p.spawn(TextBundle::from_section(
-                            "Create Game",
+                            "Create Lobby",
                             ui_theme.text_style_regular.clone(),
                         ));
                     });
@@ -694,6 +700,23 @@ pub fn cancel_account_list_button(
     if let Ok(Interaction::Pressed) = interaction {
         menu_set.p0().single_mut().display = Display::Flex;
         menu_set.p1().single_mut().display = Display::None;
+    }
+}
+
+pub fn lobby_create_button(
+    mut net_client: ResMut<Client>,
+    mut style_set: ParamSet<(
+        Query<(&mut Style, &Interaction), (Changed<Interaction>, With<LobbyCreateButton>)>,
+        Query<&mut Style, With<LobbyRoot>>,
+        Query<&mut Style, With<AccountListRoot>>,
+    )>,
+) {
+    let mut interaction = style_set.p0();
+    if let Ok((style, Interaction::Pressed)) = interaction.get_single_mut() {
+        style_set.p1().single_mut().display = Display::Flex;
+        style_set.p2().single_mut().display = Display::None;
+
+        net_client.send_message::<Channel1, _>(CSLobbyCreate);
     }
 }
 
