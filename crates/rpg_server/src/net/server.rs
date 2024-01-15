@@ -141,6 +141,7 @@ pub enum AuthorizationStatus {
 pub(crate) struct Client {
     pub(crate) entity: Entity,
     pub(crate) client_type: ClientType,
+    pub(crate) account_id: Option<AccountId>,
     pub(crate) auth_status: AuthorizationStatus,
 }
 
@@ -152,6 +153,7 @@ impl Client {
     ) -> Self {
         Self {
             entity,
+            account_id: None,
             client_type,
             auth_status,
         }
@@ -162,19 +164,11 @@ impl Client {
     }
 
     pub(crate) fn is_player(&self) -> bool {
-        if let ClientType::Player = self.client_type {
-            true
-        } else {
-            false
-        }
+        ClientType::Player == self.client_type
     }
 
     pub(crate) fn is_admin(&self) -> bool {
-        if let ClientType::Admin = self.client_type {
-            true
-        } else {
-            false
-        }
+        ClientType::Admin == self.client_type
     }
 
     pub(crate) fn is_authenticated_player(&self) -> bool {
@@ -191,6 +185,7 @@ impl Default for Client {
         Self {
             entity: Entity::PLACEHOLDER,
             client_type: ClientType::Unknown,
+            account_id: None,
             auth_status: AuthorizationStatus::Unauthenticated,
         }
     }

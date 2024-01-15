@@ -213,10 +213,6 @@ pub(crate) fn receive_player_rotation(
     mut player_q: Query<(&mut Transform, &mut PlayerDirection), With<Confirmed>>,
     mut rotation_events: EventReader<MessageEvent<SCRotPlayer>>,
 ) {
-    if PlayerPosition::mode() != ComponentSyncMode::Full {
-        return;
-    }
-
     for rotation in rotation_events.read() {
         for (mut transform, mut direction) in player_q.iter_mut() {
             direction.0 = rotation.message().0;
@@ -230,10 +226,6 @@ pub(crate) fn receive_player_movement(
     mut position_q: Query<(&mut Transform, &mut PlayerPosition), With<Confirmed>>,
     mut movement_events: EventReader<MessageEvent<SCMovePlayer>>,
 ) {
-    if PlayerPosition::mode() != ComponentSyncMode::Full {
-        return;
-    }
-
     for movement in movement_events.read() {
         for (mut transform, mut position) in position_q.iter_mut() {
             position.0 = movement.message().0;

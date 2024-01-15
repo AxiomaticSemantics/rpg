@@ -1,7 +1,11 @@
-use super::server::{
-    AuthorizationStatus, ClientType, NetworkContext, NetworkParamsRO, NetworkParamsRW,
+use super::{
+    account::RpgAccount,
+    server::{AuthorizationStatus, ClientType, NetworkContext, NetworkParamsRO, NetworkParamsRW},
 };
+use crate::chat::Chat;
 
+use rpg_account::account::AccountId;
+use rpg_chat::chat::{Channel, ChannelId};
 use rpg_network_protocol::protocol::*;
 
 use bevy::{
@@ -19,8 +23,10 @@ use lightyear::{server::events::MessageEvent, shared::replication::components::N
 
 pub(crate) fn receive_chat_join(
     mut commands: Commands,
+    mut chat: ResMut<Chat>,
     mut join_reader: EventReader<MessageEvent<CSChatJoin>>,
     mut net_params: NetworkParamsRW,
+    account_q: Query<&RpgAccount>,
 ) {
     for event in join_reader.read() {
         let client_id = event.context();
@@ -31,10 +37,23 @@ pub(crate) fn receive_chat_join(
         }
 
         // TODO Handle rejections for banned accounts etc.
-        net_params.server.send_message_to_target::<Channel1, _>(
-            SCChatJoinSuccess(0),
-            NetworkTarget::Only(vec![*client_id]),
-        );
+
+        // TODO For now add the client to a global channel
+
+        for account in &account_q {
+            if account.0.info.id != client.account_id.unwrap() {
+                continue;
+            }
+
+            if chat.channel_exists(ChannelId(0)) {
+                chat.add_subscriber(ChannelId(0), client.account_id.unwrap());
+
+                net_params.server.send_message_to_target::<Channel1, _>(
+                    SCChatJoinSuccess(0),
+                    NetworkTarget::Only(vec![*client_id]),
+                );
+            }
+        }
     }
 }
 
@@ -63,6 +82,7 @@ pub(crate) fn receive_chat_channel_message(
     mut commands: Commands,
     mut message_reader: EventReader<MessageEvent<CSChatChannelMessage>>,
     mut net_params: NetworkParamsRW,
+    mut chat: ResMut<Chat>,
 ) {
     for event in message_reader.read() {
         let client_id = event.context();
@@ -75,13 +95,32 @@ pub(crate) fn receive_chat_channel_message(
         let channel_msg = event.message();
         // TODO Handle rejections for banned accounts etc.
 
+        let Some(channel) = chat.get_channel(channel_msg.channel_id) else {
+            continue;
+        };
+
+        let subscriber_ids = channel
+            .subscribers
+            .iter()
+            .map(|s| {
+                let client = net_params
+                    .context
+                    .clients
+                    .iter()
+                    .find(|c| c.1.account_id.unwrap() == *s)
+                    .unwrap();
+
+                *client.0
+            })
+            .collect();
+
         net_params.server.send_message_to_target::<Channel1, _>(
             SCChatMessage {
                 channel_id: channel_msg.channel_id,
                 message_id: channel_msg.message_id,
                 message: channel_msg.message.clone(),
             },
-            NetworkTarget::Only(vec![*client_id]),
+            NetworkTarget::Only(subscriber_ids),
         );
     }
 }

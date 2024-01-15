@@ -2,10 +2,9 @@ use bevy::{
     ecs::{bundle::Bundle, component::Component, entity::Entity},
     math::Vec3,
     prelude::{Deref, DerefMut},
-    utils::{default, EntityHashSet},
+    utils::default,
 };
 
-use derive_more::{Add, Mul};
 use lightyear::prelude::*;
 use serde_derive::{Deserialize, Serialize};
 
@@ -24,7 +23,7 @@ pub struct NetworkPlayerBundle {
     pub id: NetworkClientId,
     pub direction: PlayerDirection,
     pub position: PlayerPosition,
-    pub replicate: Replicate,
+    /*pub replicate: Replicate,*/
 }
 
 impl NetworkPlayerBundle {
@@ -33,12 +32,12 @@ impl NetworkPlayerBundle {
             id: NetworkClientId(id),
             position: PlayerPosition(position),
             direction: PlayerDirection(direction),
-            replicate: Replicate {
+            /*replicate: Replicate {
                 // prediction_target: NetworkTarget::None,
                 prediction_target: NetworkTarget::Only(vec![id]),
                 interpolation_target: NetworkTarget::AllExcept(vec![id]),
                 ..default()
-            },
+            }*/
         }
     }
 }
@@ -48,30 +47,23 @@ impl NetworkPlayerBundle {
 #[derive(Component, Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct NetworkClientId(pub ClientId);
 
-#[derive(Component, Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct MonsterId(pub Uid);
-
-#[derive(
-    Component, Message, Serialize, Deserialize, Clone, Debug, PartialEq, Deref, DerefMut, Add, Mul,
-)]
+#[derive(Component, Message, Serialize, Deserialize, Clone, Debug, PartialEq, Deref, DerefMut)]
 pub struct PlayerPosition(pub Vec3);
 
-#[derive(
-    Component, Message, Serialize, Deserialize, Clone, Debug, PartialEq, Deref, DerefMut, Add, Mul,
-)]
+#[derive(Component, Message, Serialize, Deserialize, Clone, Debug, PartialEq, Deref, DerefMut)]
 pub struct PlayerDirection(pub Vec3);
 
 #[component_protocol(protocol = "RpgProtocol")]
-pub enum Components {
-    #[sync(once)]
+pub enum Components {}
+/*  #[sync(once)]
     Id(NetworkClientId),
     #[sync(full)]
     PlayerPosition(PlayerPosition),
     #[sync(full)]
     PlayerDirection(PlayerDirection),
-    //#[sync(once)]
-    //PlayerColor(PlayerColor),
-}
+    #[sync(once)]
+    PlayerColor(PlayerColor),
+*/
 
 // Channels
 

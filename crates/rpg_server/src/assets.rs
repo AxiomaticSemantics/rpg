@@ -98,7 +98,9 @@ pub(crate) fn load_metadata(
         && asset_server.is_loaded_with_dependencies(json_assets.passive_tree.id())
     {
         commands.init_resource::<MetadataResources>();
-        next_state.set(AppState::Simulation);
+
+        next_state.set(AppState::Lobby);
+
         println!("json loaded, initializing metadata");
     }
 }
