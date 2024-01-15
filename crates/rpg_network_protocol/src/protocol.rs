@@ -14,6 +14,7 @@ use rpg_account::{
 };
 use rpg_chat::chat::{ChannelId, MessageId};
 use rpg_core::{class::Class, skill::SkillId, uid::Uid, unit::HeroGameMode};
+use rpg_lobby::lobby::{Lobby, LobbyId};
 use rpg_world::zone::ZoneId;
 
 // Player
@@ -109,7 +110,7 @@ pub struct CSCreateCharacter {
 pub struct CSLobbyCreate;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CSLobbyJoin;
+pub struct CSLobbyJoin(pub LobbyId);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSLobbyLeave;
@@ -205,13 +206,13 @@ pub struct SCCharacter(pub CharacterRecord);
 pub struct SCCharacterInfo(pub CharacterInfo);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCLobbyCreateSuccess;
+pub struct SCLobbyCreateSuccess(pub Lobby);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCLobbyCreateError;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCLobbyJoinSuccess;
+pub struct SCLobbyJoinSuccess(pub Lobby);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCLobbyJoinError;

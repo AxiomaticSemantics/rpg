@@ -30,11 +30,37 @@ impl LobbyManager {
         self.lobbies.retain(|l| l.id != id);
     }
 
+    pub(crate) fn has_lobby(&self, id: LobbyId) -> bool {
+        self.lobbies.iter().any(|l| l.id == id)
+    }
+
+    pub(crate) fn get_lobby(&self, id: LobbyId) -> Option<&Lobby> {
+        self.lobbies.iter().find(|l| l.id == id)
+    }
+
+    pub(crate) fn get_lobby_mut(&mut self, id: LobbyId) -> Option<&mut Lobby> {
+        self.lobbies.iter_mut().find(|l| l.id == id)
+    }
+
+    pub(crate) fn has_account(&self, id: LobbyId, account_id: AccountId) -> bool {
+        if let Some(lobby) = self.lobbies.iter().find(|l| l.id == id) {
+            lobby.has_account(account_id)
+        } else {
+            false
+        }
+    }
+
     pub(crate) fn add_account(&mut self, id: LobbyId, account_id: AccountId) -> bool {
         if let Some(lobby) = self.lobbies.iter_mut().find(|l| l.id == id) {
             lobby.add_account(account_id)
         } else {
             false
+        }
+    }
+
+    pub(crate) fn remove_account(&mut self, id: LobbyId, account_id: AccountId) {
+        if let Some(lobby) = self.lobbies.iter_mut().find(|l| l.id == id) {
+            lobby.remove_account(account_id);
         }
     }
 }

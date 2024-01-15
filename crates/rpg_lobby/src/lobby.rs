@@ -2,10 +2,10 @@ use rpg_account::account::AccountId;
 
 use serde_derive::{Deserialize as De, Serialize as Ser};
 
-#[derive(Ser, De, Default, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Ser, De, Debug, Default, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct LobbyId(pub u64);
 
-#[derive(Ser, De, Default, Clone, PartialEq)]
+#[derive(Ser, De, Debug, Default, Clone, PartialEq)]
 pub struct Lobby {
     pub id: LobbyId,
     pub name: String,
@@ -23,6 +23,10 @@ impl Lobby {
 
     pub fn clear(&mut self) {
         self.accounts.clear();
+    }
+
+    pub fn has_account(&self, account_id: AccountId) -> bool {
+        self.accounts.iter().any(|a| *a == account_id)
     }
 
     pub fn add_account(&mut self, id: AccountId) -> bool {
