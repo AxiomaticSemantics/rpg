@@ -238,7 +238,7 @@ pub(crate) fn receive_character_create(
     }
 }
 
-/*
+/* FIXME Unsure if this message will return or not
 pub(crate) fn receive_character_load(
     mut character_load_reader: EventReader<MessageEvent<CSLoadCharacter>>,
     net_params: NetworkParamsRO,

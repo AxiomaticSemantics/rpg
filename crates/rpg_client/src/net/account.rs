@@ -1,4 +1,4 @@
-use crate::menu::account::{
+use crate::ui::menu::account::{
     self, AccountCharacterSlot, AccountCreateRoot, AccountListRoot, AccountLoginRoot,
 };
 
@@ -23,10 +23,7 @@ use rpg_account::{
 use rpg_network_protocol::protocol::*;
 use ui_util::style::UiTheme;
 
-use lightyear::client::{
-    components::{ComponentSyncMode, SyncComponent},
-    events::MessageEvent,
-};
+use lightyear::client::events::MessageEvent;
 
 #[derive(Default, Component)]
 pub(crate) struct RpgAccount(pub(crate) Account);

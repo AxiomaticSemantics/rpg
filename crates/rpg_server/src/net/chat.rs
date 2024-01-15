@@ -2,7 +2,7 @@ use super::{
     account::RpgAccount,
     server::{AuthorizationStatus, ClientType, NetworkContext, NetworkParamsRO, NetworkParamsRW},
 };
-use crate::chat::Chat;
+use crate::chat::ChatManager;
 
 use rpg_account::account::AccountId;
 use rpg_chat::chat::{Channel, ChannelId};
@@ -23,7 +23,7 @@ use lightyear::{server::events::MessageEvent, shared::replication::components::N
 
 pub(crate) fn receive_chat_join(
     mut commands: Commands,
-    mut chat: ResMut<Chat>,
+    mut chat: ResMut<ChatManager>,
     mut join_reader: EventReader<MessageEvent<CSChatJoin>>,
     mut net_params: NetworkParamsRW,
     account_q: Query<&RpgAccount>,
@@ -82,7 +82,7 @@ pub(crate) fn receive_chat_channel_message(
     mut commands: Commands,
     mut message_reader: EventReader<MessageEvent<CSChatChannelMessage>>,
     mut net_params: NetworkParamsRW,
-    mut chat: ResMut<Chat>,
+    mut chat: ResMut<ChatManager>,
 ) {
     for event in message_reader.read() {
         let client_id = event.context();

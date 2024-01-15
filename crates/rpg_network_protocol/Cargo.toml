@@ -2,7 +2,7 @@
 resolver = "2"
 name = "rpg_network_protocol"
 version = "0.1.0"
-description = "A shared network protocol"
+description = "A shared network protocol used by rpg_client rpg_admin_client and rpg_server"
 license = "MIT OR Apache-2.0"
 authors.workspace = true
 edition.workspace = true
@@ -18,15 +18,12 @@ rpg_chat = { path = "../rpg_chat" }
 
 serde = { workspace = true }
 serde_derive = { workspace = true }
-derive_more = "0.99.17"
 
 [dependencies.lightyear]
 git = "https://github.com/AxiomaticSemantics/lightyear"
 
 [dependencies.bevy]
 git = "https://github.com/AxiomaticSemantics/bevy"
-features = [
-  "multi-threaded",
-]
+features = [ "multi-threaded" ]
 optional = false
 default-features = false

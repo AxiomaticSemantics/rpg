@@ -77,6 +77,7 @@ impl Plugin for NetworkServerPlugin {
                         account::receive_character_create,
                         account::receive_connect_player,
                         account::receive_connect_admin,
+                        lobby::receive_lobby_create,
                         lobby::receive_lobby_join,
                         lobby::receive_lobby_leave,
                     )
@@ -194,6 +195,22 @@ impl Default for Client {
 #[derive(Resource, Default)]
 pub(crate) struct NetworkContext {
     pub clients: HashMap<ClientId, Client>,
+}
+
+impl NetworkContext {
+    pub fn get_client_from_client_id(&self, id: ClientId) -> Option<&Client> {
+        self.clients.get(&id)
+    }
+
+    pub fn get_client_from_account_id(&self, id: AccountId) -> Option<&Client> {
+        self.clients.values().find(|a| {
+            if let Some(aid) = a.account_id {
+                aid == id
+            } else {
+                false
+            }
+        })
+    }
 }
 
 pub(crate) fn handle_disconnections(

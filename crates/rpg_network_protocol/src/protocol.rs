@@ -2,7 +2,6 @@ use bevy::{
     ecs::{bundle::Bundle, component::Component, entity::Entity},
     math::Vec3,
     prelude::{Deref, DerefMut},
-    utils::default,
 };
 
 use lightyear::prelude::*;
@@ -11,7 +10,7 @@ use serde_derive::{Deserialize, Serialize};
 // TODO split these up into multiple protocols once the basic design is settled
 use rpg_account::{
     account::{Account, AccountInfo},
-    character::{Character, CharacterInfo, CharacterRecord, CharacterSlot},
+    character::{CharacterInfo, CharacterRecord, CharacterSlot},
 };
 use rpg_chat::chat::{ChannelId, MessageId};
 use rpg_core::{class::Class, skill::SkillId, uid::Uid, unit::HeroGameMode};
@@ -55,14 +54,13 @@ pub struct PlayerDirection(pub Vec3);
 
 #[component_protocol(protocol = "RpgProtocol")]
 pub enum Components {}
-/*  #[sync(once)]
+/*
+    #[sync(once)]
     Id(NetworkClientId),
     #[sync(full)]
     PlayerPosition(PlayerPosition),
     #[sync(full)]
     PlayerDirection(PlayerDirection),
-    #[sync(once)]
-    PlayerColor(PlayerColor),
 */
 
 // Channels
@@ -108,6 +106,9 @@ pub struct CSCreateCharacter {
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSLobbyCreate;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSLobbyJoin;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -138,6 +139,9 @@ pub struct CSChatChannelMessage {
     pub message_id: MessageId,
     pub message: String,
 }
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSChatChannelCreate(pub String);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSChatChannelJoin(pub String);
@@ -199,6 +203,12 @@ pub struct SCCharacter(pub CharacterRecord);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCCharacterInfo(pub CharacterInfo);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCLobbyCreateSuccess;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCLobbyCreateError;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCLobbyJoinSuccess;
@@ -287,6 +297,8 @@ pub enum Messages {
     SCAccountInfo(SCAccountInfo),
     SCCharacter(SCCharacter),
     SCCharacterInfo(SCCharacterInfo),
+    SCLobbyCreateSuccess(SCLobbyCreateSuccess),
+    SCLobbyCreateError(SCLobbyCreateError),
     SCLobbyJoinSuccess(SCLobbyJoinSuccess),
     SCLobbyJoinError(SCLobbyJoinError),
     SCLobbyLeaveSuccess(SCLobbyLeaveSuccess),
@@ -322,6 +334,7 @@ pub enum Messages {
     CSLoadAccount(CSLoadAccount),
     CSLoadCharacter(CSLoadCharacter),
     CSCreateCharacter(CSCreateCharacter),
+    CSLobbyCreate(CSLobbyCreate),
     CSLobbyJoin(CSLobbyJoin),
     CSLobbyLeave(CSLobbyLeave),
     CSCreateGame(CSCreateGame),
@@ -331,6 +344,7 @@ pub enum Messages {
     CSChatJoin(CSChatJoin),
     CSChatLeave(CSChatLeave),
     CSChatChannelMessage(CSChatChannelMessage),
+    CSChatChannelCreate(CSChatChannelCreate),
     CSChatChannelJoin(CSChatChannelJoin),
     CSChatChannelLeave(CSChatChannelLeave),
 

@@ -13,7 +13,8 @@ mod world;
 
 use crate::{
     assets::{load_metadata, JsonAssets},
-    chat::Chat,
+    chat::ChatManager,
+    lobby::LobbyManager,
     net::server::NetworkServerPlugin,
     state::AppState,
     world::ServerWorldPlugin,
@@ -59,7 +60,8 @@ fn main() {
         .add_plugins(AssetPlugin::default())
         .add_plugins(UtilityPlugin)
         .init_resource::<JsonAssets>()
-        .init_resource::<Chat>()
+        .init_resource::<ChatManager>()
+        .init_resource::<LobbyManager>()
         .add_systems(Startup, chat::setup)
         .add_systems(Update, load_metadata.run_if(in_state(AppState::LoadAssets)))
         .add_plugins(NetworkServerPlugin { port: cli.port })

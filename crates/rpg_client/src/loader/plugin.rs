@@ -1,10 +1,14 @@
 use crate::{
     assets::{AudioAssets, JsonAssets, TextureAssets},
     game::{self, plugin::GamePlugin, state_saver},
-    menu::plugin::MenuPlugin,
-    net::plugin::{NetworkClientConfig, NetworkClientPlugin},
+    net::{
+        chat::Chat,
+        lobby::Lobby,
+        plugin::{NetworkClientConfig, NetworkClientPlugin},
+    },
     splash::plugin::SplashScreenPlugin,
     state::AppState,
+    ui::menu::plugin::MenuPlugin,
 };
 
 //use console_plugin::plugin::ConsolePlugin;
@@ -113,7 +117,8 @@ impl Plugin for LoaderPlugin {
             .init_resource::<TextureAssets>()
             .init_resource::<AudioAssets>()
             .init_resource::<UiTheme>()
-            .init_resource::<state_saver::SaveSlots>()
+            .init_resource::<Lobby>()
+            .init_resource::<Chat>()
             // External plugins
             .add_plugins(NetworkClientPlugin {
                 config: NetworkClientConfig {
@@ -134,10 +139,7 @@ impl Plugin for LoaderPlugin {
             .add_plugins(SplashScreenPlugin)
             .add_plugins(MenuPlugin)
             .add_plugins(GamePlugin)
-            .add_systems(
-                OnEnter(AppState::LoadGameAssets),
-                (game::plugin::load_assets, state_saver::load_save_slots),
-            )
+            .add_systems(OnEnter(AppState::LoadGameAssets), game::plugin::load_assets)
             .add_systems(
                 Update,
                 transition_splash.run_if(in_state(AppState::LoadGameAssets)),

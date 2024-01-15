@@ -1,11 +1,11 @@
 use crate::{
     assets::TextureAssets,
     game::plugin::{GameState, PlayerOptions},
-    menu::{
+    state::AppState,
+    ui::menu::{
         account::{AccountListRoot, SelectedCharacterSlot},
         main::MainRoot,
     },
-    state::AppState,
 };
 
 use ui_util::{
@@ -13,7 +13,7 @@ use ui_util::{
     widgets::EditText,
 };
 
-use rpg_core::{class::Class, unit::HeroGameMode};
+use rpg_chat::chat::ChannelId;
 use rpg_network_protocol::protocol::*;
 
 use bevy::{
@@ -36,25 +36,19 @@ use bevy::{
 };
 
 #[derive(Component)]
-pub struct CreateMode(pub HeroGameMode);
+pub struct ChatRoot;
 
 #[derive(Component)]
-pub struct CreatePlayerName;
+pub struct ChatMessageContainer;
 
 #[derive(Component)]
-pub struct CreateRoot;
+pub struct ChatMessageText;
 
 #[derive(Component)]
-pub struct CreateButton;
+pub struct ChannelLeaveButton;
 
 #[derive(Component)]
-pub struct CreatePlayerClass(Class);
-
-#[derive(Component)]
-pub struct CancelButton;
-
-#[derive(Deref, DerefMut, Resource)]
-pub struct SelectedClass(pub Class);
+pub struct SendMeesageButton;
 
 pub fn spawn(
     textures: &TextureAssets,
@@ -68,7 +62,7 @@ pub fn spawn(
 
     builder
         .spawn((
-            CreateRoot,
+            ChatRoot,
             NodeBundle {
                 style: frame.clone(),
                 background_color: ui_theme.frame_background_color,
@@ -87,11 +81,8 @@ pub fn spawn(
                 })
                 .with_children(|p| {
                     p.spawn(
-                        TextBundle::from_section(
-                            "Select a Class",
-                            ui_theme.text_style_regular.clone(),
-                        )
-                        .with_style(ui_theme.row_style.clone()),
+                        TextBundle::from_section("Channel", ui_theme.text_style_regular.clone())
+                            .with_style(ui_theme.row_style.clone()),
                     );
                 });
 
@@ -105,47 +96,19 @@ pub fn spawn(
                         ..default()
                     })
                     .with_children(|p| {
-                        for (class, name) in [
-                            (CreatePlayerClass(Class::Str), "Warrior"),
-                            (CreatePlayerClass(Class::Dex), "Ranger"),
-                            (CreatePlayerClass(Class::Int), "Wizard"),
-                            (CreatePlayerClass(Class::StrDex), "Duelist"),
-                            (CreatePlayerClass(Class::DexInt), "Necromancer"),
-                            (CreatePlayerClass(Class::IntStr), "Cleric"),
-                            (CreatePlayerClass(Class::StrDexInt), "Rogue"),
-                        ] {
-                            p.spawn((button.clone(), class)).with_children(|p| {
-                                p.spawn(TextBundle::from_section(
-                                    name,
-                                    ui_theme.text_style_small.clone(),
-                                ));
-                            });
-                        }
-                    });
-
-                    p.spawn(NodeBundle {
-                        style: ui_theme.col_style.clone(),
-                        ..default()
-                    })
-                    .with_children(|p| {
                         p.spawn(NodeBundle {
                             style: ui_theme.frame_row_style.clone(),
                             ..default()
                         })
                         .with_children(|p| {
                             p.spawn((TextBundle::from_section(
-                                "Name:",
+                                "Message:",
                                 ui_theme.text_style_regular.clone(),
                             ),));
 
                             let mut edit_style = ui_theme.frame_row_style.clone();
 
                             edit_style.border = UiRect::all(ui_theme.border);
-                            //edit_style.padding = UiRect::all(ui_theme.padding);
-                            //edit_style.height = Val::Px(ui_theme.font_size_regular + 12.);
-
-                            //edit_style.align_items = AlignItems::Center;
-                            //edit_style.align_self = AlignSelf::Center;
 
                             p.spawn(NodeBundle {
                                 style: edit_style.clone(),
@@ -155,12 +118,12 @@ pub fn spawn(
                             })
                             .with_children(|p| {
                                 p.spawn((
-                                    CreatePlayerName,
+                                    ChatMessageText,
                                     EditText::default(),
                                     Interaction::None,
                                     TextBundle {
                                         text: Text::from_section(
-                                            " ",
+                                            "",
                                             ui_theme.text_style_regular.clone(),
                                         ),
                                         style: Style {
@@ -174,6 +137,7 @@ pub fn spawn(
                                 ));
                             });
                         });
+
                         p.spawn(NodeBundle {
                             style: ui_theme.frame_row_style.clone(),
                             ..default()
@@ -181,7 +145,7 @@ pub fn spawn(
                         .with_children(|p| {
                             p.spawn(TextBundle {
                                 text: Text::from_section(
-                                    "Hardcore:",
+                                    "Send Message:",
                                     ui_theme.text_style_regular.clone(),
                                 ),
                                 ..default()
@@ -207,11 +171,10 @@ pub fn spawn(
                             })
                             .with_children(|p| {
                                 p.spawn((
-                                    CreateMode(HeroGameMode::Normal),
                                     Interaction::None,
                                     ImageBundle {
                                         image: UiImage {
-                                            texture: textures.icons["transparent"].clone_weak(),
+                                            texture: textures.icons["checkmark"].clone_weak(),
                                             ..default()
                                         },
                                         style: Style {
@@ -233,97 +196,27 @@ pub fn spawn(
                 ..default()
             })
             .with_children(|p| {
-                p.spawn((button.clone(), CancelButton)).with_children(|p| {
-                    p.spawn(TextBundle::from_section(
-                        "Cancel",
-                        ui_theme.text_style_regular.clone(),
-                    ));
-                });
+                p.spawn((button.clone(), ChannelLeaveButton))
+                    .with_children(|p| {
+                        p.spawn(TextBundle::from_section(
+                            "Leave Channel",
+                            ui_theme.text_style_regular.clone(),
+                        ));
+                    });
             });
         });
 }
 
-pub fn cancel_button(
-    interaction_q: Query<&Interaction, (Changed<Interaction>, With<CancelButton>)>,
+pub fn channel_leave_button(
+    interaction_q: Query<&Interaction, (Changed<Interaction>, With<ChannelLeaveButton>)>,
     mut menu_set: ParamSet<(
-        Query<&mut Style, With<AccountListRoot>>,
-        Query<&mut Style, With<CreateRoot>>,
+        Query<&mut Style, With<ChatMessageContainer>>,
+        Query<&mut Style, With<ChatRoot>>,
     )>,
 ) {
     let interaction = interaction_q.get_single();
     if let Ok(Interaction::Pressed) = interaction {
         menu_set.p0().single_mut().display = Display::Flex;
         menu_set.p1().single_mut().display = Display::None;
-    }
-}
-
-pub fn set_game_mode(
-    textures: Res<TextureAssets>,
-    mut game_mode_q: Query<(&mut CreateMode, &mut UiImage, &Interaction), Changed<Interaction>>,
-) {
-    let Ok((mut game_mode, mut ui_image, interaction)) = game_mode_q.get_single_mut() else {
-        return;
-    };
-
-    if interaction == &Interaction::Pressed {
-        if game_mode.0 == HeroGameMode::Normal {
-            println!("setting hardcore mode");
-            ui_image.texture = textures.icons["checkmark"].clone_weak();
-            game_mode.0 = HeroGameMode::Hardcore;
-        } else {
-            println!("setting normal mode");
-            ui_image.texture = textures.icons["transparent"].clone_weak();
-            game_mode.0 = HeroGameMode::Normal;
-        }
-    }
-}
-
-pub fn create_class(
-    mut net_client: ResMut<Client>,
-    mut state: ResMut<NextState<AppState>>,
-    mut game_state: ResMut<GameState>,
-    selected_character_slot: Res<SelectedCharacterSlot>,
-    interaction_q: Query<
-        (&Interaction, &CreatePlayerClass),
-        (Changed<Interaction>, With<CreatePlayerClass>),
-    >,
-    game_mode_q: Query<&CreateMode>,
-    mut menu_root_q: Query<&mut Style, With<UiRoot>>,
-    player_name_text_q: Query<&Text, With<CreatePlayerName>>,
-) {
-    if !net_client.is_connected() {
-        return;
-    }
-
-    if let Ok((Interaction::Pressed, create_class)) = interaction_q.get_single() {
-        if selected_character_slot.is_none() {
-            info!("no slot selected");
-            return;
-        }
-        let player_name_text = player_name_text_q.single();
-        if player_name_text.sections[0].value.is_empty() {
-            info!("no player name provided");
-            return;
-        }
-
-        let game_mode = game_mode_q.single();
-        game_state.player_config = Some(PlayerOptions {
-            name: player_name_text.sections[0].value.clone(),
-            class: create_class.0,
-            game_mode: game_mode.0,
-        });
-
-        //menu_root_q.single_mut().display = Display::None;
-
-        let create_msg = CSCreateCharacter {
-            name: player_name_text.sections[0].value.clone(),
-            class: create_class.0,
-            game_mode: game_mode.0,
-            slot: selected_character_slot.0.unwrap(),
-        };
-
-        net_client.send_message::<Channel1, _>(create_msg).unwrap();
-
-        //state.set(AppState::GameSpawn);
     }
 }

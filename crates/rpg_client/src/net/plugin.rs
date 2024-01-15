@@ -1,4 +1,4 @@
-use super::{account, chat, game};
+use super::{account, chat, game, lobby};
 use crate::state::AppState;
 
 use bevy::{
@@ -81,19 +81,29 @@ impl Plugin for NetworkClientPlugin {
                         .in_set(FixedUpdateSet::Main),
                     reconnect,
                     receive_server_hello,
-                    account::receive_account_create_success,
-                    account::receive_account_create_error,
-                    account::receive_account_login_success,
-                    account::receive_account_login_error,
-                    account::receive_character_create_success,
-                    account::receive_character_create_error,
-                    account::receive_game_join_success,
-                    account::receive_game_join_error,
-                    chat::receive_join_success,
-                    chat::receive_join_error,
-                    chat::receive_channel_join_success,
-                    chat::receive_channel_join_error,
-                    chat::receive_chat_message,
+                    (
+                        account::receive_account_create_success,
+                        account::receive_account_create_error,
+                        account::receive_account_login_success,
+                        account::receive_account_login_error,
+                        account::receive_character_create_success,
+                        account::receive_character_create_error,
+                        account::receive_game_join_success,
+                        account::receive_game_join_error,
+                    ),
+                    (
+                        lobby::receive_join_success,
+                        lobby::receive_join_error,
+                        lobby::receive_create_success,
+                        lobby::receive_create_error,
+                    ),
+                    (
+                        chat::receive_join_success,
+                        chat::receive_join_error,
+                        chat::receive_channel_join_success,
+                        chat::receive_channel_join_error,
+                        chat::receive_chat_message,
+                    ),
                 ),
             );
     }

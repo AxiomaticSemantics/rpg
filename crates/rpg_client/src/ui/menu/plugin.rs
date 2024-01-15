@@ -1,17 +1,19 @@
 use crate::{
     assets::TextureAssets,
-    game::state_saver::SaveSlots,
     loader::plugin::OutOfGameCamera,
-    menu::{
-        self,
-        account::{AccountCreateRoot, AccountLoginRoot},
-        create::CreateRoot,
-        credits::CreditsRoot,
-        load::LoadRoot,
-        main::MainRoot,
-        settings::SettingsRoot,
-    },
     state::AppState,
+    ui::{
+        chat::{self, ChatRoot},
+        lobby::{self, LobbyRoot},
+        menu::{
+            self,
+            account::{AccountCreateRoot, AccountLoginRoot},
+            create::CreateRoot,
+            credits::CreditsRoot,
+            main::MainRoot,
+            settings::SettingsRoot,
+        },
+    },
 };
 
 /*
@@ -64,9 +66,9 @@ impl Plugin for MenuPlugin {
                         menu::account::cancel_login_button,
                         menu::account::create_button,
                         menu::account::login_button,
+                        menu::account::lobby_create_button,
                         menu::account::list_create_character_button,
                         menu::account::list_create_game_button,
-                        menu::account::list_join_game_button,
                         menu::account::list_cancel_button,
                         menu::account::list_select_slot,
                         menu::account::update_character_list,
@@ -108,7 +110,6 @@ fn display_menu(
 fn spawn(
     mut commands: Commands,
     mut state: ResMut<NextState<AppState>>,
-    save_slots: Res<SaveSlots>,
     ui_theme: Res<UiTheme>,
     textures: Res<TextureAssets>,
     //mut console: ResMut<Console>,
@@ -167,22 +168,24 @@ fn spawn(
             UiRoot,
         ))
         .with_children(|p| {
-            super::main::spawn(
+            menu::main::spawn(
                 &textures,
                 p,
                 &ui_theme,
                 &button_bundle,
                 &ui_theme.frame_col_style,
             );
-            super::account::spawn_create(&textures, p, &ui_theme, &button_bundle, &frame_hidden);
-            super::account::spawn_login(&textures, p, &ui_theme, &button_bundle, &frame_hidden);
-            super::account::spawn_list(&textures, p, &ui_theme, &button_bundle, &frame_hidden);
-            super::create::spawn(&textures, p, &ui_theme, &button_bundle, &frame_hidden);
-            super::load::spawn(p, &ui_theme, &button_bundle, &frame_hidden, &save_slots);
-            super::settings::spawn(p, &ui_theme, &button_bundle, &frame_hidden);
-            super::credits::spawn(p, &ui_theme, &button_bundle, &frame_hidden);
+            menu::account::spawn_create(&textures, p, &ui_theme, &button_bundle, &frame_hidden);
+            menu::account::spawn_login(&textures, p, &ui_theme, &button_bundle, &frame_hidden);
+            menu::account::spawn_list(&textures, p, &ui_theme, &button_bundle, &frame_hidden);
+            menu::create::spawn(&textures, p, &ui_theme, &button_bundle, &frame_hidden);
+            menu::settings::spawn(p, &ui_theme, &button_bundle, &frame_hidden);
+            menu::credits::spawn(p, &ui_theme, &button_bundle, &frame_hidden);
+
+            // FIXME these are here temporarily
+            chat::spawn(&textures, p, &ui_theme, &button_bundle, &frame_hidden);
+            lobby::spawn(&textures, p, &ui_theme, &button_bundle, &frame_hidden);
         });
 
-    println!("transition `AppState::Menu`");
     state.set(AppState::Menu);
 }

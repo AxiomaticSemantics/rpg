@@ -1,4 +1,4 @@
-use crate::menu::main::MainRoot;
+use crate::ui::menu::main::MainRoot;
 
 use ui_util::style::UiTheme;
 
