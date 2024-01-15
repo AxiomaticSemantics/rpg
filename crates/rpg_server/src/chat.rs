@@ -3,8 +3,6 @@ use rpg_chat::chat::{Channel, ChannelId, MessageId};
 
 use bevy::ecs::system::{Res, ResMut, Resource};
 
-use lightyear::netcode::ClientId;
-
 use std::collections::HashMap;
 
 #[derive(Default, Resource)]

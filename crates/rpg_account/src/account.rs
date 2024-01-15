@@ -6,9 +6,20 @@ use serde_derive::{Deserialize as De, Serialize as Ser};
 pub struct AccountId(pub u64);
 
 #[derive(Default, Debug, Clone, PartialEq, Ser, De)]
+pub struct AdminAccount {
+    pub info: AdminAccountInfo,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Ser, De)]
 pub struct Account {
     pub info: AccountInfo,
     pub characters: Vec<CharacterRecord>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Ser, De)]
+pub struct AdminAccountInfo {
+    pub id: AccountId,
+    pub name: String,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Ser, De)]

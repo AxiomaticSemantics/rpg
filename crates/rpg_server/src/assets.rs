@@ -47,9 +47,7 @@ impl FromWorld for JsonAssets {
 }
 
 #[derive(Resource)]
-pub(crate) struct MetadataResources {
-    pub(crate) rpg: Metadata,
-}
+pub(crate) struct MetadataResources(pub(crate) Metadata);
 
 impl FromWorld for MetadataResources {
     fn from_world(world: &mut World) -> Self {
@@ -67,18 +65,15 @@ impl FromWorld for MetadataResources {
         let passive_tree =
             from_slice(json_sources.get(&json.passive_tree).unwrap().0.as_slice()).unwrap();
 
-        Self {
-            rpg: Metadata {
-                item,
-                unit,
-                skill,
-                level,
-                stat,
-                modifier,
-                passive_tree,
-            },
-            //passive_tree: PassiveTreeMetadata { passive_tree },
-        }
+        Self(Metadata {
+            item,
+            unit,
+            skill,
+            level,
+            stat,
+            modifier,
+            passive_tree,
+        })
     }
 }
 

@@ -1,13 +1,13 @@
 use crate::assets::MetadataResources;
 
-use super::server::{ClientType, NetworkContext, NetworkParamsRO, NetworkParamsRW};
+use super::server::{ClientType, NetworkParamsRO, NetworkParamsRW};
 
 use bevy::{
     ecs::{
         bundle::Bundle,
         component::Component,
         event::EventReader,
-        system::{Commands, Query, Res, ResMut},
+        system::{Commands, Query, Res},
     },
     log::info,
     prelude::{Deref, DerefMut},
@@ -17,7 +17,7 @@ use lightyear::prelude::server::*;
 use lightyear::prelude::NetworkTarget;
 
 use rpg_account::{
-    account::{Account, AccountInfo},
+    account::{Account, AccountInfo, AdminAccount, AdminAccountInfo},
     character::{Character, CharacterInfo, CharacterRecord},
 };
 use rpg_core::{
@@ -25,7 +25,7 @@ use rpg_core::{
     storage::UnitStorage,
     unit::{HeroInfo, Unit, UnitInfo, UnitKind},
 };
-use rpg_network_protocol::{protocol::*, *};
+use rpg_network_protocol::protocol::*;
 
 use util::fs::{open_read, open_write};
 
@@ -33,15 +33,22 @@ use serde_json;
 
 use std::{env, path::Path};
 
-#[derive(Bundle)]
-pub(crate) struct RpgAccountBundle {
-    pub account: RpgAccount,
-}
+#[derive(Debug, Deref, DerefMut, Component)]
+pub(crate) struct AccountInstance(pub(crate) Account);
 
 #[derive(Debug, Deref, DerefMut, Component)]
-pub(crate) struct RpgAccount(pub(crate) Account);
+pub(crate) struct AdminAccountInstance(pub(crate) AdminAccount);
 
-// FIXME there should be different message types for admin and player variants
+#[derive(Bundle)]
+pub(crate) struct AccountInstanceBundle {
+    pub account: AccountInstance,
+}
+
+#[derive(Bundle)]
+pub(crate) struct AdminAccountInstanceBundle {
+    pub account: AdminAccountInstance,
+}
+
 pub(crate) fn receive_account_create(
     mut commands: Commands,
     mut account_create_reader: EventReader<MessageEvent<CSCreateAccount>>,
@@ -57,7 +64,6 @@ pub(crate) fn receive_account_create(
         // Allow authenticated admins to create accounts
         if client.is_admin() && !client.is_authenticated() {
             panic!("unauthenticated admin: {client:?}");
-            continue;
         }
 
         let file_path = format!(
@@ -87,7 +93,7 @@ pub(crate) fn receive_account_create(
 
             serde_json::to_writer(file, &account).unwrap();
 
-            commands.spawn(RpgAccount(account));
+            commands.spawn(AccountInstance(account));
 
             net_params.state.next_uid.next();
 
@@ -98,10 +104,52 @@ pub(crate) fn receive_account_create(
 
 pub(crate) fn receive_admin_login(
     mut commands: Commands,
-    mut login_reader: EventReader<MessageEvent<CSLoadAccount>>,
+    mut login_reader: EventReader<MessageEvent<CSLoadAdminAccount>>,
     mut net_params: NetworkParamsRW,
 ) {
-    // TODO
+    for event in login_reader.read() {
+        let client_id = event.context();
+        let client = net_params.context.clients.get_mut(client_id).unwrap();
+        if client.is_authenticated_player() {
+            info!("authenticated player attempted to login to account {client:?}");
+            continue;
+        } else if client.is_authenticated_admin() {
+            info!("authenticated admin attempted to login to account {client:?}");
+            continue;
+        }
+
+        let file_path = format!(
+            "{}/server/admin_accounts/{}.json",
+            std::env::var("RPG_SAVE_ROOT").unwrap(),
+            event.message().name
+        );
+        let path = Path::new(file_path.as_str());
+        let file = open_read(path);
+
+        if let Ok(_) = file {
+            info!("admin account already exists");
+        } else {
+            let Ok(file) = open_write(path) else {
+                info!("unable to open admin account file for writing");
+                continue;
+            };
+
+            let account = AdminAccount {
+                info: AdminAccountInfo {
+                    name: event.message().name.clone(),
+                    id: net_params.state.next_account_id,
+                },
+            };
+
+            serde_json::to_writer(file, &account).unwrap();
+
+            commands.spawn(AdminAccountInstance(account));
+
+            net_params.state.next_uid.next();
+
+            info!("writing account file to {file_path}");
+        }
+    }
 }
 
 pub(crate) fn receive_account_login(
@@ -133,8 +181,8 @@ pub(crate) fn receive_account_login(
                 client.account_id = Some(account.info.id);
                 info!("spawning RpgAccount for {client:?}");
 
-                commands.spawn(RpgAccountBundle {
-                    account: RpgAccount(account.clone()),
+                commands.spawn(AccountInstanceBundle {
+                    account: AccountInstance(account.clone()),
                 });
 
                 /*
@@ -164,7 +212,7 @@ pub(crate) fn receive_character_create(
     metadata: Res<MetadataResources>,
     mut character_create_reader: EventReader<MessageEvent<CSCreateCharacter>>,
     mut net_params: NetworkParamsRW,
-    mut account_q: Query<&mut RpgAccount>,
+    mut account_q: Query<&mut AccountInstance>,
 ) {
     for event in character_create_reader.read() {
         let client_id = event.context();
@@ -193,7 +241,7 @@ pub(crate) fn receive_character_create(
                     )
                     .unwrap();
             } else {
-                let unit_info = UnitInfo::Hero(HeroInfo::new(&metadata.rpg, create_msg.game_mode));
+                let unit_info = UnitInfo::Hero(HeroInfo::new(&metadata.0, create_msg.game_mode));
                 let mut unit = Unit::new(
                     net_params.state.next_uid.get(),
                     create_msg.class,
@@ -202,9 +250,9 @@ pub(crate) fn receive_character_create(
                     1,
                     create_msg.name.clone(),
                     None,
-                    &metadata.rpg,
+                    &metadata.0,
                 );
-                unit.add_default_skills(&metadata.rpg);
+                unit.add_default_skills(&metadata.0);
 
                 net_params.state.next_uid.next();
 
