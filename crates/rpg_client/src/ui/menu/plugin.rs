@@ -84,6 +84,7 @@ impl Plugin for MenuPlugin {
                         menu::settings::audio_button,
                     ),
                     menu::credits::cancel_button,
+                    (lobby::leave_button, lobby::update_players_container),
                 )
                     .run_if(in_state(AppState::Menu)),
             )
