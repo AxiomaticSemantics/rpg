@@ -19,6 +19,7 @@ use bevy::{
     ecs::{
         change_detection::DetectChanges,
         component::Component,
+        entity::Entity,
         query::{Changed, With},
         system::{Commands, ParamSet, Query, Res, ResMut, Resource},
     },
@@ -34,18 +35,18 @@ use bevy::{
 };
 
 #[derive(Component)]
-pub struct LobbyRoot;
+pub(crate) struct LobbyRoot;
 
 #[derive(Component)]
-pub struct PlayersContainer;
+pub(crate) struct PlayersContainer;
 
 #[derive(Component)]
-pub struct GameCreateButton;
+pub(crate) struct GameCreateButton;
 
 #[derive(Component)]
-pub struct LeaveButton;
+pub(crate) struct LeaveButton;
 
-pub fn spawn(
+pub(crate) fn spawn(
     textures: &TextureAssets,
     builder: &mut ChildBuilder,
     ui_theme: &UiTheme,
@@ -189,6 +190,14 @@ pub fn spawn(
                 ..default()
             })
             .with_children(|p| {
+                p.spawn((button.clone(), GameCreateButton))
+                    .with_children(|p| {
+                        p.spawn(TextBundle::from_section(
+                            "Create Game",
+                            ui_theme.text_style_regular.clone(),
+                        ));
+                    });
+
                 p.spawn((button.clone(), LeaveButton)).with_children(|p| {
                     p.spawn(TextBundle::from_section(
                         "Leave Lobby",
@@ -199,7 +208,8 @@ pub fn spawn(
         });
 }
 
-pub fn leave_button(
+pub(crate) fn leave_button(
+    mut net_client: ResMut<Client>,
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<LeaveButton>)>,
     mut menu_set: ParamSet<(
         Query<&mut Style, With<AccountListRoot>>,
@@ -208,15 +218,17 @@ pub fn leave_button(
 ) {
     let interaction = interaction_q.get_single();
     if let Ok(Interaction::Pressed) = interaction {
+        net_client.send_message::<Channel1, _>(CSLobbyLeave);
         menu_set.p0().single_mut().display = Display::Flex;
         menu_set.p1().single_mut().display = Display::None;
     }
 }
 
-fn update_players_container(
+pub(crate) fn update_players_container(
     mut commands: Commands,
+    ui_theme: Res<UiTheme>,
     mut lobby: ResMut<Lobby>,
-    players_container_q: Query<Option<&Children>, With<PlayersContainer>>,
+    players_container_q: Query<(Entity, Option<&Children>), With<PlayersContainer>>,
 ) {
     if !lobby.is_changed() {
         return;
@@ -224,17 +236,33 @@ fn update_players_container(
 
     info!("lobby changed, updating players container");
 
-    let children = players_container_q.get_single();
+    let (entity, children) = players_container_q.single();
 
-    if let Ok(Some(children)) = children {
+    // TODO optimize thi on a rainy day
+    // clear all children in the containers hierarchy
+    if let Some(children) = children {
         for child in children.iter() {
             commands.entity(*child).despawn_recursive();
         }
     }
 
-    /*
-    for account in lobby.accounts {
-       commands.spawn();
+    // rebuild a new node hierarchy
+    if let Some(lobby) = &lobby.0 {
+        for account in lobby.accounts.iter() {
+            let child = commands
+                .spawn(NodeBundle {
+                    style: ui_theme.col_style.clone(),
+                    ..default()
+                })
+                .with_children(|p| {
+                    p.spawn(TextBundle::from_section(
+                        format!("{}", account.0),
+                        ui_theme.text_style_regular.clone(),
+                    ));
+                })
+                .id();
+
+            commands.entity(entity).push_children(&[child]);
+        }
     }
-    */
 }
