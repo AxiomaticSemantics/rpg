@@ -15,6 +15,7 @@ use bevy::{
         mouse::{MouseMotion, MouseScrollUnit, MouseWheel},
         ButtonInput,
     },
+    log::{debug, info},
     math::{Rect, Vec2, Vec3, Vec3Swizzles},
     render::color::Color,
     text::{Text, TextStyle},
@@ -241,28 +242,21 @@ pub fn setup_focus(mut commands: Commands) {
 pub fn edit_focus_update(
     ui_theme: Res<UiTheme>,
     mut focused_element: ResMut<FocusedElement>,
-    mut edit_text_q: Query<
-        (Entity, &Interaction, &mut BackgroundColor),
-        (Changed<Interaction>, With<EditText>),
-    >,
+    edit_text_q: Query<(Entity, &Interaction), (Changed<Interaction>, With<EditText>)>,
 ) {
-    for (entity, interaction, mut bg_color) in &mut edit_text_q {
-        match &interaction {
-            Interaction::Pressed => {
-                if let Some(focused) = &mut focused_element.0 {
-                    println!("updating focus");
-                    if *focused != entity {
-                        *focused = entity;
-                    }
-                } else {
-                    println!("set focus");
-                    focused_element.0 = Some(entity);
+    for (entity, interaction) in &edit_text_q {
+        if let Interaction::Pressed = interaction {
+            if let Some(focused) = &mut focused_element.0 {
+                info!("updating focus");
+                if *focused != entity {
+                    *focused = entity;
                 }
-
-                return;
+            } else {
+                info!("set focus");
+                focused_element.0 = Some(entity);
             }
-            Interaction::Hovered => *bg_color = ui_theme.button_theme.hovered_background_color,
-            Interaction::None => *bg_color = ui_theme.button_theme.normal_background_color,
+
+            return;
         }
     }
 }
@@ -424,7 +418,6 @@ pub fn edit_text(
             continue;
         }
 
-        /*println!("cursor: {:?} text len: {len}");*/
         assert!(edit_text.cursor.in_range());
 
         for input in input_chars.read() {
@@ -447,7 +440,7 @@ pub fn edit_text(
                     }
 
                     assert!(edit_text.cursor.in_range());
-                    println!("backspace {}", text.sections[0].value);
+                    debug!("backspace {}", text.sections[0].value);
 
                     (false, '\u{0}')
                 }
@@ -479,13 +472,13 @@ pub fn edit_text(
                         }
                     } else {
                         // FIXME input replacement policy
-                        println!("adding whitespace: `{ch}`");
+                        debug!("adding whitespace: `{ch}`");
 
                         (true, ' ')
                     }
                 }
                 ch if ch.chars().next().unwrap().is_control() => {
-                    println!("rejecting control: `{ch:#?}`");
+                    debug!("rejecting control: `{ch:#?}`");
 
                     (false, ch.chars().next().unwrap())
                 }
