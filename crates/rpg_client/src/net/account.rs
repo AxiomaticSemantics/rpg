@@ -1,5 +1,5 @@
 use crate::ui::menu::account::{
-    self, AccountCharacterSlot, AccountCreateRoot, AccountListRoot, AccountLoginRoot,
+    self, AccountCharacter, AccountCreateRoot, AccountListRoot, AccountLoginRoot,
 };
 
 use bevy::{
@@ -33,7 +33,7 @@ pub(crate) fn receive_account_create_success(
     mut style_set: ParamSet<(
         Query<&mut Style, With<AccountCreateRoot>>,
         Query<&mut Style, With<AccountListRoot>>,
-        Query<(&mut Text, &mut Style, &AccountCharacterSlot)>,
+        Query<(&mut Text, &mut Style, &AccountCharacter)>,
     )>,
     mut account_events: EventReader<MessageEvent<SCCreateAccountSuccess>>,
     mut account_q: Query<&mut RpgAccount>,
@@ -49,8 +49,8 @@ pub(crate) fn receive_account_create_success(
         account.0.characters = account_msg.0.characters.clone();
 
         for character_record in account_msg.0.characters.iter() {
-            for (mut slot_text, mut slot_style, slot) in &mut style_set.p2() {
-                if slot.0 != character_record.info.slot {
+            for (mut slot_text, mut slot_style, slot_character) in &mut style_set.p2() {
+                if slot_character.slot != character_record.info.slot {
                     continue;
                 }
 
@@ -93,7 +93,7 @@ pub(crate) fn receive_account_login_success(
     mut style_set: ParamSet<(
         Query<&mut Style, With<AccountLoginRoot>>,
         Query<&mut Style, With<AccountListRoot>>,
-        Query<(&mut Text, &mut Style, &AccountCharacterSlot)>,
+        Query<(&mut Text, &mut Style, &AccountCharacter)>,
     )>,
     mut account_events: EventReader<MessageEvent<SCLoginAccountSuccess>>,
     mut account_q: Query<&mut RpgAccount>,
@@ -106,8 +106,8 @@ pub(crate) fn receive_account_login_success(
         let account_msg = event.message();
 
         for character_record in account_msg.0.characters.iter() {
-            for (mut slot_text, mut slot_style, slot) in &mut style_set.p2() {
-                if slot.0 != character_record.info.slot {
+            for (mut slot_text, mut slot_style, slot_character) in &mut style_set.p2() {
+                if slot_character.slot != character_record.info.slot {
                     continue;
                 }
 

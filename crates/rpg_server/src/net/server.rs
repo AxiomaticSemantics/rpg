@@ -71,14 +71,19 @@ impl Plugin for NetworkServerPlugin {
                 Update,
                 (
                     (
-                        account::receive_account_create,
-                        account::receive_account_login,
-                        account::receive_admin_login,
-                        account::receive_character_create,
-                        account::receive_game_create,
-                        lobby::receive_lobby_create,
-                        lobby::receive_lobby_join,
-                        lobby::receive_lobby_leave,
+                        (
+                            account::receive_account_create,
+                            account::receive_account_login,
+                            account::receive_admin_login,
+                            account::receive_character_create,
+                            account::receive_game_create,
+                        ),
+                        (
+                            lobby::receive_lobby_create,
+                            lobby::receive_lobby_join,
+                            lobby::receive_lobby_leave,
+                            lobby::receive_lobby_message,
+                        ),
                     )
                         .run_if(in_state(AppState::Lobby)),
                     (

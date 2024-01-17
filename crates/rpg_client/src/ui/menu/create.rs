@@ -3,7 +3,7 @@ use crate::{
     game::plugin::{GameState, PlayerOptions},
     state::AppState,
     ui::menu::{
-        account::{AccountListRoot, SelectedCharacterSlot},
+        account::{AccountListRoot, SelectedCharacter},
         main::MainRoot,
     },
 };
@@ -160,7 +160,7 @@ pub fn spawn(
                                     Interaction::None,
                                     TextBundle {
                                         text: Text::from_section(
-                                            " ",
+                                            "",
                                             ui_theme.text_style_regular.clone(),
                                         ),
                                         style: Style {
@@ -267,11 +267,11 @@ pub fn set_game_mode(
 
     if interaction == &Interaction::Pressed {
         if game_mode.0 == HeroGameMode::Normal {
-            println!("setting hardcore mode");
+            info!("setting hardcore mode");
             ui_image.texture = textures.icons["checkmark"].clone_weak();
             game_mode.0 = HeroGameMode::Hardcore;
         } else {
-            println!("setting normal mode");
+            info!("setting normal mode");
             ui_image.texture = textures.icons["transparent"].clone_weak();
             game_mode.0 = HeroGameMode::Normal;
         }
@@ -282,7 +282,7 @@ pub fn create_class(
     mut net_client: ResMut<Client>,
     mut state: ResMut<NextState<AppState>>,
     mut game_state: ResMut<GameState>,
-    selected_character_slot: Res<SelectedCharacterSlot>,
+    selected_character: Res<SelectedCharacter>,
     interaction_q: Query<
         (&Interaction, &CreatePlayerClass),
         (Changed<Interaction>, With<CreatePlayerClass>),
@@ -296,10 +296,11 @@ pub fn create_class(
     }
 
     if let Ok((Interaction::Pressed, create_class)) = interaction_q.get_single() {
-        if selected_character_slot.is_none() {
+        let Some(selected_character) = &selected_character.0 else {
             info!("no slot selected");
             return;
-        }
+        };
+
         let player_name_text = player_name_text_q.single();
         if player_name_text.sections[0].value.is_empty() {
             info!("no player name provided");
@@ -313,17 +314,13 @@ pub fn create_class(
             game_mode: game_mode.0,
         });
 
-        //menu_root_q.single_mut().display = Display::None;
-
         let create_msg = CSCreateCharacter {
             name: player_name_text.sections[0].value.clone(),
             class: create_class.0,
             game_mode: game_mode.0,
-            slot: selected_character_slot.0.unwrap(),
+            slot: selected_character.slot,
         };
 
         net_client.send_message::<Channel1, _>(create_msg).unwrap();
-
-        //state.set(AppState::GameSpawn);
     }
 }

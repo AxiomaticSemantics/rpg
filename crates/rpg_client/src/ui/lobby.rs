@@ -2,7 +2,7 @@ use crate::{
     assets::TextureAssets,
     net::lobby::Lobby,
     ui::menu::{
-        account::{AccountListRoot, SelectedCharacterSlot},
+        account::{AccountListRoot, SelectedCharacter},
         main::MainRoot,
     },
 };
@@ -26,6 +26,7 @@ use bevy::{
     hierarchy::{BuildChildren, ChildBuilder, Children, DespawnRecursiveExt},
     log::info,
     prelude::{Deref, DerefMut},
+    render::color::Color,
     text::Text,
     ui::{
         node_bundles::{ButtonBundle, ImageBundle, NodeBundle, TextBundle},
@@ -39,6 +40,12 @@ pub(crate) struct LobbyRoot;
 
 #[derive(Component)]
 pub(crate) struct PlayersContainer;
+
+#[derive(Component)]
+pub(crate) struct LobbyMessageText;
+
+#[derive(Component)]
+pub(crate) struct LobbyMessageButton;
 
 #[derive(Component)]
 pub(crate) struct GameCreateButton;
@@ -114,71 +121,108 @@ pub(crate) fn spawn(
                                     ..default()
                                 },
                             ));
-                            /*
-                            .with_children(|p| {
-                                p.spawn((TextBundle {
-                                    text: Text::from_section(
-                                        "player info",
-                                        ui_theme.text_style_regular.clone(),
-                                    ),
-                                    style: Style {
-                                        height: Val::Px(ui_theme.font_size_regular + 12.),
-                                        width: Val::Px(128.0),
-                                        ..default()
-                                    },
-                                    focus_policy: FocusPolicy::Pass,
-                                    ..default()
-                                },));
-                            });*/
+                        });
+
+                        p.spawn(TextBundle {
+                            text: Text::from_section("Chat", ui_theme.text_style_regular.clone()),
+                            ..default()
                         });
 
                         p.spawn(NodeBundle {
-                            style: ui_theme.frame_row_style.clone(),
+                            style: ui_theme.frame_col_style.clone(),
+                            border_color: ui_theme.border_color,
+                            background_color: ui_theme.background_color,
                             ..default()
                         })
                         .with_children(|p| {
-                            p.spawn(TextBundle {
-                                text: Text::from_section(
-                                    "Send Message:",
-                                    ui_theme.text_style_regular.clone(),
-                                ),
-                                ..default()
-                            });
+                            let mut chat_style = ui_theme.frame_row_style.clone();
+                            chat_style.width = Val::Px(400.);
+                            chat_style.height = Val::Px(28.);
 
-                            let mut button_style = Style {
-                                align_items: AlignItems::Center,
-                                justify_content: JustifyContent::Center,
-                                min_width: Val::Px(28.),
-                                min_height: Val::Px(28.),
-                                max_width: Val::Px(28.),
-                                max_height: Val::Px(28.),
-                                padding: UiRect::all(ui_theme.padding),
-                                border: UiRect::all(ui_theme.border),
-                                ..default()
-                            };
+                            for i in 0..10 {
+                                p.spawn(NodeBundle {
+                                    style: chat_style.clone(),
+                                    background_color: Color::rgb(0.2, 0.2, 0.2).into(),
+                                    ..default()
+                                })
+                                .with_children(|p| {
+                                    p.spawn(TextBundle::from_section(
+                                        "",
+                                        ui_theme.text_style_regular.clone(),
+                                    ));
+                                });
+                            }
 
                             p.spawn(NodeBundle {
-                                style: button_style.clone(),
-                                background_color: ui_theme.button_theme.normal_background_color,
-                                border_color: ui_theme.border_color,
+                                style: ui_theme.frame_row_style.clone(),
                                 ..default()
                             })
                             .with_children(|p| {
-                                p.spawn((
-                                    Interaction::None,
-                                    ImageBundle {
-                                        image: UiImage {
-                                            texture: textures.icons["checkmark"].clone_weak(),
+                                p.spawn(TextBundle {
+                                    text: Text::from_section(
+                                        "Message",
+                                        ui_theme.text_style_regular.clone(),
+                                    ),
+                                    ..default()
+                                });
+
+                                p.spawn(NodeBundle {
+                                    style: chat_style.clone(),
+                                    background_color: Color::rgb(0.2, 0.2, 0.2).into(),
+                                    ..default()
+                                })
+                                .with_children(|p| {
+                                    p.spawn((
+                                        LobbyMessageText,
+                                        Interaction::None,
+                                        EditText::default(),
+                                        TextBundle {
+                                            text: Text::from_section(
+                                                "",
+                                                ui_theme.text_style_regular.clone(),
+                                            ),
+                                            style: chat_style.clone(),
                                             ..default()
                                         },
-                                        style: Style {
-                                            max_width: Val::Px(24.),
-                                            min_height: Val::Px(24.),
+                                    ));
+                                });
+
+                                let mut button_style = Style {
+                                    align_items: AlignItems::Center,
+                                    justify_content: JustifyContent::Center,
+                                    min_width: Val::Px(28.),
+                                    min_height: Val::Px(28.),
+                                    max_width: Val::Px(28.),
+                                    max_height: Val::Px(28.),
+                                    padding: UiRect::all(ui_theme.padding),
+                                    border: UiRect::all(ui_theme.border),
+                                    ..default()
+                                };
+
+                                p.spawn(NodeBundle {
+                                    style: button_style.clone(),
+                                    background_color: ui_theme.button_theme.normal_background_color,
+                                    border_color: ui_theme.border_color,
+                                    ..default()
+                                })
+                                .with_children(|p| {
+                                    p.spawn((
+                                        Interaction::None,
+                                        LobbyMessageButton,
+                                        ImageBundle {
+                                            image: UiImage {
+                                                texture: textures.icons["checkmark"].clone_weak(),
+                                                ..default()
+                                            },
+                                            style: Style {
+                                                max_width: Val::Px(24.),
+                                                min_height: Val::Px(24.),
+                                                ..default()
+                                            },
                                             ..default()
                                         },
-                                        ..default()
-                                    },
-                                ));
+                                    ));
+                                });
                             });
                         });
                     });
@@ -208,15 +252,65 @@ pub(crate) fn spawn(
         });
 }
 
+pub(crate) fn lobby_message_button(
+    lobby: Res<Lobby>,
+    mut net_client: ResMut<Client>,
+    button_q: Query<&Interaction, (Changed<Interaction>, With<LobbyMessageButton>)>,
+    text_q: Query<&Text, With<LobbyMessageText>>,
+) {
+    let interaction = button_q.get_single();
+    if let Ok(Interaction::Pressed) = interaction {
+        let Some(lobby) = &lobby.0 else {
+            info!("not in a lobby");
+            return;
+        };
+
+        let text = text_q.single();
+        if text.sections[0].value.is_empty() {
+            info!("no message to send");
+            return;
+        }
+        net_client.send_message::<Channel1, _>(CSLobbyMessage {
+            id: lobby.id,
+            message: text.sections[0].value.clone(),
+        });
+    }
+}
+
+pub(crate) fn game_create_button(
+    selected_character: Res<SelectedCharacter>,
+    lobby: Res<Lobby>,
+    mut net_client: ResMut<Client>,
+    button_q: Query<&Interaction, (Changed<Interaction>, With<GameCreateButton>)>,
+) {
+    let interaction = button_q.get_single();
+    if let Ok(Interaction::Pressed) = interaction {
+        let Some(lobby) = &lobby.0 else {
+            info!("not in a lobby");
+            return;
+        };
+
+        let Some(slot_character) = &selected_character.0 else {
+            info!("no character selected");
+            return;
+        };
+
+        net_client.send_message::<Channel1, _>(CSCreateGame {
+            game_mode: lobby.game_mode,
+            slot: slot_character.slot,
+        });
+    }
+}
+
 pub(crate) fn leave_button(
     mut net_client: ResMut<Client>,
-    interaction_q: Query<&Interaction, (Changed<Interaction>, With<LeaveButton>)>,
+    button_q: Query<&Interaction, (Changed<Interaction>, With<LeaveButton>)>,
     mut menu_set: ParamSet<(
         Query<&mut Style, With<AccountListRoot>>,
         Query<&mut Style, With<LobbyRoot>>,
     )>,
 ) {
-    let interaction = interaction_q.get_single();
+    let interaction = button_q.get_single();
     if let Ok(Interaction::Pressed) = interaction {
         net_client.send_message::<Channel1, _>(CSLobbyLeave);
         menu_set.p0().single_mut().display = Display::Flex;

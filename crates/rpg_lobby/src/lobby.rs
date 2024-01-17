@@ -1,4 +1,5 @@
 use rpg_account::account::AccountId;
+use rpg_core::unit::HeroGameMode;
 
 use serde_derive::{Deserialize as De, Serialize as Ser};
 
@@ -9,14 +10,16 @@ pub struct LobbyId(pub u64);
 pub struct Lobby {
     pub id: LobbyId,
     pub name: String,
+    pub game_mode: HeroGameMode,
     pub accounts: Vec<AccountId>,
 }
 
 impl Lobby {
-    pub fn new(id: LobbyId, name: String) -> Self {
+    pub fn new(id: LobbyId, name: String, game_mode: HeroGameMode) -> Self {
         Self {
             id,
             name,
+            game_mode,
             accounts: vec![],
         }
     }
