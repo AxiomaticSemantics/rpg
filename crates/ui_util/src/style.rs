@@ -132,8 +132,8 @@ pub fn insert_theme(mut ui_theme: ResMut<UiTheme>, ui_font: Res<UiFont>) {
         ..default()
     };
 
-    let text_color_dark = Color::rgb(0.25, 0.25, 0.30);
-    let text_color_light = Color::rgb_u8(248, 248, 242);
+    let text_color_dark = Color::rgb(0.85, 0.85, 0.80);
+    let text_color_light = Color::rgb(0.2, 0.2, 0.25);
 
     let font = ui_font.prime.clone_weak();
     let font_size_xtra_large = 32.;
