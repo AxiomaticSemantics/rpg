@@ -1,4 +1,5 @@
 use rpg_account::account::AccountId;
+use rpg_chat::chat::MessageId;
 use rpg_core::unit::HeroGameMode;
 use rpg_lobby::lobby::{Lobby, LobbyId};
 

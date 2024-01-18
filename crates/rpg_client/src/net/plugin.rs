@@ -96,6 +96,7 @@ impl Plugin for NetworkClientPlugin {
                         lobby::receive_join_error,
                         lobby::receive_create_success,
                         lobby::receive_create_error,
+                        lobby::receive_lobby_message,
                     ),
                     (
                         chat::receive_join_success,

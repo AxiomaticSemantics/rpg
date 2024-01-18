@@ -732,7 +732,10 @@ pub fn lobby_create_button(
         style_set.p1().single_mut().display = Display::Flex;
         style_set.p2().single_mut().display = Display::None;
 
-        net_client.send_message::<Channel1, _>(CSLobbyCreate(character_info.game_mode));
+        net_client.send_message::<Channel1, _>(CSLobbyCreate {
+            name: "Test Lobby".into(),
+            game_mode: character_info.game_mode,
+        });
     }
 }
 

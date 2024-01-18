@@ -9,12 +9,12 @@ use serde_derive::{Deserialize, Serialize};
 
 // TODO split these up into multiple protocols once the basic design is settled
 use rpg_account::{
-    account::{Account, AccountInfo},
+    account::{Account, AccountId, AccountInfo},
     character::{CharacterInfo, CharacterRecord, CharacterSlot},
 };
 use rpg_chat::chat::{ChannelId, MessageId};
 use rpg_core::{class::Class, skill::SkillId, unit::HeroGameMode};
-use rpg_lobby::lobby::{Lobby, LobbyId};
+use rpg_lobby::lobby::{Lobby, LobbyId, LobbyMessage};
 use rpg_world::zone::ZoneId;
 
 // Player
@@ -108,7 +108,10 @@ pub struct CSCreateCharacter {
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CSLobbyCreate(pub HeroGameMode);
+pub struct CSLobbyCreate {
+    pub game_mode: HeroGameMode,
+    pub name: String,
+}
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSLobbyJoin(pub LobbyId);
@@ -231,6 +234,9 @@ pub struct SCLobbyLeaveSuccess;
 pub struct SCLobbyLeaveError;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCLobbyMessage(pub LobbyMessage);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCLobbyMessageSuccess;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -319,6 +325,7 @@ pub enum Messages {
     SCLobbyLeaveError(SCLobbyLeaveError),
     SCLobbyMessageSuccess(SCLobbyMessageSuccess),
     SCLobbyMessageError(SCLobbyMessageError),
+    SCLobbyMessage(SCLobbyMessage),
     SCGameCreateSuccess(SCGameCreateSuccess),
     SCGameCreateError(SCGameCreateError),
     SCGameJoinSuccess(SCGameJoinSuccess),

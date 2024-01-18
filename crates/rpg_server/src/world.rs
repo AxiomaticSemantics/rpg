@@ -1,5 +1,3 @@
-use crate::net::server::{ServerMode, ServerState};
-
 use bevy::{
     app::{App, Plugin, Update},
     ecs::{
@@ -49,16 +47,7 @@ impl Plugin for ServerWorldPlugin {
     }
 }
 
-fn spawn_world(
-    mut rpg_world: ResMut<RpgWorld>,
-    server_state: Res<ServerState>,
-    mut load_zone: EventReader<LoadZone>,
-) {
-    if server_state.mode != ServerMode::Game {
-        load_zone.clear();
-        return;
-    }
-
+fn spawn_world(mut rpg_world: ResMut<RpgWorld>, mut load_zone: EventReader<LoadZone>) {
     for load_zone_request in load_zone.read() {
         if rpg_world.zones.contains_key(&load_zone_request.0) {
             // ..

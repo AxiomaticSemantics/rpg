@@ -9,7 +9,7 @@ use crate::{
 
 use ui_util::{
     style::{UiRoot, UiTheme},
-    widgets::EditText,
+    widgets::{EditText, FocusedElement, NewlineBehaviour},
 };
 
 use rpg_chat::chat::ChannelId;
@@ -24,6 +24,7 @@ use bevy::{
         system::{Commands, ParamSet, Query, Res, ResMut, Resource},
     },
     hierarchy::{BuildChildren, ChildBuilder, Children, DespawnRecursiveExt},
+    input::{keyboard::KeyCode, ButtonInput},
     log::info,
     prelude::{Deref, DerefMut},
     render::color::Color,
@@ -43,6 +44,12 @@ pub(crate) struct PlayersContainer;
 
 #[derive(Component)]
 pub(crate) struct LobbyMessageText;
+
+#[derive(Component)]
+pub(crate) struct LobbySendMessageText;
+
+#[derive(Component)]
+pub(crate) struct LobbyMessages;
 
 #[derive(Component)]
 pub(crate) struct LobbyMessageButton;
@@ -122,109 +129,126 @@ pub(crate) fn spawn(
                                 },
                             ));
                         });
+                    });
 
+                    p.spawn(NodeBundle {
+                        style: ui_theme.row_style.clone(),
+                        ..default()
+                    })
+                    .with_children(|p| {
                         p.spawn(TextBundle {
                             text: Text::from_section("Chat", ui_theme.text_style_regular.clone()),
                             ..default()
                         });
 
-                        p.spawn(NodeBundle {
+                        p.spawn((NodeBundle {
                             style: ui_theme.frame_col_style.clone(),
                             border_color: ui_theme.border_color,
                             background_color: ui_theme.background_color,
                             ..default()
-                        })
-                        .with_children(|p| {
-                            let mut chat_style = ui_theme.frame_row_style.clone();
-                            chat_style.width = Val::Px(400.);
-                            chat_style.height = Val::Px(28.);
-
-                            for i in 0..10 {
-                                p.spawn(NodeBundle {
-                                    style: chat_style.clone(),
-                                    background_color: Color::rgb(0.2, 0.2, 0.2).into(),
-                                    ..default()
-                                })
-                                .with_children(|p| {
-                                    p.spawn(TextBundle::from_section(
-                                        "",
-                                        ui_theme.text_style_regular.clone(),
-                                    ));
-                                });
-                            }
-
-                            p.spawn(NodeBundle {
-                                style: ui_theme.frame_row_style.clone(),
-                                ..default()
-                            })
+                        },))
                             .with_children(|p| {
-                                p.spawn(TextBundle {
-                                    text: Text::from_section(
-                                        "Message",
-                                        ui_theme.text_style_regular.clone(),
-                                    ),
-                                    ..default()
-                                });
+                                let mut chat_style = ui_theme.frame_col_style.clone();
+                                chat_style.width = Val::Px(400.);
+                                chat_style.height = Val::Px(24.);
 
-                                p.spawn(NodeBundle {
-                                    style: chat_style.clone(),
-                                    background_color: Color::rgb(0.2, 0.2, 0.2).into(),
-                                    ..default()
-                                })
+                                // Chat History
+                                p.spawn((
+                                    LobbyMessages,
+                                    NodeBundle {
+                                        style: ui_theme.frame_col_style.clone(),
+                                        background_color: Color::rgb(0.1, 0.1, 0.1).into(),
+                                        ..default()
+                                    },
+                                ))
                                 .with_children(|p| {
-                                    p.spawn((
-                                        LobbyMessageText,
-                                        Interaction::None,
-                                        EditText::default(),
-                                        TextBundle {
-                                            text: Text::from_section(
+                                    for i in 0..10 {
+                                        p.spawn((
+                                            LobbyMessageText,
+                                            TextBundle::from_section(
                                                 "",
                                                 ui_theme.text_style_regular.clone(),
-                                            ),
-                                            style: chat_style.clone(),
-                                            ..default()
-                                        },
-                                    ));
+                                            )
+                                            .with_style(chat_style.clone()),
+                                        ));
+                                    }
                                 });
 
-                                let mut button_style = Style {
-                                    align_items: AlignItems::Center,
-                                    justify_content: JustifyContent::Center,
-                                    min_width: Val::Px(28.),
-                                    min_height: Val::Px(28.),
-                                    max_width: Val::Px(28.),
-                                    max_height: Val::Px(28.),
-                                    padding: UiRect::all(ui_theme.padding),
-                                    border: UiRect::all(ui_theme.border),
-                                    ..default()
-                                };
-
                                 p.spawn(NodeBundle {
-                                    style: button_style.clone(),
-                                    background_color: ui_theme.button_theme.normal_background_color,
-                                    border_color: ui_theme.border_color,
+                                    style: ui_theme.frame_row_style.clone(),
                                     ..default()
                                 })
                                 .with_children(|p| {
-                                    p.spawn((
-                                        Interaction::None,
-                                        LobbyMessageButton,
-                                        ImageBundle {
-                                            image: UiImage {
-                                                texture: textures.icons["checkmark"].clone_weak(),
+                                    p.spawn(TextBundle {
+                                        text: Text::from_section(
+                                            "Message",
+                                            ui_theme.text_style_regular.clone(),
+                                        ),
+                                        ..default()
+                                    });
+
+                                    p.spawn(NodeBundle {
+                                        style: chat_style.clone(),
+                                        background_color: Color::rgb(0.2, 0.2, 0.2).into(),
+                                        ..default()
+                                    })
+                                    .with_children(|p| {
+                                        p.spawn((
+                                            LobbySendMessageText,
+                                            Interaction::None,
+                                            EditText::new(NewlineBehaviour::Consume),
+                                            TextBundle {
+                                                text: Text::from_section(
+                                                    "",
+                                                    ui_theme.text_style_regular.clone(),
+                                                ),
+                                                style: chat_style.clone(),
                                                 ..default()
                                             },
-                                            style: Style {
-                                                max_width: Val::Px(24.),
-                                                min_height: Val::Px(24.),
+                                        ));
+                                    });
+
+                                    let mut button_style = Style {
+                                        align_items: AlignItems::Center,
+                                        justify_content: JustifyContent::Center,
+                                        min_width: Val::Px(28.),
+                                        min_height: Val::Px(28.),
+                                        max_width: Val::Px(28.),
+                                        max_height: Val::Px(28.),
+                                        padding: UiRect::all(ui_theme.padding),
+                                        border: UiRect::all(ui_theme.border),
+                                        ..default()
+                                    };
+
+                                    p.spawn(NodeBundle {
+                                        style: button_style.clone(),
+                                        background_color: ui_theme
+                                            .button_theme
+                                            .normal_background_color,
+                                        border_color: ui_theme.border_color,
+                                        ..default()
+                                    })
+                                    .with_children(|p| {
+                                        p.spawn((
+                                            Interaction::None,
+                                            LobbyMessageButton,
+                                            ImageBundle {
+                                                image: UiImage {
+                                                    texture: textures.icons["checkmark"]
+                                                        .clone_weak(),
+                                                    ..default()
+                                                },
+                                                style: Style {
+                                                    max_width: Val::Px(24.),
+                                                    min_height: Val::Px(24.),
+                                                    ..default()
+                                                },
                                                 ..default()
                                             },
-                                            ..default()
-                                        },
-                                    ));
+                                        ));
+                                    });
                                 });
                             });
-                        });
                     });
                 });
             });
@@ -252,11 +276,13 @@ pub(crate) fn spawn(
         });
 }
 
-pub(crate) fn lobby_message_button(
+pub(crate) fn lobby_send_message(
     lobby: Res<Lobby>,
+    focused: Res<FocusedElement>,
+    key_input: Res<ButtonInput<KeyCode>>,
     mut net_client: ResMut<Client>,
     button_q: Query<&Interaction, (Changed<Interaction>, With<LobbyMessageButton>)>,
-    text_q: Query<&Text, With<LobbyMessageText>>,
+    mut text_q: Query<(Entity, &mut Text), With<LobbySendMessageText>>,
 ) {
     let interaction = button_q.get_single();
     if let Ok(Interaction::Pressed) = interaction {
@@ -265,7 +291,7 @@ pub(crate) fn lobby_message_button(
             return;
         };
 
-        let text = text_q.single();
+        let (_, mut text) = text_q.single_mut();
         if text.sections[0].value.is_empty() {
             info!("no message to send");
             return;
@@ -274,6 +300,33 @@ pub(crate) fn lobby_message_button(
             id: lobby.id,
             message: text.sections[0].value.clone(),
         });
+
+        text.sections[0].value.clear();
+    } else if key_input.just_pressed(KeyCode::Enter) {
+        let Some(lobby) = &lobby.0 else {
+            info!("not in a lobby");
+            return;
+        };
+
+        let Some(focused) = focused.0 else {
+            return;
+        };
+
+        let (entity, mut text) = text_q.single_mut();
+        if focused != entity {
+            return;
+        }
+
+        if text.sections[0].value.is_empty() {
+            info!("no message to send");
+            return;
+        }
+        net_client.send_message::<Channel1, _>(CSLobbyMessage {
+            id: lobby.id,
+            message: text.sections[0].value.clone(),
+        });
+
+        text.sections[0].value.clear();
     }
 }
 
@@ -315,6 +368,41 @@ pub(crate) fn leave_button(
         net_client.send_message::<Channel1, _>(CSLobbyLeave);
         menu_set.p0().single_mut().display = Display::Flex;
         menu_set.p1().single_mut().display = Display::None;
+    }
+}
+
+pub(crate) fn update_lobby_messages(
+    mut lobby: ResMut<Lobby>,
+    lobby_messages_q: Query<(Entity, &Children), With<LobbyMessages>>,
+    mut message_item_q: Query<&mut Text, With<LobbyMessageText>>,
+) {
+    if !lobby.is_changed() {
+        return;
+    }
+
+    let Some(lobby) = &mut lobby.0 else {
+        info!("lobby is not populated");
+        return;
+    };
+
+    let len = lobby.messages.len();
+    info!("updating lobby messages {}", len);
+
+    let mut count = len.saturating_sub(10);
+    let (entity, children) = lobby_messages_q.single();
+
+    for child in children.iter() {
+        let mut message_text = &mut message_item_q.get_mut(*child).unwrap();
+        let Some(msg) = lobby.messages.get(count) else {
+            continue;
+        };
+
+        let message = format!("{}: {}", msg.sender, msg.message);
+        if message_text.sections[0].value != message {
+            message_text.sections[0].value = message;
+        }
+
+        count += 1;
     }
 }
 

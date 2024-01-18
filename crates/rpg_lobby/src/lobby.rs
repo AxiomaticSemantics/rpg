@@ -1,4 +1,5 @@
 use rpg_account::account::AccountId;
+use rpg_chat::chat::MessageId;
 use rpg_core::unit::HeroGameMode;
 
 use serde_derive::{Deserialize as De, Serialize as Ser};
@@ -6,12 +7,21 @@ use serde_derive::{Deserialize as De, Serialize as Ser};
 #[derive(Ser, De, Debug, Default, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct LobbyId(pub u64);
 
-#[derive(Ser, De, Debug, Default, Clone, PartialEq)]
+#[derive(Ser, De, Debug, Clone, PartialEq)]
+pub struct LobbyMessage {
+    pub id: MessageId,
+    pub sender_id: AccountId,
+    pub sender: String,
+    pub message: String,
+}
+
+#[derive(Ser, De, Debug, Clone, PartialEq)]
 pub struct Lobby {
     pub id: LobbyId,
     pub name: String,
     pub game_mode: HeroGameMode,
     pub accounts: Vec<AccountId>,
+    pub messages: Vec<LobbyMessage>,
 }
 
 impl Lobby {
@@ -21,6 +31,7 @@ impl Lobby {
             name,
             game_mode,
             accounts: vec![],
+            messages: vec![],
         }
     }
 

@@ -1,4 +1,4 @@
-use crate::assets::MetadataResources;
+use crate::{assets::MetadataResources, server_state::ServerMetadataResource};
 
 use super::server::{ClientType, NetworkParamsRO, NetworkParamsRW};
 
@@ -7,7 +7,7 @@ use bevy::{
         bundle::Bundle,
         component::Component,
         event::EventReader,
-        system::{Commands, Query, Res},
+        system::{Commands, Query, Res, ResMut},
     },
     log::info,
     prelude::{Deref, DerefMut},
@@ -51,11 +51,12 @@ pub(crate) struct AdminAccountInstanceBundle {
 
 pub(crate) fn receive_account_create(
     mut commands: Commands,
+    mut server_metadata: ResMut<ServerMetadataResource>,
     mut account_create_reader: EventReader<MessageEvent<CSCreateAccount>>,
     mut net_params: NetworkParamsRW,
 ) {
     for event in account_create_reader.read() {
-        let client = net_params.context.clients.get(event.context()).unwrap();
+        let client = net_params.context.clients.get_mut(event.context()).unwrap();
         if client.is_authenticated_player() {
             info!("already authenticated client attempted to create account {client:?}");
             continue;
@@ -66,18 +67,30 @@ pub(crate) fn receive_account_create(
             panic!("unauthenticated admin: {client:?}");
         }
 
-        let file_path = format!(
+        let account_file_path = format!(
             "{}/server/accounts/{}.json",
             std::env::var("RPG_SAVE_ROOT").unwrap(),
             event.message().name
         );
-        let path = Path::new(file_path.as_str());
-        let file = open_read(path);
+        let account_path = Path::new(account_file_path.as_str());
+        let account_file = open_read(account_path);
 
-        if let Ok(_) = file {
+        let meta_file_path = format!(
+            "{}/server/meta.json",
+            std::env::var("RPG_SAVE_ROOT").unwrap(),
+        );
+        let meta_path = Path::new(meta_file_path.as_str());
+        let meta_file = open_write(meta_path);
+
+        let Ok(meta_file) = meta_file else {
+            info!("cannot open {meta_file_path} for writing");
+            return;
+        };
+
+        if let Ok(_) = account_file {
             info!("account already exists");
         } else {
-            let Ok(file) = open_write(path) else {
+            let Ok(account_file) = open_write(account_path) else {
                 info!("unable to open account file for writing");
                 continue;
             };
@@ -86,24 +99,26 @@ pub(crate) fn receive_account_create(
                 info: AccountInfo {
                     character_slots: 12,
                     name: event.message().name.clone(),
-                    id: net_params.state.next_account_id,
+                    id: server_metadata.0.next_account_id,
                 },
                 characters: vec![],
             };
 
-            serde_json::to_writer(file, &account).unwrap();
+            serde_json::to_writer(account_file, &account).unwrap();
+            serde_json::to_writer(meta_file, &server_metadata.0).unwrap();
 
-            commands.spawn(AccountInstance(account));
+            let account_entity = commands.spawn(AccountInstance(account)).id();
+            client.entity = account_entity;
+            server_metadata.0.next_account_id.0 += 1;
 
-            net_params.state.next_uid.next();
-
-            info!("writing account file to {file_path}");
+            info!("writing account file to {account_file_path}");
         }
     }
 }
 
 pub(crate) fn receive_admin_login(
     mut commands: Commands,
+    mut server_metadata: ResMut<ServerMetadataResource>,
     mut login_reader: EventReader<MessageEvent<CSLoadAdminAccount>>,
     mut net_params: NetworkParamsRW,
 ) {
@@ -137,7 +152,7 @@ pub(crate) fn receive_admin_login(
             let account = AdminAccount {
                 info: AdminAccountInfo {
                     name: event.message().name.clone(),
-                    id: net_params.state.next_account_id,
+                    id: server_metadata.0.next_account_id,
                 },
             };
 
@@ -145,7 +160,7 @@ pub(crate) fn receive_admin_login(
 
             commands.spawn(AdminAccountInstance(account));
 
-            net_params.state.next_uid.next();
+            server_metadata.0.next_account_id.0 += 1;
 
             info!("writing account file to {file_path}");
         }
@@ -179,22 +194,16 @@ pub(crate) fn receive_account_login(
                 // FIXME assign a client id and send it to the client
                 client.client_type = ClientType::Player;
                 client.account_id = Some(account.info.id);
-                info!("spawning RpgAccount for {client:?}");
+                info!("spawning Account for {client:?}");
 
-                commands.spawn(AccountInstanceBundle {
-                    account: AccountInstance(account.clone()),
-                });
-
-                /*
-                client.entity = commands
-                    .spawn((
-                        protocol::NetworkPlayerBundle::new(*client_id, Vec3::ZERO, Vec3::ZERO),
-                        TransformBundle::from_transform(
-                            Transform::from_translation(Vec3::ZERO).looking_to(Vec3::NEG_Z, Vec3::Y),
-                        ),
-                    ))
+                let account_entity = commands
+                    .spawn(AccountInstanceBundle {
+                        account: AccountInstance(account.clone()),
+                    })
                     .id();
-                        */
+
+                client.entity = account_entity;
+
                 net_params.server.send_message_to_target::<Channel1, _>(
                     SCLoginAccountSuccess(account.clone()),
                     NetworkTarget::Only(vec![*client_id]),
@@ -210,6 +219,7 @@ pub(crate) fn receive_account_login(
 
 pub(crate) fn receive_character_create(
     metadata: Res<MetadataResources>,
+    mut server_metadata: ResMut<ServerMetadataResource>,
     mut character_create_reader: EventReader<MessageEvent<CSCreateCharacter>>,
     mut net_params: NetworkParamsRW,
     mut account_q: Query<&mut AccountInstance>,
@@ -243,7 +253,7 @@ pub(crate) fn receive_character_create(
             } else {
                 let unit_info = UnitInfo::Hero(HeroInfo::new(&metadata.0, create_msg.game_mode));
                 let mut unit = Unit::new(
-                    net_params.state.next_uid.get(),
+                    server_metadata.0.next_uid.get(),
                     create_msg.class,
                     UnitKind::Hero,
                     unit_info,
@@ -254,7 +264,7 @@ pub(crate) fn receive_character_create(
                 );
                 unit.add_default_skills(&metadata.0);
 
-                net_params.state.next_uid.next();
+                server_metadata.0.next_uid.next();
 
                 let character_info = CharacterInfo {
                     name: create_msg.name.clone(),
@@ -271,8 +281,6 @@ pub(crate) fn receive_character_create(
                         storage: UnitStorage::default(),
                     },
                 };
-
-                net_params.state.next_uid.next();
 
                 net_params
                     .server

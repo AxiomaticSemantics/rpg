@@ -79,8 +79,9 @@ impl Plugin for MenuPlugin {
                     menu::credits::cancel_button,
                     (
                         lobby::game_create_button,
-                        lobby::lobby_message_button,
+                        lobby::lobby_send_message,
                         lobby::leave_button,
+                        lobby::update_lobby_messages,
                         lobby::update_players_container,
                     ),
                 )

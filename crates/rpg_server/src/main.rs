@@ -3,8 +3,10 @@
 //! - `cargo run -- --port 42069`
 
 mod assets;
-mod net;
+mod server_state;
 mod state;
+
+mod net;
 
 mod chat;
 mod lobby;
@@ -16,6 +18,7 @@ use crate::{
     chat::ChatManager,
     lobby::LobbyManager,
     net::server::NetworkServerPlugin,
+    server_state::ServerMetadataResource,
     state::AppState,
     world::ServerWorldPlugin,
 };
@@ -60,6 +63,7 @@ fn main() {
         .add_plugins(AssetPlugin::default())
         .add_plugins(UtilityPlugin)
         .init_resource::<JsonAssets>()
+        .init_resource::<ServerMetadataResource>()
         .init_resource::<ChatManager>()
         .init_resource::<LobbyManager>()
         .add_systems(Startup, chat::setup)
