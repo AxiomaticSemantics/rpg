@@ -8,7 +8,9 @@ use bevy::{
 };
 
 use rpg_account::account::AccountId;
-use rpg_lobby::lobby::LobbyId;
+use rpg_chat::chat::MessageId;
+use rpg_core::unit::HeroGameMode;
+use rpg_lobby::lobby::{LobbyId, LobbyMessage};
 use rpg_network_protocol::protocol::*;
 
 use lightyear::client::events::MessageEvent;
@@ -16,7 +18,9 @@ use lightyear::client::events::MessageEvent;
 pub(crate) struct LobbyInfo {
     pub(crate) id: LobbyId,
     pub(crate) name: String,
+    pub(crate) game_mode: HeroGameMode,
     pub(crate) accounts: Vec<AccountId>,
+    pub(crate) messages: Vec<LobbyMessage>,
 }
 
 #[derive(Default, Resource)]
@@ -39,7 +43,9 @@ pub(crate) fn receive_join_success(
         lobby.0 = Some(LobbyInfo {
             id: join_msg.0.id,
             name: join_msg.0.name.clone(),
+            game_mode: join_msg.0.game_mode,
             accounts: join_msg.0.accounts.clone(),
+            messages: join_msg.0.messages.clone(),
         });
 
         join_events.clear();
@@ -72,7 +78,9 @@ pub(crate) fn receive_create_success(
         lobby.0 = Some(LobbyInfo {
             id: create_msg.0.id,
             name: create_msg.0.name.clone(),
+            game_mode: create_msg.0.game_mode,
             accounts: create_msg.0.accounts.clone(),
+            messages: vec![],
         });
 
         create_events.clear();
@@ -107,5 +115,29 @@ pub(crate) fn receive_leave_error(
 ) {
     for event in leave_events.read() {
         info!("lobby leave");
+    }
+}
+
+pub(crate) fn receive_lobby_message(
+    mut lobby: ResMut<Lobby>,
+    mut message_events: EventReader<MessageEvent<SCLobbyMessage>>,
+) {
+    for event in message_events.read() {
+        let lobby_message = event.message();
+
+        let Some(lobby) = &mut lobby.0 else {
+            info!("received lobby message while not in a lobby");
+            message_events.clear();
+            return;
+        };
+
+        info!("lobby message: {lobby_message:?}");
+
+        lobby.messages.push(LobbyMessage {
+            id: lobby_message.0.id,
+            message: lobby_message.0.message.clone(),
+            sender_id: lobby_message.0.sender_id,
+            sender: lobby_message.0.sender.clone(),
+        });
     }
 }

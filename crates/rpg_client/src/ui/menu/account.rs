@@ -16,7 +16,7 @@ use ui_util::{
 
 use rpg_account::{
     account::{Account, AccountInfo},
-    character::CharacterSlot,
+    character::{CharacterInfo, CharacterSlot},
 };
 use rpg_core::{class::Class, uid::Uid, unit::HeroGameMode};
 use rpg_network_protocol::protocol::*;
@@ -98,11 +98,14 @@ pub struct ListContainer;
 #[derive(Component)]
 pub struct LobbyCreateButton;
 
-#[derive(Resource, Default, Deref, DerefMut)]
-pub struct SelectedCharacterSlot(pub Option<CharacterSlot>);
+#[derive(Debug, Component, Clone)]
+pub struct AccountCharacter {
+    pub slot: CharacterSlot,
+    pub info: Option<CharacterInfo>,
+}
 
-#[derive(Debug, Component, Clone, Deref, DerefMut)]
-pub struct AccountCharacterSlot(pub CharacterSlot);
+#[derive(Resource, Default, Deref, DerefMut)]
+pub struct SelectedCharacter(pub Option<AccountCharacter>);
 
 pub fn spawn_create(
     textures: &TextureAssets,
@@ -546,7 +549,10 @@ pub fn spawn_list(
 
                                     p.spawn(col_bundle.clone()).with_children(|p| {
                                         p.spawn((
-                                            AccountCharacterSlot(CharacterSlot(slot)),
+                                            AccountCharacter {
+                                                slot: CharacterSlot(slot),
+                                                info: None,
+                                            },
                                             Interaction::None,
                                             TextBundle::from_section(
                                                 "Empty Slot",
@@ -602,7 +608,6 @@ pub fn create_button(
     )>,
 ) {
     for interaction in &interaction_q {
-        //
         if *interaction != Interaction::Pressed {
             continue;
         }
@@ -627,6 +632,7 @@ pub fn create_button(
         }
 
         // TODO some basic validation of input
+        // TODO hash the users password
         let create_msg = CSCreateAccount {
             name,
             email,
@@ -647,7 +653,6 @@ pub fn login_button(
     )>,
 ) {
     for interaction in &interaction_q {
-        //
         if *interaction != Interaction::Pressed {
             continue;
         }
@@ -704,6 +709,7 @@ pub fn cancel_account_list_button(
 }
 
 pub fn lobby_create_button(
+    selected_character: Res<SelectedCharacter>,
     mut net_client: ResMut<Client>,
     mut style_set: ParamSet<(
         Query<(&mut Style, &Interaction), (Changed<Interaction>, With<LobbyCreateButton>)>,
@@ -713,16 +719,29 @@ pub fn lobby_create_button(
 ) {
     let mut interaction = style_set.p0();
     if let Ok((style, Interaction::Pressed)) = interaction.get_single_mut() {
+        let Some(selected_character) = &selected_character.0 else {
+            info!("no character selected");
+            return;
+        };
+
+        let Some(character_info) = &selected_character.info else {
+            info!("no character info");
+            return;
+        };
+
         style_set.p1().single_mut().display = Display::Flex;
         style_set.p2().single_mut().display = Display::None;
 
-        net_client.send_message::<Channel1, _>(CSLobbyCreate);
+        net_client.send_message::<Channel1, _>(CSLobbyCreate {
+            name: "Test Lobby".into(),
+            game_mode: character_info.game_mode,
+        });
     }
 }
 
 pub fn list_create_character_button(
     mut net_client: ResMut<Client>,
-    selected_character_slot: Res<SelectedCharacterSlot>,
+    selected_character: Res<SelectedCharacter>,
     mut style_set: ParamSet<(
         Query<&mut Style, With<CreateRoot>>,
         Query<&mut Style, With<AccountListRoot>>,
@@ -731,10 +750,15 @@ pub fn list_create_character_button(
 ) {
     let mut interaction = style_set.p2();
     if let Ok((style, Interaction::Pressed)) = interaction.get_single_mut() {
-        let Some(selected_character_slot) = selected_character_slot.0 else {
+        let Some(selected_character) = &selected_character.0 else {
             info!("no character slot selected");
             return;
         };
+
+        if selected_character.info.is_some() {
+            info!("selected slot already contains a character");
+            return;
+        }
 
         style_set.p0().single_mut().display = Display::Flex;
         style_set.p1().single_mut().display = Display::None;
@@ -743,7 +767,7 @@ pub fn list_create_character_button(
 
 pub fn list_join_game_button(
     mut net_client: ResMut<Client>,
-    selected_character_slot: Res<SelectedCharacterSlot>,
+    selected_character: Res<SelectedCharacter>,
     mut style_set: ParamSet<(
         Query<&mut Style, With<MainRoot>>,
         Query<&mut Style, With<AccountListRoot>>,
@@ -753,8 +777,8 @@ pub fn list_join_game_button(
 ) {
     let mut interaction = style_set.p2();
     if let Ok((style, Interaction::Pressed)) = interaction.get_single_mut() {
-        let Some(selected_character_slot) = selected_character_slot.0 else {
-            info!("no character slot selected");
+        let Some(selected_character) = &selected_character.0 else {
+            info!("no character selected");
             return;
         };
 
@@ -763,13 +787,13 @@ pub fn list_join_game_button(
             .0
             .characters
             .iter()
-            .find(|c| c.info.slot == selected_character_slot)
+            .find(|c| c.info.slot == selected_character.slot)
             .unwrap();
 
         net_client
             .send_message::<Channel1, _>(CSJoinGame {
                 game_mode: character_record.info.game_mode,
-                slot: selected_character_slot,
+                slot: selected_character.slot,
             })
             .unwrap();
 
@@ -780,7 +804,7 @@ pub fn list_join_game_button(
 
 pub fn list_create_game_button(
     mut net_client: ResMut<Client>,
-    selected_character_slot: Res<SelectedCharacterSlot>,
+    selected_character: Res<SelectedCharacter>,
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<ListCreateGameButton>)>,
     mut menu_set: ParamSet<(
         Query<&mut Style, With<MainRoot>>,
@@ -790,8 +814,8 @@ pub fn list_create_game_button(
 ) {
     let interaction = interaction_q.get_single();
     if let Ok(Interaction::Pressed) = interaction {
-        let Some(selected_character_slot) = selected_character_slot.0 else {
-            info!("no character slot selected");
+        let Some(selected_character) = &selected_character.0 else {
+            info!("no character selected");
             return;
         };
 
@@ -803,14 +827,14 @@ pub fn list_create_game_button(
             .0
             .characters
             .iter()
-            .find(|c| c.info.slot == selected_character_slot)
+            .find(|c| c.info.slot == selected_character.slot)
             .unwrap();
 
         info!("sending create game request");
         net_client
             .send_message::<Channel1, _>(CSCreateGame {
                 game_mode: character.info.game_mode,
-                slot: selected_character_slot,
+                slot: selected_character.slot,
             })
             .unwrap();
     }
@@ -832,20 +856,30 @@ pub fn list_cancel_button(
 
 pub fn list_select_slot(
     ui_theme: Res<UiTheme>,
-    mut selected_character_slot: ResMut<SelectedCharacterSlot>,
+    mut selected_character: ResMut<SelectedCharacter>,
     mut slot_q: Query<(
         &mut Style,
         &mut BackgroundColor,
         Ref<Interaction>,
-        &AccountCharacterSlot,
+        &AccountCharacter,
     )>,
 ) {
-    for (mut style, mut bg_color, interaction, slot) in &mut slot_q {
+    for (mut style, mut bg_color, interaction, slot_character) in &mut slot_q {
         match *interaction {
             Interaction::Pressed => {
-                if interaction.is_changed() && selected_character_slot.0 != Some(slot.0) {
-                    info!("setting selected character slot to {slot:?}");
-                    selected_character_slot.0 = Some(slot.0);
+                if !interaction.is_changed() {
+                    continue;
+                }
+
+                let Some(selected_character) = &mut selected_character.0 else {
+                    selected_character.0 = Some(slot_character.clone());
+                    continue;
+                };
+
+                if selected_character.slot != slot_character.slot {
+                    info!("setting selected character slot to {slot_character:?}");
+                    selected_character.slot = slot_character.slot;
+                    selected_character.info = slot_character.info.clone();
                 }
             }
             Interaction::Hovered => {
@@ -860,9 +894,11 @@ pub fn list_select_slot(
             }
         }
 
-        if selected_character_slot.0 == Some(slot.0) {
-            if bg_color.0 != ui_theme.button_theme.pressed_background_color.0 {
-                *bg_color = ui_theme.button_theme.pressed_background_color;
+        if let Some(selected_character) = &selected_character.0 {
+            if selected_character.slot == slot_character.slot {
+                if bg_color.0 != ui_theme.button_theme.pressed_background_color.0 {
+                    *bg_color = ui_theme.button_theme.pressed_background_color;
+                }
             }
         }
     }
@@ -870,19 +906,18 @@ pub fn list_select_slot(
 
 pub fn update_character_list(
     account_q: Query<&RpgAccount, Changed<RpgAccount>>,
-    mut slot_q: Query<(&mut Text, &AccountCharacterSlot)>,
+    mut slot_q: Query<(&mut Text, &mut AccountCharacter)>,
 ) {
     if let Ok(account) = account_q.get_single() {
         info!("account changed, updating character slots");
 
         for character in account.0.characters.iter() {
-            info!(
-                "character uid: {:?} slot: {:?}",
-                character.info.uid, character.info.slot
-            );
+            info!("character info: {:?}", character.info);
 
-            for (mut text, slot) in &mut slot_q {
-                if slot.0 == character.info.slot {
+            for (mut text, mut slot_character) in &mut slot_q {
+                if slot_character.slot == character.info.slot {
+                    slot_character.info = Some(character.info.clone());
+
                     info!("slot match, updating");
 
                     let slot_string = format!(

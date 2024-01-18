@@ -1,4 +1,6 @@
 use rpg_account::account::AccountId;
+use rpg_chat::chat::MessageId;
+use rpg_core::unit::HeroGameMode;
 use rpg_lobby::lobby::{Lobby, LobbyId};
 
 use bevy::ecs::system::Resource;
@@ -10,10 +12,10 @@ pub(crate) struct LobbyManager {
 }
 
 impl LobbyManager {
-    pub(crate) fn add_lobby(&mut self, name: String) -> Option<LobbyId> {
+    pub(crate) fn add_lobby(&mut self, name: String, game_mode: HeroGameMode) -> Option<LobbyId> {
         let id = self.next_lobby_id;
         if !self.lobbies.iter().any(|l| l.id == id) {
-            let lobby = Lobby::new(self.next_lobby_id, name);
+            let lobby = Lobby::new(self.next_lobby_id, name, game_mode);
             self.lobbies.push(lobby);
 
             self.next_lobby_id.0 += 1;

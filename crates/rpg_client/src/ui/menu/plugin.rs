@@ -3,16 +3,9 @@ use crate::{
     loader::plugin::OutOfGameCamera,
     state::AppState,
     ui::{
-        chat::{self, ChatRoot},
-        lobby::{self, LobbyRoot},
-        menu::{
-            self,
-            account::{AccountCreateRoot, AccountLoginRoot},
-            create::CreateRoot,
-            credits::CreditsRoot,
-            main::MainRoot,
-            settings::SettingsRoot,
-        },
+        chat::{self},
+        lobby::{self},
+        menu::{self, main::MainRoot},
     },
 };
 
@@ -48,7 +41,7 @@ pub struct MenuPlugin;
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
         println!("Initializing menu plugin.");
-        app.init_resource::<menu::account::SelectedCharacterSlot>()
+        app.init_resource::<menu::account::SelectedCharacter>()
             .add_systems(OnEnter(AppState::MenuLoad), spawn)
             .add_systems(OnEnter(AppState::Menu), display_menu)
             .add_systems(
@@ -84,7 +77,13 @@ impl Plugin for MenuPlugin {
                         menu::settings::audio_button,
                     ),
                     menu::credits::cancel_button,
-                    (lobby::leave_button, lobby::update_players_container),
+                    (
+                        lobby::game_create_button,
+                        lobby::lobby_send_message,
+                        lobby::leave_button,
+                        lobby::update_lobby_messages,
+                        lobby::update_players_container,
+                    ),
                 )
                     .run_if(in_state(AppState::Menu)),
             )

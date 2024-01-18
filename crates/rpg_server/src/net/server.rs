@@ -58,7 +58,6 @@ impl Plugin for NetworkServerPlugin {
 
         app.add_plugins(server::ServerPlugin::new(plugin_config))
             .init_resource::<NetworkContext>()
-            .init_resource::<ServerState>()
             .add_systems(
                 FixedUpdate,
                 (game::rotation_request, game::movement_request)
@@ -71,14 +70,19 @@ impl Plugin for NetworkServerPlugin {
                 Update,
                 (
                     (
-                        account::receive_account_create,
-                        account::receive_account_login,
-                        account::receive_admin_login,
-                        account::receive_character_create,
-                        account::receive_game_create,
-                        lobby::receive_lobby_create,
-                        lobby::receive_lobby_join,
-                        lobby::receive_lobby_leave,
+                        (
+                            account::receive_account_create,
+                            account::receive_account_login,
+                            account::receive_admin_login,
+                            account::receive_character_create,
+                            account::receive_game_create,
+                        ),
+                        (
+                            lobby::receive_lobby_create,
+                            lobby::receive_lobby_join,
+                            lobby::receive_lobby_leave,
+                            lobby::receive_lobby_message,
+                        ),
                     )
                         .run_if(in_state(AppState::Lobby)),
                     (
@@ -96,14 +100,12 @@ impl Plugin for NetworkServerPlugin {
 pub(crate) struct NetworkParamsRO<'w> {
     pub(crate) server: Res<'w, Server>,
     pub(crate) context: Res<'w, NetworkContext>,
-    pub(crate) state: Res<'w, ServerState>,
 }
 
 #[derive(SystemParam)]
 pub(crate) struct NetworkParamsRW<'w> {
     pub(crate) server: ResMut<'w, Server>,
     pub(crate) context: ResMut<'w, NetworkContext>,
-    pub(crate) state: ResMut<'w, ServerState>,
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -112,22 +114,6 @@ pub(crate) enum ClientType {
     Unknown,
     Player,
     Admin,
-}
-
-#[derive(Default, Debug, Copy, Clone, PartialEq)]
-pub(crate) enum ServerMode {
-    #[default]
-    Offline,
-    Idle,
-    Lobby,
-    Game,
-}
-
-#[derive(Default, Resource)]
-pub(crate) struct ServerState {
-    pub(crate) mode: ServerMode,
-    pub(crate) next_account_id: AccountId,
-    pub(crate) next_uid: NextUid,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -226,11 +212,6 @@ pub(crate) fn handle_connections(
     mut connections: EventReader<ConnectEvent>,
     mut net_params: NetworkParamsRW,
 ) {
-    if connections.len() > 0 && net_params.state.mode == ServerMode::Idle {
-        info!("Setting server to Lobby mode");
-        net_params.state.mode = ServerMode::Lobby;
-    }
-
     for connection in connections.read() {
         let client_id = *connection.context();
 

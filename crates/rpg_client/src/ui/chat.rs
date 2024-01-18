@@ -3,7 +3,7 @@ use crate::{
     game::plugin::{GameState, PlayerOptions},
     state::AppState,
     ui::menu::{
-        account::{AccountListRoot, SelectedCharacterSlot},
+        account::{AccountListRoot, SelectedCharacter},
         main::MainRoot,
     },
 };
