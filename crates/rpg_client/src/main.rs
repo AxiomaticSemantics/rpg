@@ -7,11 +7,7 @@
 //! - `cargo run -p rpg_client -- --addr 192.168.0.1 --port 42069`
 
 #![cfg_attr(
-    all(
-        feature = "disable_windows_console",
-        target_os = "windows",
-        not(debug_assertions)
-    ),
+    all(feature = "disable_windows_console", target_os = "windows",),
     windows_subsystem = "windows"
 )]
 
@@ -19,7 +15,6 @@ mod assets;
 mod game;
 mod loader;
 mod net;
-mod random;
 mod splash;
 mod state;
 mod ui;

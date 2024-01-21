@@ -1,5 +1,8 @@
-use crate::ui::menu::account::{
-    self, AccountCharacter, AccountCreateRoot, AccountListRoot, AccountLoginRoot,
+use crate::{
+    state::AppState,
+    ui::menu::account::{
+        self, AccountCharacter, AccountCreateRoot, AccountListRoot, AccountLoginRoot,
+    },
 };
 
 use bevy::{
@@ -8,7 +11,8 @@ use bevy::{
         entity::Entity,
         event::EventReader,
         query::With,
-        system::{Commands, ParamSet, Query, Res},
+        schedule::NextState,
+        system::{Commands, ParamSet, Query, Res, ResMut},
     },
     hierarchy::Children,
     log::info,
@@ -190,11 +194,16 @@ pub(crate) fn receive_character_create_error(
 }
 
 pub(crate) fn receive_game_join_success(
+    mut state: ResMut<NextState<AppState>>,
     mut join_events: EventReader<MessageEvent<SCGameJoinSuccess>>,
     mut account_q: Query<&mut RpgAccount>,
 ) {
     for event in join_events.read() {
         info!("game join success");
+
+        let join_msg = event.message();
+
+        state.set(AppState::GameJoin);
 
         join_events.clear();
         return;
@@ -214,11 +223,14 @@ pub(crate) fn receive_game_join_error(
 }
 
 pub(crate) fn receive_game_create_success(
+    mut state: ResMut<NextState<AppState>>,
     mut create_events: EventReader<MessageEvent<SCGameCreateSuccess>>,
     mut account_q: Query<&mut RpgAccount>,
 ) {
     for event in create_events.read() {
         info!("game create success");
+
+        state.set(AppState::GameJoin);
 
         create_events.clear();
         return;

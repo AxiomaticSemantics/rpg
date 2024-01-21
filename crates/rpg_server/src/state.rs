@@ -5,5 +5,6 @@ pub(crate) enum AppState {
     #[default]
     LoadAssets,
     Lobby,
+    SpawnSimulation,
     Simulation,
 }

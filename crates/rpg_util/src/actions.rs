@@ -1,5 +1,6 @@
+use crate::unit::Unit;
+
 use rpg_core::skill::SkillId;
-use rpg_util::unit::Unit;
 
 use bevy::{
     ecs::{

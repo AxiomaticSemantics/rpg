@@ -3,11 +3,11 @@
 use crate::assets::TextureAssets;
 
 use crate::game::{
-    actor::{player::Player, unit::Unit},
+    actor::player::Player,
     metadata::MetadataResources,
     plugin::{GameSessionCleanup, GameState},
 };
-
+use rpg_util::unit::Unit;
 use ui_util::style::UiTheme;
 use util::cleanup::CleanupStrategy;
 
@@ -153,8 +153,6 @@ pub(crate) fn setup(
     _textures: Res<TextureAssets>,
 ) {
     println!("setup_hud");
-
-    let player_name = game_state.player_config.as_ref().unwrap().name.clone();
 
     let mut container_hidden_style = ui_theme.container_absolute_max.clone();
     container_hidden_style.display = Display::None;

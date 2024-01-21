@@ -3,7 +3,7 @@
 use crate::assets::TextureAssets;
 
 use crate::game::{
-    actor::{player::Player, unit::Unit},
+    actor::player::Player,
     assets::RenderResources,
     controls::Controls,
     item::{
@@ -23,6 +23,8 @@ use rpg_core::{
         SlotIndex, Storage, StorageIndex, StorageSlot as RpgStorageSlot,
     },
 };
+use rpg_util::unit::Unit;
+
 use ui_util::style::UiTheme;
 use util::cleanup::CleanupStrategy;
 
@@ -334,8 +336,6 @@ pub(crate) fn setup(
     textures: Res<TextureAssets>,
 ) {
     println!("game::ui::inventory::setup");
-
-    let player_name = game_state.player_config.as_ref().unwrap().name.clone();
 
     let vertical_spacing = NodeBundle {
         style: ui_theme.vertical_spacer.clone(),

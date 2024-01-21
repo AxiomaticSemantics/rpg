@@ -1,0 +1,23 @@
+[package]
+resolver = "2"
+name = "rpg_util"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+rpg_core = { path = "../rpg_core" }
+
+[dependencies.bevy]
+git = "https://github.com/AxiomaticSemantics/bevy"
+features = [ ]
+optional = false
+default-features = false
+
+#serde = { workspace = true }
+#serde_derive = { workspace = true }

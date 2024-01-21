@@ -3,7 +3,7 @@ use bevy::{
     prelude::{Deref, DerefMut},
 };
 
-use fastrand::Rng;
+pub use fastrand::Rng;
 
 #[derive(Resource, Deref, DerefMut)]
-pub(crate) struct Random(pub(crate) Rng);
+pub struct SharedRng(pub Rng);

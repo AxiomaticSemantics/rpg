@@ -13,7 +13,7 @@ use crate::{
 
 //use console_plugin::plugin::ConsolePlugin;
 use ui_util::{plugin::UiUtilPlugin, style::UiTheme};
-use util::plugin::UtilityPlugin;
+use util::{plugin::UtilityPlugin, random::Rng};
 
 #[cfg(all(debug_assertions, feature = "bevy_diagnostic"))]
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
@@ -121,15 +121,7 @@ impl Plugin for LoaderPlugin {
             .init_resource::<Chat>()
             // External plugins
             .add_plugins(NetworkClientPlugin {
-                config: NetworkClientConfig {
-                    client_port: 0,
-                    server_port: cli.port,
-                    server_addr: if cli.addr != Ipv4Addr::UNSPECIFIED {
-                        cli.addr
-                    } else {
-                        Ipv4Addr::new(192, 168, 0, 102)
-                    },
-                },
+                config: generate_network_config(&cli),
             })
             .add_plugins(TweeningPlugin)
             .add_plugins(UiUtilPlugin)
@@ -177,6 +169,22 @@ fn transition_splash(mut commands: Commands, mut state: ResMut<NextState<AppStat
 fn transition_game_asset_load(mut state: ResMut<NextState<AppState>>) {
     println!("transition to `AppState::LoadGameAssets`");
     state.set(AppState::LoadGameAssets);
+}
+
+fn generate_network_config(cli: &Cli) -> NetworkClientConfig {
+    let mut rng = Rng::new();
+    let client_seed = rng.u64(0..u64::MAX);
+
+    NetworkClientConfig {
+        client_port: 0,
+        client_seed,
+        server_port: cli.port,
+        server_addr: if cli.addr != Ipv4Addr::UNSPECIFIED {
+            cli.addr
+        } else {
+            Ipv4Addr::new(192, 168, 0, 102)
+        },
+    }
 }
 
 // Set the window icon on supported platforms

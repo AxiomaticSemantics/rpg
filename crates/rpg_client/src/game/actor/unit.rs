@@ -1,17 +1,14 @@
 #![allow(clippy::too_many_arguments)]
 
-use crate::{
-    game::{
-        actions::{ActionData, Actions, State},
-        actor::{animation::AnimationState, player::Player},
-        assets::RenderResources,
-        health_bar::{HealthBar, HealthBarFrame, HealthBarRect},
-        item::{GroundItem, ResourceItem, StorableItem, UnitStorage},
-        metadata::MetadataResources,
-        plugin::{GameCamera, GameState, GameTime},
-        skill,
-    },
-    random::Random,
+use crate::game::{
+    actions::{ActionData, Actions, State},
+    actor::{animation::AnimationState, player::Player},
+    assets::RenderResources,
+    health_bar::{HealthBar, HealthBarFrame, HealthBarRect},
+    item::{GroundItem, ResourceItem, StorableItem, UnitStorage},
+    metadata::MetadataResources,
+    plugin::{GameCamera, GameState, GameTime},
+    skill,
 };
 
 use audio_manager::plugin::AudioActions;
@@ -20,7 +17,12 @@ use rpg_core::{
     storage::Storage,
     unit::UnitKind,
 };
-use util::math::{intersect_aabb, Aabb as UtilAabb};
+use rpg_util::unit::{Corpse, Hero, Unit, UnitBundle, Villain};
+
+use util::{
+    math::{intersect_aabb, Aabb as UtilAabb},
+    random::SharedRng,
+};
 
 use bevy::{
     animation::RepeatAnimation,
@@ -41,37 +43,11 @@ use bevy::{
     transform::components::Transform,
 };
 
-#[derive(Component, Default, Debug, Deref, DerefMut)]
-pub struct CorpseTimer(pub Timer);
-
-#[derive(Component)]
-pub struct Hero;
-
-#[derive(Debug, Component, Deref, DerefMut)]
-pub struct Unit(pub rpg_core::unit::Unit);
-
-#[derive(Bundle)]
-pub struct UnitBundle {
-    pub unit: Unit,
-}
-
-impl UnitBundle {
-    pub fn new(unit: Unit) -> Self {
-        Self { unit }
-    }
-}
-
-pub fn upkeep(time: Res<Time>, mut unit_q: Query<&mut Unit, Without<CorpseTimer>>) {
-    for mut unit in &mut unit_q {
-        unit.stats.apply_regeneration(time.delta_seconds());
-    }
-}
-
 pub fn update_health_bars(
     mut unit_q: Query<
         (&Unit, &Transform, &mut HealthBar),
         (
-            Without<CorpseTimer>,
+            Without<Corpse>,
             Without<GameCamera>,
             Without<HealthBarFrame>,
             Without<HealthBarRect>,
@@ -140,9 +116,7 @@ pub fn update_health_bars(
 }
 
 // TODO FIXME this is just a buggy hack
-pub fn collide_units(
-    mut unit_q: Query<(&mut Transform, &Aabb), (With<Unit>, Without<CorpseTimer>)>,
-) {
+pub fn collide_units(mut unit_q: Query<(&mut Transform, &Aabb), (With<Unit>, Without<Corpse>)>) {
     let mut combinations = unit_q.iter_combinations_mut();
     while let Some([(mut t1, a1), (mut t2, a2)]) = combinations.fetch_next() {
         while intersect_aabb(
@@ -187,7 +161,7 @@ pub fn pick_storable_items(
             With<Hero>,
             With<Player>,
             Without<GroundItem>,
-            Without<CorpseTimer>,
+            Without<Corpse>,
         ),
     >,
 ) {
@@ -233,7 +207,7 @@ pub fn attract_resource_items(
             With<Hero>,
             With<Player>,
             Without<GroundItem>,
-            Without<CorpseTimer>,
+            Without<Corpse>,
         ),
     >,
 ) {
@@ -270,7 +244,7 @@ pub fn action(
     game_time: Res<GameTime>,
     metadata: Res<MetadataResources>,
     mut renderables: ResMut<RenderResources>,
-    mut random: ResMut<Random>,
+    mut random: ResMut<SharedRng>,
     mut state: ResMut<GameState>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut unit_q: Query<
@@ -282,7 +256,7 @@ pub fn action(
             &mut AnimationState,
             &mut AudioActions,
         ),
-        Without<CorpseTimer>,
+        Without<Corpse>,
     >,
 ) {
     use std::f32::consts;
@@ -467,20 +441,15 @@ pub fn action(
     }
 }
 
-pub fn corpse_removal(
+pub fn remove_healthbar(
     mut commands: Commands,
     time: Res<Time>,
-    mut unit_q: Query<(Entity, &mut CorpseTimer, &mut HealthBar), With<Unit>>,
+    mut unit_q: Query<(Entity, &mut Corpse, &mut HealthBar), With<Unit>>,
 ) {
     for (entity, mut timer, mut health_bar) in &mut unit_q {
         if health_bar.bar_entity != Entity::PLACEHOLDER {
             commands.entity(health_bar.bar_entity).despawn_recursive();
             health_bar.bar_entity = Entity::PLACEHOLDER;
-        }
-
-        timer.tick(time.delta());
-        if timer.just_finished() {
-            commands.entity(entity).despawn_recursive();
         }
     }
 }

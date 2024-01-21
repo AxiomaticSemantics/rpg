@@ -19,6 +19,7 @@ use rpg_account::{
     character::{CharacterInfo, CharacterSlot},
 };
 use rpg_core::{class::Class, uid::Uid, unit::HeroGameMode};
+use rpg_lobby::lobby::LobbyId;
 use rpg_network_protocol::protocol::*;
 
 use lightyear::prelude::*;
@@ -97,6 +98,9 @@ pub struct ListContainer;
 
 #[derive(Component)]
 pub struct LobbyCreateButton;
+
+#[derive(Component)]
+pub struct LobbyJoinButton;
 
 #[derive(Debug, Component, Clone)]
 pub struct AccountCharacter {
@@ -587,6 +591,15 @@ pub fn spawn_list(
                             ui_theme.text_style_regular.clone(),
                         ));
                     });
+
+                p.spawn((button.clone(), LobbyJoinButton))
+                    .with_children(|p| {
+                        p.spawn(TextBundle::from_section(
+                            "Join Lobby",
+                            ui_theme.text_style_regular.clone(),
+                        ));
+                    });
+
                 p.spawn((button.clone(), ListCancelButton))
                     .with_children(|p| {
                         p.spawn(TextBundle::from_section(
@@ -736,6 +749,35 @@ pub fn lobby_create_button(
             name: "Test Lobby".into(),
             game_mode: character_info.game_mode,
         });
+    }
+}
+
+pub fn lobby_join_button(
+    selected_character: Res<SelectedCharacter>,
+    mut net_client: ResMut<Client>,
+    mut style_set: ParamSet<(
+        Query<(&mut Style, &Interaction), (Changed<Interaction>, With<LobbyJoinButton>)>,
+        Query<&mut Style, With<LobbyRoot>>,
+        Query<&mut Style, With<AccountListRoot>>,
+    )>,
+) {
+    let mut interaction = style_set.p0();
+    if let Ok((style, Interaction::Pressed)) = interaction.get_single_mut() {
+        let Some(selected_character) = &selected_character.0 else {
+            info!("no character selected");
+            return;
+        };
+
+        let Some(character_info) = &selected_character.info else {
+            info!("no character info");
+            return;
+        };
+
+        style_set.p1().single_mut().display = Display::Flex;
+        style_set.p2().single_mut().display = Display::None;
+
+        // FIXME temp hardcoded id
+        net_client.send_message::<Channel1, _>(CSLobbyJoin(LobbyId(0)));
     }
 }
 

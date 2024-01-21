@@ -2,10 +2,7 @@
 
 use crate::assets::TextureAssets;
 
-use crate::game::{
-    plugin::{GameSessionCleanup, GameState, GameTime, PlayState, SessionStats},
-    state_saver::SaveGame,
-};
+use crate::game::plugin::{GameSessionCleanup, GameState, GameTime, PlayState, SessionStats};
 
 use ui_util::style::UiTheme;
 use util::cleanup::CleanupStrategy;
@@ -81,7 +78,7 @@ pub(crate) fn user_pause(
 }
 
 pub(crate) fn save_button_pressed(
-    mut save_event_writer: EventWriter<SaveGame>,
+    //mut save_event_writer: EventWriter<SaveGame>,
     mut pause_view_q: Query<&mut Style, With<PauseView>>,
     button_q: Query<&Interaction, (With<SaveButton>, Changed<Interaction>)>,
 ) {
@@ -91,7 +88,7 @@ pub(crate) fn save_button_pressed(
 
     if interaction == &Interaction::Pressed {
         pause_view_q.single_mut().display = Display::None;
-        save_event_writer.send(SaveGame);
+        //save_event_writer.send(SaveGame);
     }
 }
 
@@ -102,8 +99,6 @@ pub(crate) fn setup(
     _textures: Res<TextureAssets>,
 ) {
     println!("setup game::ui::pause");
-
-    let player_name = game_state.player_config.as_ref().unwrap().name.clone();
 
     let mut container_hidden_style = ui_theme.container_absolute_max.clone();
     container_hidden_style.display = Display::None;

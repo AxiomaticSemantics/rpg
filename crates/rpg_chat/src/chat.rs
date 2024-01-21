@@ -8,10 +8,11 @@ pub struct MessageId(pub u64);
 #[derive(Ser, De, Default, Hash, Copy, Clone, PartialEq, Eq, Debug)]
 pub struct ChannelId(pub u64);
 
-#[derive(Ser, De, PartialEq, Debug)]
+#[derive(Ser, De, Clone, PartialEq, Debug)]
 pub struct Message {
     pub message: String,
     pub id: MessageId,
+    pub channel_id: ChannelId,
     pub sender: AccountId,
 }
 

@@ -1,5 +1,5 @@
 use bevy::{
-    ecs::{bundle::Bundle, component::Component, entity::Entity},
+    ecs::{component::Component, entity::Entity},
     math::Vec3,
     prelude::{Deref, DerefMut},
 };
@@ -12,57 +12,14 @@ use rpg_account::{
     account::{Account, AccountId, AccountInfo},
     character::{CharacterInfo, CharacterRecord, CharacterSlot},
 };
-use rpg_chat::chat::{ChannelId, MessageId};
+use rpg_chat::chat::{ChannelId, Message as ChatMessage, MessageId};
 use rpg_core::{class::Class, skill::SkillId, unit::HeroGameMode};
 use rpg_lobby::lobby::{Lobby, LobbyId, LobbyMessage};
 use rpg_world::zone::ZoneId;
 
-// Player
-#[derive(Bundle)]
-pub struct NetworkPlayerBundle {
-    pub id: NetworkClientId,
-    pub direction: PlayerDirection,
-    pub position: PlayerPosition,
-    /*pub replicate: Replicate,*/
-}
-
-impl NetworkPlayerBundle {
-    pub fn new(id: ClientId, position: Vec3, direction: Vec3) -> Self {
-        Self {
-            id: NetworkClientId(id),
-            position: PlayerPosition(position),
-            direction: PlayerDirection(direction),
-            /*replicate: Replicate {
-                // prediction_target: NetworkTarget::None,
-                prediction_target: NetworkTarget::Only(vec![id]),
-                interpolation_target: NetworkTarget::AllExcept(vec![id]),
-                ..default()
-            }*/
-        }
-    }
-}
-
-// Components
-
-#[derive(Component, Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct NetworkClientId(pub ClientId);
-
-#[derive(Component, Message, Serialize, Deserialize, Clone, Debug, PartialEq, Deref, DerefMut)]
-pub struct PlayerPosition(pub Vec3);
-
-#[derive(Component, Message, Serialize, Deserialize, Clone, Debug, PartialEq, Deref, DerefMut)]
-pub struct PlayerDirection(pub Vec3);
-
+// Components (Unused, everything is manually managed)
 #[component_protocol(protocol = "RpgProtocol")]
 pub enum Components {}
-/*
-    #[sync(once)]
-    Id(NetworkClientId),
-    #[sync(full)]
-    PlayerPosition(PlayerPosition),
-    #[sync(full)]
-    PlayerDirection(PlayerDirection),
-*/
 
 // Channels
 
@@ -145,11 +102,7 @@ pub struct CSChatJoin;
 pub struct CSChatLeave;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CSChatChannelMessage {
-    pub channel_id: ChannelId,
-    pub message_id: MessageId,
-    pub message: String,
-}
+pub struct CSChatChannelMessage(pub ChatMessage);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSChatChannelCreate(pub String);
@@ -162,6 +115,9 @@ pub struct CSChatChannelLeave(pub ChannelId);
 
 // Game Messages
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSPlayerReady;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSJoinZone(pub ZoneId);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -171,10 +127,10 @@ pub struct CSMovePlayer;
 pub struct CSRotPlayer(pub Vec3);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CSUseSkillDirect(pub SkillId);
+pub struct CSSkillUseDirect(pub SkillId);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CSUseSkillTargeted {
+pub struct CSSkillUseTargeted {
     pub skill_id: SkillId,
     pub target: Vec3,
 }
@@ -266,7 +222,7 @@ pub struct SCChatLeave;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCChatChannelJoinSuccess {
-    pub recent_message_ids: Vec<MessageId>,
+    pub recent_messages: Vec<ChatMessage>,
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -282,11 +238,7 @@ pub struct SCChatChannelMessageSuccess;
 pub struct SCChatChannelMessageError;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCChatMessage {
-    pub channel_id: ChannelId,
-    pub message_id: MessageId,
-    pub message: String,
-}
+pub struct SCChatMessage(pub ChatMessage);
 
 // Game Messages
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -294,6 +246,12 @@ pub struct SCPlayerJoinSuccess;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCPlayerJoinError;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCPlayerSpawn {
+    pub position: Vec3,
+    pub direction: Vec3,
+}
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCMovePlayer(pub Vec3);
@@ -345,6 +303,7 @@ pub enum Messages {
     // Game Messages
     SCPlayerJoinSuccess(SCPlayerJoinSuccess),
     SCPlayerJoinError(SCPlayerJoinError),
+    SCPlayerSpawn(SCPlayerSpawn),
     SCMovePlayer(SCMovePlayer),
     SCRotPlayer(SCRotPlayer),
 
@@ -373,11 +332,12 @@ pub enum Messages {
     CSChatChannelLeave(CSChatChannelLeave),
 
     // Game Messages
+    CSPlayerReady(CSPlayerReady),
     CSJoinZone(CSJoinZone),
     CSRotPlayer(CSRotPlayer),
     CSMovePlayer(CSMovePlayer),
-    CSUseSkillDirect(CSUseSkillDirect),
-    CSUseSkillTargeted(CSUseSkillTargeted),
+    CSSkillUseDirect(CSSkillUseDirect),
+    CSSkillUseTargeted(CSSkillUseTargeted),
 }
 
 // Protocol

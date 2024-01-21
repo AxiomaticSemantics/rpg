@@ -11,8 +11,9 @@ use bevy::{
         query::{With, Without},
         system::{Commands, Query, Res, ResMut},
     },
-    gizmos::AabbGizmo,
+    gizmos::aabb::ShowAabbGizmo,
     hierarchy::DespawnRecursiveExt,
+    log::debug,
     math::{Quat, Vec3},
     pbr::{MaterialMeshBundle, PbrBundle, StandardMaterial},
     prelude::{Deref, DerefMut},
@@ -32,109 +33,42 @@ use bevy::{
 
 use super::{
     actions::{Action, ActionData, Actions, AttackData, KnockbackData as KnockbackActionData},
-    actor::{
-        animation::AnimationState,
-        unit::{CorpseTimer, Unit},
-    },
+    actor::animation::AnimationState,
     assets::RenderResources,
     item::{GroundItemDrop, GroundItemDrops},
     metadata::MetadataResources,
     plugin::{GameOverState, GameSessionCleanup, GameState, GameTime, PlayState},
     prop::{PropHandle, PropInfo},
 };
-use crate::random::Random;
 
 use audio_manager::plugin::AudioActions;
 use rpg_core::{
     combat::{AttackResult, CombatResult},
     damage::Damage,
     skill::{
-        effect::{
-            ChainData, DotData, EffectData, EffectInfo, EffectInstance, KnockbackData, PierceData,
-            SplitData,
-        },
-        skill_tables::SkillTableEntry,
-        AreaInstance, DirectInstance, OrbitData, Origin, ProjectileInstance, ProjectileShape,
-        Skill, SkillId, SkillInfo, SkillInstance,
+        effect::*, skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData, Origin,
+        ProjectileInstance, ProjectileShape, Skill, SkillId, SkillInfo, SkillInstance,
     },
     unit::UnitKind,
 };
+use rpg_util::{
+    skill::*,
+    unit::{Corpse, Unit},
+};
+
 use util::{
     cleanup::CleanupStrategy,
     math::{intersect_aabb, Aabb as UtilAabb},
+    random::SharedRng,
 };
 
 use std::borrow::Cow;
-
-#[derive(Default, Debug, Component, Deref, DerefMut)]
-pub struct SkillTimer(pub Option<Timer>);
-
-#[derive(Debug, Clone)]
-pub struct InvulnerabilityTimer {
-    pub entity: Entity,
-    pub timer: Timer,
-}
-
-#[derive(Default, Debug, Clone, Component, Deref, DerefMut)]
-pub struct Invulnerability(pub Vec<InvulnerabilityTimer>);
 
 #[derive(Event)]
 pub struct SkillContactEvent {
     entity: Entity,
     owner_entity: Entity,
     defender_entity: Entity,
-}
-
-#[derive(Default, Debug)]
-pub struct Tickable {
-    pub timer: Timer,
-    pub can_damage: bool,
-}
-
-#[derive(Debug, Component)]
-pub struct SkillUse {
-    pub owner: Entity,
-    // This reduces queries during hit detection
-    pub owner_kind: UnitKind,
-    pub id: SkillId,
-    pub damage: Damage,
-    pub info: SkillInstance,
-    pub effects: Vec<EffectInstance>,
-    pub tickable: Option<Tickable>,
-}
-
-impl SkillUse {
-    pub fn new(
-        owner: Entity,
-        owner_kind: UnitKind,
-        id: SkillId,
-        damage: Damage,
-        info: SkillInstance,
-        effects: Vec<EffectInstance>,
-        tickable: Option<Tickable>,
-    ) -> Self {
-        Self {
-            owner,
-            owner_kind,
-            id,
-            damage,
-            info,
-            effects,
-            tickable,
-        }
-    }
-}
-
-#[derive(Bundle)]
-pub struct SkillUseBundle {
-    pub info: SkillUse,
-    pub timer: SkillTimer,
-}
-
-impl SkillUseBundle {
-    pub fn new(info: SkillUse, timer: SkillTimer) -> Self {
-        Self { info, timer }
-    }
 }
 
 pub fn update_invulnerability(
@@ -156,7 +90,7 @@ pub fn handle_contact(
     mut game_time: ResMut<GameTime>,
     mut game_state: ResMut<GameState>,
     mut ground_drops: ResMut<GroundItemDrops>,
-    mut random: ResMut<Random>,
+    mut random: ResMut<SharedRng>,
     mut skill_events: EventReader<SkillContactEvent>,
     mut skill_q: Query<(Entity, &mut Transform, &mut Invulnerability, &mut SkillUse)>,
     mut unit_q: Query<
@@ -166,7 +100,7 @@ pub fn handle_contact(
             &mut Actions,
             &mut AudioActions,
             &mut AnimationState,
-            Option<&CorpseTimer>,
+            Option<&Corpse>,
         ),
         Without<SkillUse>,
     >,
@@ -191,7 +125,7 @@ pub fn handle_contact(
         match combat_result {
             CombatResult::Attack(attack) => match attack {
                 AttackResult::Blocked => {
-                    println!("blocked");
+                    debug!("blocked");
                     if defender.kind == UnitKind::Hero {
                         game_state.session_stats.blocks += 1;
                     } else {
@@ -200,7 +134,7 @@ pub fn handle_contact(
 
                     d_audio.push("hit_blocked".into());
 
-                    match &instance.info {
+                    match &instance.instance {
                         SkillInstance::Direct(_) | SkillInstance::Projectile(_) => {
                             commands.entity(s_entity).despawn_recursive();
                             continue;
@@ -209,7 +143,7 @@ pub fn handle_contact(
                     }
                 }
                 AttackResult::Dodged => {
-                    println!("dodge");
+                    debug!("dodge");
                     if defender.kind == UnitKind::Hero {
                         game_state.session_stats.dodges += 1;
                     } else {
@@ -233,7 +167,7 @@ pub fn handle_contact(
                         game_state.session_stats.villain_hits += 1;
                     }
 
-                    if let SkillInstance::Projectile(_) = &instance.info {
+                    if let SkillInstance::Projectile(_) = &instance.instance {
                         if instance
                             .effects
                             .iter()
@@ -248,7 +182,7 @@ pub fn handle_contact(
                 }
             },
             CombatResult::Death(_) => {
-                //println!("death");
+                debug!("death");
 
                 d_audio.push("hit_death".into());
 
@@ -282,9 +216,10 @@ pub fn handle_contact(
                     game_time.watch.pause();
                 }
 
-                commands
-                    .entity(event.defender_entity)
-                    .insert(CorpseTimer(Timer::from_seconds(60., TimerMode::Once)));
+                commands.entity(event.defender_entity).insert(Corpse);
+                /*commands
+                .entity(event.defender_entity)
+                .insert(CorpseTimer(Timer::from_seconds(60., TimerMode::Once)));*/
             }
             _ => {}
         }
@@ -323,7 +258,7 @@ pub fn clean_skills(
             }
         }
 
-        let despawn = match &skill_use.info {
+        let despawn = match &skill_use.instance {
             SkillInstance::Projectile(info) => match info.info.duration {
                 Some(d) => game_time.watch.elapsed_secs() - info.start_time >= d,
                 None => {
@@ -353,7 +288,7 @@ pub fn clean_skills(
 pub fn update_skill(time: Res<Time>, mut skill_q: Query<(&mut Transform, &mut SkillUse)>) {
     let dt = time.delta_seconds();
     for (mut transform, mut skill_use) in &mut skill_q {
-        match &mut skill_use.info {
+        match &mut skill_use.instance {
             SkillInstance::Projectile(info) => {
                 // The skill would have been destroyed if it was expired, advance it
                 if let Some(orbit) = &info.orbit {
@@ -406,7 +341,7 @@ pub fn update_skill(time: Res<Time>, mut skill_q: Query<(&mut Transform, &mut Sk
 pub fn collide_skills(
     mut skill_events: EventWriter<SkillContactEvent>,
     mut skill_q: Query<(Entity, &Transform, &Aabb, &Invulnerability, &SkillUse)>,
-    unit_q: Query<(Entity, &Transform, &Aabb, &Unit), Without<CorpseTimer>>,
+    unit_q: Query<(Entity, &Transform, &Aabb, &Unit), Without<Corpse>>,
 ) {
     for (s_entity, s_transform, s_aabb, invulnerability, instance) in &mut skill_q {
         if let Some(tickable) = &instance.tickable {
@@ -431,7 +366,7 @@ pub fn collide_skills(
 
             let unit_offset = Vec3::new(0.0, 1.2, 0.0);
 
-            let collision = match &instance.info {
+            let collision = match &instance.instance {
                 SkillInstance::Direct(_) | SkillInstance::Projectile(_) => intersect_aabb(
                     (
                         &(s_transform.translation),
@@ -469,7 +404,7 @@ pub fn prepare_skill(
     owner: Entity,
     attack_data: &AttackData,
     game_time: &GameTime,
-    random: &mut Random,
+    random: &mut SharedRng,
     renderables: &mut RenderResources,
     meshes: &mut Assets<Mesh>,
     skill_info: &SkillTableEntry,
@@ -701,11 +636,11 @@ pub(crate) fn spawn_instance(
     commands: &mut Commands,
     aabb: Aabb,
     transform: Transform,
-    instance: SkillUse,
+    skill_use_instance: SkillUse,
     mesh: Option<PropHandle>,
     material: Option<Handle<StandardMaterial>>,
 ) {
-    let skill_use = SkillUseBundle::new(instance, SkillTimer(None));
+    let skill_use = SkillUseBundle::new(skill_use_instance, SkillTimer(None));
 
     let common_bundle = (
         GameSessionCleanup,
@@ -715,13 +650,13 @@ pub(crate) fn spawn_instance(
         skill_use,
     );
 
-    match &common_bundle.4.info.info {
+    match &common_bundle.4.skill.instance {
         SkillInstance::Direct(_) => {
             //println!("spawning direct skill {}", transform.translation);
 
             commands.spawn((
                 common_bundle,
-                AabbGizmo::default(),
+                ShowAabbGizmo::default(),
                 SpatialBundle::from_transform(transform),
             ));
         }
@@ -737,7 +672,7 @@ pub(crate) fn spawn_instance(
                         transform,
                         ..default()
                     },
-                    AabbGizmo::default(),
+                    ShowAabbGizmo::default(),
                 ));
             } else if let PropHandle::Mesh(handle) = handle {
                 commands.spawn((
@@ -772,31 +707,10 @@ pub(crate) fn spawn_instance(
     }
 }
 
-pub fn get_skill_origin(
-    metadata: &MetadataResources,
-    unit_transform: &Transform,
-    target: Vec3,
-    skill_id: SkillId,
-) -> (Vec3, Vec3) {
-    let skill_meta = &metadata.rpg.skill.skills[&skill_id];
-
-    match &skill_meta.origin {
-        Origin::Direct(data) => (
-            unit_transform.translation + data.offset * unit_transform.forward(),
-            unit_transform.translation + data.offset * unit_transform.forward(),
-        ),
-        Origin::Remote(data) => (unit_transform.translation + data.offset, target),
-        Origin::Locked(data) => (
-            unit_transform.translation + data.offset,
-            unit_transform.translation + data.offset,
-        ),
-    }
-}
-
 /// Returns `true` if the skill should be destroyed
 fn handle_effects(
     game_time: &GameTime,
-    random: &mut Random,
+    random: &mut SharedRng,
     skill_use: &mut SkillUse,
     skill_transform: &mut Transform,
     defender_actions: &mut Actions,
