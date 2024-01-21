@@ -1,4 +1,6 @@
-use crate::character::CharacterRecord;
+use crate::character::{CharacterRecord, CharacterSlot};
+
+use rpg_core::uid::Uid;
 
 use serde_derive::{Deserialize as De, Serialize as Ser};
 
@@ -14,6 +16,16 @@ pub struct AdminAccount {
 pub struct Account {
     pub info: AccountInfo,
     pub characters: Vec<CharacterRecord>,
+}
+
+impl Account {
+    pub fn get_character_from_slot(&self, slot: CharacterSlot) -> Option<&CharacterRecord> {
+        self.characters.iter().find(|c| c.info.slot == slot)
+    }
+
+    pub fn get_character_from_uid(&self, uid: Uid) -> Option<&CharacterRecord> {
+        self.characters.iter().find(|c| c.info.uid == uid)
+    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Ser, De)]

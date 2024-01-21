@@ -1,23 +1,25 @@
-use crate::game::{
-    actions::{Action, ActionData, Actions, AttackData},
-    actor::{
-        self,
-        unit::{CorpseTimer, Hero, Unit},
-        villain::Villain,
+use crate::{
+    game::{
+        actions::{Action, ActionData, Actions, AttackData},
+        actor,
+        assets::RenderResources,
+        controls::{Controls, CursorPosition},
+        metadata::MetadataResources,
+        plugin::{GameCamera, GameState},
+        world::zone::Zone,
     },
-    assets::RenderResources,
-    controls::{Controls, CursorPosition},
-    metadata::MetadataResources,
-    plugin::{GameCamera, GameState},
-    skill::get_skill_origin,
-    state_saver::{LoadCharacter, SaveSlots},
-    world::zone::Zone,
+    net::account::RpgAccount,
 };
 
 use rpg_core::{
     passive_tree::PassiveSkillGraph,
     storage::UnitStorage as RpgUnitStorage,
     unit::{HeroInfo, Unit as RpgUnit, UnitInfo, UnitKind},
+};
+use rpg_network_protocol::protocol::*;
+use rpg_util::{
+    skill::*,
+    unit::{Hero, Unit, Villain},
 };
 
 use bevy::{
@@ -30,6 +32,7 @@ use bevy::{
         system::{Commands, Query, Res, ResMut},
     },
     gizmos::gizmos::Gizmos,
+    log::info,
     math::{Vec2, Vec3},
     pbr::SpotLight,
     render::color::Color,
@@ -52,7 +55,7 @@ pub struct Nearest;
 pub fn update_debug_lines(
     mut gizmos: Gizmos,
     player_q: Query<&Transform, (With<Player>, Without<Villain>)>,
-    villain_q: Query<&Transform, (With<Villain>, Without<CorpseTimer>, Without<Player>)>,
+    villain_q: Query<&Transform, (With<Villain>, Without<Player>)>,
 ) {
     let mut nearest = None::<&Transform>;
     let mut nearest_distance = 8.;
@@ -96,6 +99,7 @@ pub fn update_debug_gizmos(zone: Res<Zone>, mut gizmos: Gizmos) {
 }
 
 pub fn input_actions(
+    mut net_client: ResMut<Client>,
     controls: Res<Controls>,
     cursor_position: Res<CursorPosition>,
     metadata: Res<MetadataResources>,
@@ -110,8 +114,10 @@ pub fn input_actions(
     if controls.mouse_primary.pressed || controls.gamepad_b.pressed {
         let skill_id = unit.active_skills.primary.skill.unwrap();
 
+        net_client.send_message::<Channel1, _>(CSSkillUseDirect(skill_id));
+
         let (origin, target) =
-            get_skill_origin(&metadata, transform, cursor_position.ground, skill_id);
+            get_skill_origin(&metadata.rpg, transform, cursor_position.ground, skill_id);
 
         if actions.attack.is_none() && actions.knockback.is_none() {
             actions.request(Action::new(
@@ -132,6 +138,7 @@ pub fn input_actions(
 
     if controls.mouse_secondary.pressed || controls.gamepad_a.pressed {
         actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
+        net_client.send_message::<Channel1, _>(CSMovePlayer);
     } else if controls.mouse_secondary.just_released || controls.gamepad_a.just_released {
         actions.request(Action::new(ActionData::MoveEnd, None, true));
     }
@@ -157,6 +164,7 @@ pub fn input_actions(
         if (rot_diff - 1.).abs() > 0.001 {
             //println!("rot_diff {rot_diff}");
             actions.request(Action::new(ActionData::LookDir(target_dir), None, true));
+            net_client.send_message::<Channel1, _>(CSRotPlayer(target_dir));
         }
     }
 
@@ -226,24 +234,23 @@ pub fn spawn_player(
     mut game_state: ResMut<GameState>,
     metadata: Res<MetadataResources>,
     renderables: Res<RenderResources>,
-    save_slots: Res<SaveSlots>,
-    mut load_event: EventReader<LoadCharacter>,
+    account_q: Query<&RpgAccount>,
 ) {
-    println!("spawn_player");
+    info!("spawning local player");
 
-    let player_config = &game_state.player_config.as_ref().unwrap();
+    let account = account_q.single();
 
-    let (unit, storage, passive_tree) = if !load_event.is_empty() {
-        let slot_id = load_event.read().last().unwrap();
+    game_state.mode = account.0.characters[0].info.game_mode;
 
-        let slot = &save_slots.slots[slot_id.0 as usize];
-        let state = slot.state.as_ref().unwrap();
+    let (unit, storage, passive_tree) = {
         (
-            state.unit.clone(),
-            state.storage.clone(),
-            state.passive_tree.clone(),
+            account.0.characters[0].character.unit.clone(),
+            account.0.characters[0].character.storage.clone(),
+            account.0.characters[0].character.passive_tree.clone(),
         )
-    } else {
+    };
+
+    /* {
         let mut unit = RpgUnit::new(
             game_state.next_uid.get(),
             player_config.class,
@@ -268,7 +275,7 @@ pub fn spawn_player(
             RpgUnitStorage::default(),
             PassiveSkillGraph::new(class),
         )
-    };
+    };*/
 
     actor::spawn_actor(
         &mut commands,

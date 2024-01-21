@@ -1,8 +1,5 @@
-use super::{
-    account::AccountInstance,
-    server::{NetworkParamsRO, NetworkParamsRW},
-};
-use crate::{lobby::LobbyManager, server_state::ServerMetadataResource};
+use super::server::{NetworkParamsRO, NetworkParamsRW};
+use crate::{account::AccountInstance, lobby::LobbyManager, server_state::ServerMetadataResource};
 
 use rpg_chat::chat::MessageId;
 use rpg_lobby::lobby::{Lobby, LobbyId, LobbyMessage};

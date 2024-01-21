@@ -10,7 +10,7 @@ use bevy::{
         world::{FromWorld, World},
     },
     prelude::{Deref, DerefMut},
-    time::{Time, Timer, TimerMode},
+    time::{Fixed, Time, Timer, TimerMode},
 };
 
 use lightyear::{
@@ -37,6 +37,7 @@ use std::net::{Ipv4Addr, SocketAddr};
 
 #[derive(Debug, Clone)]
 pub struct NetworkClientConfig {
+    pub client_seed: u64,
     pub client_port: u16,
     pub server_addr: Ipv4Addr,
     pub server_port: u16,
@@ -51,7 +52,7 @@ impl Plugin for NetworkClientPlugin {
         let server_addr = SocketAddr::new(self.config.server_addr.into(), self.config.server_port);
         let auth = Authentication::Manual {
             server_addr,
-            client_id: 0,
+            client_id: self.config.client_seed,
             private_key: KEY,
             protocol_id: PROTOCOL_ID,
         };
@@ -71,14 +72,12 @@ impl Plugin for NetworkClientPlugin {
         let plugin_config = PluginConfig::new(config, io, protocol(), auth);
 
         app.add_plugins(ClientPlugin::new(plugin_config))
+            .insert_resource(Time::<Fixed>::from_seconds(1.0 / 60.))
             .init_resource::<ConnectionTimer>()
             .add_systems(Startup, setup)
             .add_systems(
                 Update,
                 (
-                    //input.in_set(FixedUpdateSet::Main),
-                    (game::receive_player_rotation, game::receive_player_move) //.after(input)
-                        .in_set(FixedUpdateSet::Main),
                     reconnect,
                     receive_server_hello,
                     (
@@ -88,6 +87,8 @@ impl Plugin for NetworkClientPlugin {
                         account::receive_account_login_error,
                         account::receive_character_create_success,
                         account::receive_character_create_error,
+                        account::receive_game_create_success,
+                        account::receive_game_create_error,
                         account::receive_game_join_success,
                         account::receive_game_join_error,
                     ),
@@ -105,8 +106,19 @@ impl Plugin for NetworkClientPlugin {
                         chat::receive_channel_join_error,
                         chat::receive_chat_message,
                     ),
+                    (
+                        game::receive_player_spawn,
+                        game::receive_player_join_success,
+                        game::receive_player_join_error,
+                    ),
+                    (game::receive_player_rotation, game::receive_player_move),
                 ),
-            );
+            )
+            /*.add_systems(
+                FixedUpdate,
+                //(game::receive_player_rotation, game::receive_player_move)
+                //    .after(FixedUpdateSet::Main), //.in_set(FixedUpdateSet::Main),
+            )*/;
     }
 }
 

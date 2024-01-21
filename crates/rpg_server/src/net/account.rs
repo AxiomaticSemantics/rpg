@@ -1,4 +1,12 @@
-use crate::{assets::MetadataResources, server_state::ServerMetadataResource};
+use crate::{
+    account::{
+        AccountInstance, AccountInstanceBundle, AdminAccountInstance, AdminAccountInstanceBundle,
+    },
+    assets::MetadataResources,
+    game::plugin::{GameState, PlayerIdInfo},
+    server_state::ServerMetadataResource,
+    state::AppState,
+};
 
 use super::server::{ClientType, NetworkParamsRO, NetworkParamsRW};
 
@@ -7,6 +15,7 @@ use bevy::{
         bundle::Bundle,
         component::Component,
         event::EventReader,
+        schedule::NextState,
         system::{Commands, Query, Res, ResMut},
     },
     log::info,
@@ -32,22 +41,6 @@ use util::fs::{open_read, open_write};
 use serde_json;
 
 use std::{env, path::Path};
-
-#[derive(Debug, Deref, DerefMut, Component)]
-pub(crate) struct AccountInstance(pub(crate) Account);
-
-#[derive(Debug, Deref, DerefMut, Component)]
-pub(crate) struct AdminAccountInstance(pub(crate) AdminAccount);
-
-#[derive(Bundle)]
-pub(crate) struct AccountInstanceBundle {
-    pub account: AccountInstance,
-}
-
-#[derive(Bundle)]
-pub(crate) struct AdminAccountInstanceBundle {
-    pub account: AdminAccountInstance,
-}
 
 pub(crate) fn receive_account_create(
     mut commands: Commands,
@@ -194,7 +187,7 @@ pub(crate) fn receive_account_login(
                 // FIXME assign a client id and send it to the client
                 client.client_type = ClientType::Player;
                 client.account_id = Some(account.info.id);
-                info!("spawning Account for {client:?}");
+                info!("spawning account for {client:?}");
 
                 let account_entity = commands
                     .spawn(AccountInstanceBundle {
@@ -309,33 +302,95 @@ pub(crate) fn receive_character_create(
 }
 
 pub(crate) fn receive_game_create(
-    net_params: NetworkParamsRO,
+    mut state: ResMut<NextState<AppState>>,
+    mut game_state: ResMut<GameState>,
+    mut net_params: NetworkParamsRW,
     mut create_events: EventReader<MessageEvent<CSCreateGame>>,
+    account_q: Query<&AccountInstance>,
 ) {
     for create in create_events.read() {
-        let client_id = create.context();
-        let client = net_params.context.clients.get(client_id).unwrap();
+        let client_id = *create.context();
+        let client = net_params.context.clients.get(&client_id).unwrap();
         if !client.is_authenticated_player() {
             continue;
         };
 
         let create_msg = create.message();
         info!("create game {create_msg:?}");
+
+        let account = account_q.get(client.entity).unwrap();
+
+        let Some(character) = account.get_character_from_slot(create_msg.slot) else {
+            info!("no character in slot");
+            continue;
+        };
+
+        // FIXME temporarily clear, this will be handled properly later
+        game_state.players.clear();
+        game_state.players.push(PlayerIdInfo {
+            account_id: account.0.info.id,
+            character_id: character.info.uid,
+            client_id,
+        });
+        game_state.options.mode = create_msg.game_mode;
+
+        net_params.server.send_message_to_target::<Channel1, _>(
+            SCGameCreateSuccess,
+            NetworkTarget::Only(vec![client_id]),
+        );
+
+        // FIXME turn this into an event
+        state.set(AppState::SpawnSimulation);
     }
 }
 
 pub(crate) fn receive_game_join(
-    net_params: NetworkParamsRO,
+    mut game_state: ResMut<GameState>,
+    mut net_params: NetworkParamsRW,
     mut join_events: EventReader<MessageEvent<CSJoinGame>>,
+    account_q: Query<&AccountInstance>,
 ) {
     for join in join_events.read() {
-        let client_id = join.context();
-        let client = net_params.context.clients.get(client_id).unwrap();
+        let client_id = *join.context();
+        let client = net_params.context.clients.get(&client_id).unwrap();
         if !client.is_authenticated_player() {
             continue;
         };
 
         let join_msg = join.message();
         info!("join game {join_msg:?}");
+
+        let account = account_q.get(client.entity).unwrap();
+        if game_state
+            .players
+            .iter()
+            .any(|a| a.account_id == account.info.id)
+        {
+            info!("client attempted to join a game while in a game");
+            net_params.server.send_message_to_target::<Channel1, _>(
+                SCGameJoinError,
+                NetworkTarget::Only(vec![client_id]),
+            );
+
+            continue;
+        }
+
+        let Some(character) = account.get_character_from_slot(join_msg.slot) else {
+            info!("no character exists in slot");
+            continue;
+        };
+
+        game_state.players.push(PlayerIdInfo {
+            account_id: account.0.info.id,
+            character_id: character.info.uid,
+            client_id,
+        });
+
+        net_params.server.send_message_to_target::<Channel1, _>(
+            SCGameJoinSuccess,
+            NetworkTarget::Only(vec![client_id]),
+        );
+
+        // TODO broadcast to players
     }
 }

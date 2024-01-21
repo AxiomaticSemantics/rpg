@@ -1,16 +1,10 @@
 #![allow(clippy::too_many_arguments)]
 
-use crate::{
-    assets::AudioAssets, loader::plugin::OutOfGameCamera, random::Random, state::AppState,
-};
+use crate::{assets::AudioAssets, loader::plugin::OutOfGameCamera, state::AppState};
 
 use super::{
     actions,
-    actor::{
-        self, player,
-        unit::{self, Unit},
-        villain::{self, VillainSpawner},
-    },
+    actor::{self, player, unit, villain},
     assets::RenderResources,
     controls::{self, Controls, CursorPosition},
     environment,
@@ -23,18 +17,32 @@ use super::{
 
 use audio_manager::plugin::AudioActions;
 use rpg_core::{class::Class, uid::NextUid, unit::HeroGameMode};
-use util::cleanup::CleanupStrategy;
+use rpg_network_protocol::protocol::*;
+use rpg_util::unit::Unit;
+use util::{
+    cleanup::CleanupStrategy,
+    random::{Rng, SharedRng},
+};
 
 use bevy::{
     app::{App, Plugin, PostUpdate, PreUpdate, Update},
     audio::{AudioBundle, AudioSink, PlaybackSettings},
     core_pipeline::{bloom::BloomSettings, core_3d::Camera3dBundle, tonemapping::Tonemapping},
-    ecs::prelude::*,
-    ecs::schedule::IntoSystemConfigs,
-    gizmos::{AabbGizmoConfig, GizmoConfig},
-    hierarchy::prelude::*,
+    ecs::{
+        component::Component,
+        entity::Entity,
+        query::{Changed, With, Without},
+        schedule::{
+            common_conditions::*, Condition, IntoSystemConfigs, NextState, OnEnter, OnExit,
+        },
+        system::{Commands, Query, Res, ResMut, Resource},
+    },
+    gizmos::config::{GizmoConfig, GizmoConfigGroup},
+    hierarchy::{BuildChildren, ChildBuilder, DespawnRecursiveExt},
+    log::{debug, info},
     math::Vec3,
     pbr::{AmbientLight, DirectionalLightShadowMap},
+    reflect::Reflect,
     render::{
         camera::{Camera, ClearColorConfig},
         color::Color,
@@ -43,10 +51,11 @@ use bevy::{
     utils::default,
 };
 
-use fastrand::Rng;
-
 #[derive(Clone, Copy, Component)]
 pub struct GameSessionCleanup;
+
+#[derive(Default, Reflect, GizmoConfigGroup)]
+struct GameGizmos {}
 
 #[derive(Component)]
 pub struct GameCamera {
@@ -148,7 +157,7 @@ pub struct GameState {
     pub session_stats: SessionStats,
     pub next_uid: NextUid,
     pub state: PlayState,
-    pub player_config: Option<PlayerOptions>,
+    pub mode: HeroGameMode,
 }
 
 #[derive(Debug, Resource, Default)]
@@ -160,23 +169,16 @@ pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        println!("Initializing game client plugin.");
+        debug!("initializing");
 
-        app.add_event::<state_saver::LoadCharacter>()
-            .add_event::<state_saver::SaveGame>()
-            .add_event::<SkillContactEvent>()
+        app.add_event::<SkillContactEvent>()
             .init_resource::<Controls>()
             .init_resource::<CursorPosition>()
             .init_resource::<CursorItem>()
             .init_resource::<GroundItemDrops>()
             .init_resource::<GameTime>()
             .init_resource::<GameState>()
-            .insert_resource(Random(Rng::with_seed(1234)))
-            .insert_resource(VillainSpawner {
-                units: 1,
-                frequency: 10.,
-                timer: Timer::from_seconds(10., TimerMode::Repeating),
-            })
+            .insert_resource(SharedRng(Rng::with_seed(1234)))
             .insert_resource(DirectionalLightShadowMap { size: 2048 })
             .insert_resource(AmbientLight {
                 brightness: 0.,
@@ -194,6 +196,7 @@ impl Plugin for GamePlugin {
                         actor::player::spawn_player,
                     )
                         .chain(),
+                    transition_to_game,
                     (
                         ui::hud::setup,
                         ui::hero::setup,
@@ -202,12 +205,9 @@ impl Plugin for GamePlugin {
                         ui::game_over::setup,
                         passive_tree::setup,
                     )
-                        .after(actor::player::spawn_player),
+                        .after(actor::player::spawn_player)
+                        .before(transition_to_game),
                 ),
-            )
-            .add_systems(
-                Update,
-                spawn_to_game_transition.run_if(in_state(AppState::GameSpawn)),
             )
             // Game
             /*.add_systems(
@@ -221,7 +221,6 @@ impl Plugin for GamePlugin {
                         (
                             controls::update_controls,
                             player::input_actions,
-                            villain::villain_think,
                             unit::action,
                             skill::update_skill,
                             unit::collide_units,
@@ -261,11 +260,7 @@ impl Plugin for GamePlugin {
             )
             .add_systems(
                 Update,
-                (
-                    ui::pause::user_pause,
-                    ui::pause::save_button_pressed,
-                    state_saver::save_character,
-                )
+                (ui::pause::user_pause, ui::pause::save_button_pressed)
                     .chain()
                     .run_if(in_state(AppState::Game).and_then(is_paused)),
             )
@@ -294,9 +289,8 @@ impl Plugin for GamePlugin {
                 (
                     environment::day_night_cycle,
                     stopwatch,
-                    unit::upkeep,
-                    villain::spawner,
-                    unit::corpse_removal,
+                    // TODO decide if this will be needed again villain::spawner,
+                    unit::remove_healthbar,
                     skill::clean_skills,
                     skill::update_invulnerability,
                     actions::action_tick,
@@ -304,6 +298,7 @@ impl Plugin for GamePlugin {
                     .run_if(in_state(AppState::Game).and_then(is_playing)),
             )
             .add_systems(OnEnter(AppState::Game), stopwatch_restart)
+            .add_systems(OnExit(AppState::GameSpawn), send_player_ready)
             // GameOver
             .add_systems(
                 OnExit(AppState::GameOver),
@@ -337,15 +332,20 @@ impl Plugin for GamePlugin {
     }
 }
 
+fn transition_to_game(mut state: ResMut<NextState<AppState>>) {
+    debug!("transition to game");
+    state.set(AppState::Game);
+}
+
 pub(crate) fn background_audio(
     mut commands: Commands,
     audio_assets: Res<AudioAssets>,
     background_music_q: Query<Entity, (Without<AudioSink>, With<BackgroundMusic>)>,
     environmental_sound_q: Query<Entity, (Without<AudioSink>, With<EnvironmentalSound>)>,
-    mut random: ResMut<Random>,
+    mut rng: ResMut<SharedRng>,
 ) {
     for entity in &background_music_q {
-        let track_roll = random.0.usize(1..=7);
+        let track_roll = rng.0.usize(1..=7);
         let key = format!("bg_loop{track_roll}");
         let handle = audio_assets.background_tracks[key.as_str()].clone_weak();
 
@@ -353,7 +353,7 @@ pub(crate) fn background_audio(
             .entity(entity)
             .insert((handle, PlaybackSettings::REMOVE));
 
-        println!("switching to bg track {key}");
+        debug!("switching to bg track {key}");
     }
 
     for entity in &environmental_sound_q {
@@ -363,6 +363,10 @@ pub(crate) fn background_audio(
             .entity(entity)
             .insert((handle, PlaybackSettings::LOOP));
     }
+}
+
+fn send_player_ready(mut net_client: ResMut<Client>) {
+    net_client.send_message::<Channel1, _>(CSPlayerReady);
 }
 
 pub(crate) fn unit_audio(
@@ -458,10 +462,11 @@ pub(crate) fn setup(
     mut commands: Commands,
     mut camera_2d_q: Query<&mut Camera, With<OutOfGameCamera>>,
 ) {
-    println!("begin game spawn");
+    info!("spawning world");
 
     camera_2d_q.single_mut().is_active = false;
 
+    /* FIXME update this
     commands.insert_resource(GizmoConfig {
         enabled: true,
         aabb: AabbGizmoConfig {
@@ -469,9 +474,10 @@ pub(crate) fn setup(
             ..default()
         },
         ..default()
-    });
+    });*/
 
     let default_y = 10.;
+
     // camera
     commands.spawn((
         GameSessionCleanup,
@@ -576,11 +582,11 @@ pub(crate) fn setup(
     // ..default()
     // });
 
-    println!("game spawn complete");
+    info!("spawning complete");
 }
 
 fn cleanup(mut game_state: ResMut<GameState>, mut controls: ResMut<Controls>) {
-    println!("game::plugin cleanup");
+    debug!("game::plugin cleanup");
 
     controls.reset();
 
@@ -607,9 +613,4 @@ fn stopwatch_restart(mut game_time: ResMut<GameTime>) {
 
 fn stopwatch(time: Res<Time>, mut game_time: ResMut<GameTime>) {
     game_time.watch.tick(time.delta());
-}
-
-fn spawn_to_game_transition(mut state: ResMut<NextState<AppState>>) {
-    println!("game spawn to play transition");
-    state.set(AppState::Game);
 }

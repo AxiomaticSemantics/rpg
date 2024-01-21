@@ -18,13 +18,17 @@ rpg_account = { path = "../rpg_account" }
 rpg_lobby = { path = "../rpg_lobby" }
 rpg_chat = { path = "../rpg_chat" }
 
+# bevy plugins
+rpg_util = { path = "../rpg_util" }
 util = { path = "../util" }
 
+# external dependencies
 serde = { workspace = true }
 serde_derive = { workspace = true }
 serde_json = { workspace = true }
 
 clap = { version = "4.4.13", features = ["derive"] }
+signal-hook = { version = "0.3.17", features = ["extended-siginfo"] }
 
 [dependencies.lightyear]
 git = "https://github.com/AxiomaticSemantics/lightyear"

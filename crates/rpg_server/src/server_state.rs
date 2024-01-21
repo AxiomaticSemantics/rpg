@@ -18,6 +18,7 @@ pub(crate) struct ServerMetadata {
     pub(crate) next_account_id: AccountId,
     pub(crate) next_message_id: MessageId,
     pub(crate) next_uid: NextUid,
+    pub(crate) rng_seed: u64,
 }
 
 #[derive(Resource)]

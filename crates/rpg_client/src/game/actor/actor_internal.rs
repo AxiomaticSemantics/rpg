@@ -1,8 +1,6 @@
 use super::{
     animation::AnimationState,
     player::{Player, PlayerBundle},
-    unit::{Hero, Unit, UnitBundle},
-    villain::{ThinkTimer, Villain, VillainBundle, VillainState},
 };
 use crate::game::{
     actions::Actions, assets::RenderResources, health_bar::HealthBar, item::UnitStorage,
@@ -13,6 +11,7 @@ use bevy::{
     animation::AnimationClip,
     asset::Handle,
     ecs::{bundle::Bundle, component::Component, system::Commands},
+    log::info,
     math::Vec3,
     pbr::{MaterialMeshBundle, StandardMaterial},
     prelude::{Deref, DerefMut},
@@ -31,6 +30,7 @@ use rpg_core::{
     unit::{Unit as RpgUnit, UnitKind},
     villain::VillainId,
 };
+use rpg_util::unit::{Hero, Unit, UnitBundle, Villain, VillainBundle};
 use util::cleanup::CleanupStrategy;
 
 #[derive(Default, Debug, Component, Deref, DerefMut)]
@@ -167,22 +167,19 @@ pub(crate) fn spawn_actor(
 
             let actor = renderables.actors[actor_key].actor.clone();
 
+            /* FIXME remove me
             let think_timer = ThinkTimer(Timer::from_seconds(
                 villain_info.think_cooldown,
                 TimerMode::Repeating,
-            ));
+            ));*/
 
             let actor_villain_bundle = (
                 GameSessionCleanup,
                 CleanupStrategy::DespawnRecursive,
                 VillainBundle {
-                    villain: Villain {
-                        look_target: None,
-                        state: VillainState::Idle,
-                    },
-                    think_timer,
+                    villain: Villain,
+                    unit: UnitBundle::new(Unit(unit)),
                 },
-                UnitBundle::new(Unit(unit)),
             );
 
             match actor {
@@ -216,7 +213,6 @@ pub(crate) fn spawn_actor(
     }
 }
 
-// TODO now that I've verified that this works expand upon it further to add a little more variety to our limited skinned meshes
 /*
 pub(crate) fn _replace_actor_materials(
     actor: Query<Entity, With<Hero>>,

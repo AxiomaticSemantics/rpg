@@ -280,7 +280,6 @@ pub fn set_game_mode(
 
 pub fn create_class(
     mut net_client: ResMut<Client>,
-    mut state: ResMut<NextState<AppState>>,
     mut game_state: ResMut<GameState>,
     selected_character: Res<SelectedCharacter>,
     interaction_q: Query<
@@ -308,11 +307,6 @@ pub fn create_class(
         }
 
         let game_mode = game_mode_q.single();
-        game_state.player_config = Some(PlayerOptions {
-            name: player_name_text.sections[0].value.clone(),
-            class: create_class.0,
-            game_mode: game_mode.0,
-        });
 
         let create_msg = CSCreateCharacter {
             name: player_name_text.sections[0].value.clone(),

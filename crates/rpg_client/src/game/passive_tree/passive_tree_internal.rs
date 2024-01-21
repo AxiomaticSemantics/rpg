@@ -3,18 +3,15 @@
 use crate::{
     assets::TextureAssets,
     game::{
-        actor::{player::Player, unit::Unit},
-        assets::RenderResources,
-        controls::Controls,
-        metadata::MetadataResources,
-        plugin::GameSessionCleanup,
+        actor::player::Player, assets::RenderResources, controls::Controls,
+        metadata::MetadataResources, plugin::GameSessionCleanup,
     },
 };
-
 use rpg_core::{
     passive_tree::{EdgeNodes, Node, NodeId, NodeKind, PassiveSkillGraph},
     stat::value::ValueKind,
 };
+use rpg_util::unit::Unit;
 use ui_util::style::UiTheme;
 use util::cleanup::CleanupStrategy;
 

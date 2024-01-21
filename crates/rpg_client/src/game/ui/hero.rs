@@ -3,11 +3,11 @@
 use crate::assets::TextureAssets;
 
 use crate::game::{
-    actor::{player::Player, unit::Unit},
+    actor::player::Player,
     metadata::MetadataResources,
     plugin::{GameSessionCleanup, GameState, PlayerOptions},
 };
-
+use rpg_util::unit::Unit;
 use ui_util::style::UiTheme;
 use util::cleanup::CleanupStrategy;
 
@@ -129,8 +129,6 @@ pub(crate) fn setup(
 ) {
     println!("game::ui::hero::setup");
 
-    let player_name = game_state.player_config.as_ref().unwrap().name.clone();
-
     let mut container_hidden_style = ui_theme.container_absolute_max.clone();
     container_hidden_style.display = Display::None;
 
@@ -197,16 +195,6 @@ pub(crate) fn setup(
                 ..default()
             })
             .with_children(|p| {
-                // Blank fill
-                /* p.spawn(NodeBundle {
-                    style: Style {
-                        width: Val::Percent(100.),
-                        height: Val::Percent(100.),
-                        ..default()
-                    },
-                    ..default()
-                }); */
-
                 let frame_color = ui_theme.frame_background_color.0.with_a(0.9);
                 p.spawn(NodeBundle {
                     style: Style {
@@ -216,10 +204,7 @@ pub(crate) fn setup(
                         justify_content: JustifyContent::Center,
                         width: Val::Percent(100.),
                         border: UiRect::all(ui_theme.border),
-                        //padding: UiRect::all(ui_theme.padding),
                         margin: UiRect::all(ui_theme.margin),
-
-                        //min_width: Val::Px(720.),
                         ..default()
                     },
                     border_color: ui_theme.border_color,

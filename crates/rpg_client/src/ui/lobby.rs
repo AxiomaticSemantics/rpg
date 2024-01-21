@@ -335,6 +335,10 @@ pub(crate) fn game_create_button(
     lobby: Res<Lobby>,
     mut net_client: ResMut<Client>,
     button_q: Query<&Interaction, (Changed<Interaction>, With<GameCreateButton>)>,
+    mut menu_set: ParamSet<(
+        Query<&mut Style, With<UiRoot>>,
+        Query<&mut Style, With<LobbyRoot>>,
+    )>,
 ) {
     let interaction = button_q.get_single();
     if let Ok(Interaction::Pressed) = interaction {
@@ -352,6 +356,9 @@ pub(crate) fn game_create_button(
             game_mode: lobby.game_mode,
             slot: slot_character.slot,
         });
+
+        menu_set.p0().single_mut().display = Display::None;
+        menu_set.p1().single_mut().display = Display::None;
     }
 }
 
@@ -366,6 +373,7 @@ pub(crate) fn leave_button(
     let interaction = button_q.get_single();
     if let Ok(Interaction::Pressed) = interaction {
         net_client.send_message::<Channel1, _>(CSLobbyLeave);
+
         menu_set.p0().single_mut().display = Display::Flex;
         menu_set.p1().single_mut().display = Display::None;
     }
@@ -420,7 +428,8 @@ pub(crate) fn update_players_container(
 
     let (entity, children) = players_container_q.single();
 
-    // TODO optimize thi on a rainy day
+    // TODO optimize this on a rainy day
+
     // clear all children in the containers hierarchy
     if let Some(children) = children {
         for child in children.iter() {

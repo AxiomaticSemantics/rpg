@@ -37,9 +37,9 @@ pub(crate) struct RpgWorld {
     pub(crate) zones: HashMap<ZoneId, RpgZone>,
 }
 
-pub(crate) struct ServerWorldPlugin;
+pub(crate) struct WorldPlugin;
 
-impl Plugin for ServerWorldPlugin {
+impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<LoadZone>()
             .init_resource::<RpgWorld>()

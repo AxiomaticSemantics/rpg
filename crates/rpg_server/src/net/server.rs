@@ -1,5 +1,5 @@
 use super::{account, chat, game, lobby};
-use crate::state::AppState;
+use crate::{game::plugin::GameState, state::AppState};
 
 use bevy::{
     app::{App, FixedUpdate, Plugin, PreUpdate, Update},
@@ -17,7 +17,6 @@ use lightyear::prelude::server::*;
 use lightyear::prelude::*;
 
 use rpg_account::account::AccountId;
-use rpg_core::uid::NextUid;
 use rpg_network_protocol::{protocol::*, *};
 
 use std::collections::HashMap;
@@ -58,14 +57,19 @@ impl Plugin for NetworkServerPlugin {
 
         app.add_plugins(server::ServerPlugin::new(plugin_config))
             .init_resource::<NetworkContext>()
+            .add_systems(PreUpdate, (handle_connections, handle_disconnections))
             .add_systems(
                 FixedUpdate,
-                (game::rotation_request, game::movement_request)
+                (
+                    game::receive_rotation,
+                    game::receive_skill_use_direct,
+                    game::receive_skill_use_targeted,
+                    game::receive_movement,
+                )
                     .chain()
-                    .in_set(FixedUpdateSet::Main)
+                    //.in_set(FixedUpdateSet::Main)
                     .run_if(in_state(AppState::Simulation)),
             )
-            .add_systems(PreUpdate, (handle_connections, handle_disconnections))
             .add_systems(
                 Update,
                 (
@@ -86,11 +90,17 @@ impl Plugin for NetworkServerPlugin {
                     )
                         .run_if(in_state(AppState::Lobby)),
                     (
+                        account::receive_game_join,
                         chat::receive_chat_channel_message,
                         chat::receive_chat_join,
                         chat::receive_chat_leave,
                     )
-                        .run_if(in_state(AppState::Lobby).or_else(in_state(AppState::Simulation))),
+                        .run_if(
+                            in_state(AppState::Lobby)
+                                .or_else(in_state(AppState::SpawnSimulation))
+                                .or_else(in_state(AppState::Simulation)),
+                        ),
+                    (game::receive_player_ready).run_if(in_state(AppState::Simulation)),
                 ),
             );
     }
@@ -193,15 +203,20 @@ impl NetworkContext {
 }
 
 pub(crate) fn handle_disconnections(
-    mut disconnections: EventReader<DisconnectEvent>,
+    mut game_state: ResMut<GameState>,
+    mut disconnect_reader: EventReader<DisconnectEvent>,
     mut net_params: NetworkParamsRW,
     mut commands: Commands,
 ) {
-    for disconnection in disconnections.read() {
-        let client_id = disconnection.context();
-        info!("Removing {client_id} from global map");
-        if let Some(client) = net_params.context.clients.remove(client_id) {
+    for event in disconnect_reader.read() {
+        let client_id = *event.context();
+        game_state.players.retain(|p| p.client_id != client_id);
+
+        if let Some(client) = net_params.context.clients.remove(&client_id) {
+            info!("Removing {client_id} from global map");
+
             if client.entity != Entity::PLACEHOLDER {
+                info!("despawning client entity");
                 commands.entity(client.entity).despawn_recursive();
             }
         }
@@ -209,11 +224,11 @@ pub(crate) fn handle_disconnections(
 }
 
 pub(crate) fn handle_connections(
-    mut connections: EventReader<ConnectEvent>,
+    mut connect_reader: EventReader<ConnectEvent>,
     mut net_params: NetworkParamsRW,
 ) {
-    for connection in connections.read() {
-        let client_id = *connection.context();
+    for event in connect_reader.read() {
+        let client_id = *event.context();
 
         net_params
             .context

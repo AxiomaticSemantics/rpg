@@ -26,6 +26,7 @@ rpg_chat = { path = "../rpg_chat" }
 rpg_lobby = { path = "../rpg_lobby" }
 
 # bevy plugins
+rpg_util = { path = "../rpg_util" }
 rpg_network_protocol = { path = "../rpg_network_protocol" }
 
 util = { path = "../util" }

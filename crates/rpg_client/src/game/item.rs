@@ -1,8 +1,7 @@
 use super::{
-    actor::unit::Unit, assets::RenderResources, controls::CursorPosition,
-    metadata::MetadataResources, plugin::GameSessionCleanup, prop::PropHandle,
+    assets::RenderResources, controls::CursorPosition, metadata::MetadataResources,
+    plugin::GameSessionCleanup, prop::PropHandle,
 };
-use crate::random::Random;
 
 use audio_manager::plugin::AudioActions;
 use rpg_core::{
@@ -10,7 +9,8 @@ use rpg_core::{
     metadata::Metadata,
     storage::{StorageSlot as RpgStorageSlot, UnitStorage as RpgUnitStorage},
 };
-use util::cleanup::CleanupStrategy;
+use rpg_util::unit::Unit;
+use util::{cleanup::CleanupStrategy, random::SharedRng};
 
 use bevy::{
     ecs::{
@@ -135,7 +135,7 @@ pub(crate) fn spawn_ground_items(
     mut commands: Commands,
     metadata: Res<MetadataResources>,
     renderables: Res<RenderResources>,
-    mut random: ResMut<Random>,
+    mut random: ResMut<SharedRng>,
     mut ground_drop_items: ResMut<GroundItemDrops>,
     mut unit_q: Query<(&mut AudioActions, &Transform), With<Unit>>,
 ) {

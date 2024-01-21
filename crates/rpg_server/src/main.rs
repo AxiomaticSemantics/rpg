@@ -1,6 +1,6 @@
 //! Run with
 //! - `cargo run`
-//! - `cargo run -- --port 42069`
+//! - `cargo run -- --port 42069 --addr 127.0.0.1`
 
 mod assets;
 mod server_state;
@@ -8,7 +8,9 @@ mod state;
 
 mod net;
 
+mod account;
 mod chat;
+mod game;
 mod lobby;
 
 mod world;
@@ -16,11 +18,12 @@ mod world;
 use crate::{
     assets::{load_metadata, JsonAssets},
     chat::ChatManager,
+    game::plugin::GamePlugin,
     lobby::LobbyManager,
     net::server::NetworkServerPlugin,
     server_state::ServerMetadataResource,
     state::AppState,
-    world::ServerWorldPlugin,
+    world::WorldPlugin,
 };
 
 use rpg_network_protocol::*;
@@ -47,28 +50,92 @@ struct Cli {
     addr: Ipv4Addr,
 }
 
-fn main() {
+use std::io::Error;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
+use std::thread;
+use std::time;
+
+use signal_hook::consts::signal::*;
+use signal_hook::consts::TERM_SIGNALS;
+use signal_hook::flag;
+use signal_hook::iterator::exfiltrator::WithOrigin;
+use signal_hook::iterator::Signals;
+use signal_hook::iterator::SignalsInfo;
+use signal_hook::low_level;
+
+fn main() -> Result<(), Error> {
     let cli = Cli::parse();
 
-    let mut app = App::new();
-    app.init_state::<AppState>()
-        .add_plugins(
-            MinimalPlugins
-                .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
-                    1.0 / 60.0,
-                )))
-                .set(TaskPoolPlugin::default()),
-        )
-        .add_plugins(LogPlugin::default())
-        .add_plugins(AssetPlugin::default())
-        .add_plugins(UtilityPlugin)
-        .init_resource::<JsonAssets>()
-        .init_resource::<ServerMetadataResource>()
-        .init_resource::<ChatManager>()
-        .init_resource::<LobbyManager>()
-        .add_systems(Startup, chat::setup)
-        .add_systems(Update, load_metadata.run_if(in_state(AppState::LoadAssets)))
-        .add_plugins(NetworkServerPlugin { port: cli.port })
-        .add_plugins(ServerWorldPlugin)
-        .run();
+    let term_now = Arc::new(AtomicBool::new(false));
+    for sig in TERM_SIGNALS {
+        // When terminated by a second term signal, exit with exit code 1.
+        // This will do nothing the first time (because term_now is false).
+        flag::register_conditional_shutdown(*sig, 1, Arc::clone(&term_now))?;
+        flag::register(*sig, Arc::clone(&term_now))?;
+    }
+
+    /*
+    let mut signals = vec![SIGTSTP, SIGCONT, SIGWINCH, SIGHUP];
+
+    let mut has_terminal = true;
+    for info in &mut signals {
+        eprintln!("Received a signal {:?}", info);
+    }*/
+
+    let mut signals = Signals::new(TERM_SIGNALS)?;
+
+    let t = thread::spawn(move || {
+        App::new()
+            .init_state::<AppState>()
+            .add_plugins(
+                MinimalPlugins
+                    .set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
+                        1.0 / 60.0,
+                    )))
+                    .set(TaskPoolPlugin::default()),
+            )
+            .add_plugins(LogPlugin::default())
+            .add_plugins(AssetPlugin::default())
+            .add_plugins(UtilityPlugin)
+            .init_resource::<JsonAssets>()
+            .init_resource::<ServerMetadataResource>()
+            .init_resource::<ChatManager>()
+            .init_resource::<LobbyManager>()
+            .add_systems(Startup, chat::setup)
+            .add_systems(Update, load_metadata.run_if(in_state(AppState::LoadAssets)))
+            .add_plugins(NetworkServerPlugin { port: cli.port })
+            .add_plugins(GamePlugin)
+            .run();
+    });
+
+    'outer: loop {
+        let mut count = 0;
+        for signal in signals.pending() {
+            match signal {
+                SIGINT => {
+                    println!("\nCaught: SIGINT; joining app thread");
+                    break 'outer;
+                }
+                SIGTERM => {
+                    println!("\nCaught: SIGTERM; joining app thread");
+                    break 'outer;
+                }
+                term_sig => {
+                    println!("\nCaught: {:?}; joining app thread", term_sig);
+                    break 'outer;
+                }
+            }
+            count += 1;
+        }
+        if count == 0 {
+            thread::sleep(time::Duration::from_millis(1));
+        }
+    }
+
+    println!("\nReceived kill signal, joining app thread. Enter Ctrl+C again to exit immediately.");
+
+    t.join().unwrap();
+
+    Ok(())
 }

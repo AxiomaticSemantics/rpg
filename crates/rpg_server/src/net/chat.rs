@@ -1,11 +1,8 @@
-use super::{
-    account::AccountInstance,
-    server::{NetworkParamsRO, NetworkParamsRW},
-};
-use crate::chat::ChatManager;
+use super::server::{NetworkParamsRO, NetworkParamsRW};
+use crate::{account::AccountInstance, chat::ChatManager};
 
 use rpg_account::account::AccountId;
-use rpg_chat::chat::{Channel, ChannelId};
+use rpg_chat::chat::{Channel, ChannelId, Message};
 use rpg_network_protocol::protocol::*;
 
 use bevy::{
@@ -92,7 +89,7 @@ pub(crate) fn receive_chat_channel_message(
         let channel_msg = event.message();
         // TODO Handle rejections for banned accounts etc.
 
-        let Some(channel) = chat.get_channel(channel_msg.channel_id) else {
+        let Some(channel) = chat.get_channel(channel_msg.0.channel_id) else {
             continue;
         };
 
@@ -112,11 +109,12 @@ pub(crate) fn receive_chat_channel_message(
             .collect();
 
         net_params.server.send_message_to_target::<Channel1, _>(
-            SCChatMessage {
-                channel_id: channel_msg.channel_id,
-                message_id: channel_msg.message_id,
-                message: channel_msg.message.clone(),
-            },
+            SCChatMessage(Message {
+                channel_id: channel_msg.0.channel_id,
+                id: channel_msg.0.id,
+                sender: channel_msg.0.sender.clone(),
+                message: channel_msg.0.message.clone(),
+            }),
             NetworkTarget::Only(subscriber_ids),
         );
     }

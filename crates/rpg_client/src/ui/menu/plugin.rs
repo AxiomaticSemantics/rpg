@@ -60,6 +60,7 @@ impl Plugin for MenuPlugin {
                         menu::account::create_button,
                         menu::account::login_button,
                         menu::account::lobby_create_button,
+                        menu::account::lobby_join_button,
                         menu::account::list_create_character_button,
                         menu::account::list_create_game_button,
                         menu::account::list_cancel_button,
