@@ -11,11 +11,9 @@ use util::random::SharedRng;
 use bevy::{
     ecs::{
         component::Component,
-        entity::Entity,
         query::{With, Without},
         system::{Commands, Query, Res, ResMut},
     },
-    hierarchy::DespawnRecursiveExt,
     math::Vec3,
     prelude::{Deref, DerefMut},
     time::{Time, Timer},

@@ -170,7 +170,7 @@ pub fn input_actions(
         }
     }
 
-    // println!("actions: {actions:?} controls: {controls:?}");
+    // debug!("actions: {actions:?} controls: {controls:?}");
 }
 
 pub fn update_spotlight(
@@ -191,8 +191,6 @@ pub fn update_spotlight(
             Vec3::Y,
         );
     }
-
-    info!("spotlight update {spotlight_transform:?}");
 }
 
 pub fn update_camera(
@@ -256,33 +254,6 @@ pub fn spawn_player(
             account.0.characters[0].character.passive_tree.clone(),
         )
     };
-
-    /* {
-        let mut unit = RpgUnit::new(
-            game_state.next_uid.get(),
-            player_config.class,
-            UnitKind::Hero,
-            UnitInfo::Hero(HeroInfo::new(&metadata.rpg, player_config.game_mode)),
-            1,
-            player_config.name.clone(),
-            None,
-            &metadata.rpg,
-        );
-
-        // FIXME remove after testing
-        unit.passive_skill_points = 10;
-
-        game_state.next_uid.next();
-
-        unit.add_default_skills(&metadata.rpg);
-
-        let class = unit.class;
-        (
-            unit,
-            RpgUnitStorage::default(),
-            PassiveSkillGraph::new(class),
-        )
-    };*/
 
     actor::spawn_actor(
         &mut commands,

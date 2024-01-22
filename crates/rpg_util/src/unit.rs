@@ -1,7 +1,6 @@
 use bevy::{
     ecs::{bundle::Bundle, component::Component},
     prelude::{Deref, DerefMut},
-    time::Timer,
 };
 
 #[derive(Component)]

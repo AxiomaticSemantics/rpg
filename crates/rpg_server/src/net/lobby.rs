@@ -1,4 +1,4 @@
-use super::server::{NetworkParamsRO, NetworkParamsRW};
+use super::server::NetworkParamsRW;
 use crate::{account::AccountInstance, lobby::LobbyManager, server_state::ServerMetadataResource};
 
 use rpg_chat::chat::MessageId;

@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [ "crates/util", "crates/audio_manager", "crates/ui_util", "crates/util", "crates/rpg_chat", "crates/rpg_lobby", "crates/rpg_account", "crates/rpg_network_protocol", "crates/rpg_util", "crates/rpg_server", "crates/rpg_world", "crates/rpg_core", "crates/rpg_client" ]
+default-run = "crates/rpg_client"
 
 [workspace.package]
 description = "A prototype of an Action RPG"

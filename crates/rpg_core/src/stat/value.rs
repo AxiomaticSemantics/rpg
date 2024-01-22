@@ -18,7 +18,7 @@ pub enum ValueKind {
     F64,
 }
 
-#[derive(Debug, Copy, Clone, PartialOrd, Ser, De)]
+#[derive(Debug, Copy, Clone, PartialOrd, Ord, Ser, De)]
 pub enum Value {
     U32(u32),
     U64(u64),

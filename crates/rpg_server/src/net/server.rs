@@ -128,17 +128,19 @@ pub(crate) enum ClientType {
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Client {
+    pub(crate) id: ClientId,
     pub(crate) entity: Entity,
     pub(crate) client_type: ClientType,
     pub(crate) account_id: Option<AccountId>,
 }
 
 impl Client {
-    pub(crate) fn new(entity: Entity, client_type: ClientType) -> Self {
+    pub(crate) fn new(id: ClientId) -> Self {
         Self {
-            entity,
+            id,
+            entity: Entity::PLACEHOLDER,
             account_id: None,
-            client_type,
+            client_type: ClientType::Unknown,
         }
     }
 
@@ -160,16 +162,6 @@ impl Client {
 
     pub(crate) fn is_authenticated_admin(&self) -> bool {
         self.is_admin() && self.is_authenticated()
-    }
-}
-
-impl Default for Client {
-    fn default() -> Self {
-        Self {
-            entity: Entity::PLACEHOLDER,
-            client_type: ClientType::Unknown,
-            account_id: None,
-        }
     }
 }
 
@@ -233,7 +225,7 @@ pub(crate) fn handle_connections(
         net_params
             .context
             .clients
-            .insert(client_id, Client::default());
+            .insert(client_id, Client::new(client_id));
 
         net_params
             .server

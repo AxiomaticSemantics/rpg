@@ -53,3 +53,16 @@ impl fmt::Display for StatModifier {
         write!(f, "{}", modifier::format_modifier(&self.modifier),)
     }
 }
+
+#[derive(Ser, De, PartialEq, Debug, Clone)]
+pub enum StatChange {
+    Gain(Value),
+    Loss(Value),
+}
+
+#[derive(Ser, De, PartialEq, Debug, Clone)]
+pub struct StatUpdate {
+    pub id: StatId,
+    pub total: Value,
+    pub change: StatChange,
+}

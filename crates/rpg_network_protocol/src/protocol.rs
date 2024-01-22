@@ -13,7 +13,12 @@ use rpg_account::{
     character::{CharacterInfo, CharacterRecord, CharacterSlot},
 };
 use rpg_chat::chat::{ChannelId, Message as ChatMessage, MessageId};
-use rpg_core::{class::Class, skill::SkillId, unit::HeroGameMode};
+use rpg_core::{
+    class::Class,
+    skill::SkillId,
+    stat::{value::Value, StatId, StatUpdate},
+    unit::HeroGameMode,
+};
 use rpg_lobby::lobby::{Lobby, LobbyId, LobbyMessage};
 use rpg_world::zone::ZoneId;
 
@@ -259,6 +264,11 @@ pub struct SCMovePlayer(pub Vec3);
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCRotPlayer(pub Vec3);
 
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCStatUpdates {
+    pub updates: Vec<StatUpdate>,
+}
+
 #[message_protocol(protocol = "RpgProtocol")]
 pub enum Messages {
     // Server -> Client
@@ -306,6 +316,7 @@ pub enum Messages {
     SCPlayerSpawn(SCPlayerSpawn),
     SCMovePlayer(SCMovePlayer),
     SCRotPlayer(SCRotPlayer),
+    SCStatUpdates(SCStatUpdates),
 
     // Client -> Server
 

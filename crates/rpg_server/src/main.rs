@@ -35,6 +35,7 @@ use bevy::{
     core::TaskPoolPlugin,
     ecs::schedule::{common_conditions::in_state, IntoSystemConfigs},
     log::LogPlugin,
+    time::{Fixed, Time},
     MinimalPlugins,
 };
 
@@ -95,6 +96,7 @@ fn main() -> Result<(), Error> {
                     )))
                     .set(TaskPoolPlugin::default()),
             )
+            .insert_resource(Time::<Fixed>::from_seconds(1.0 / 60.))
             .add_plugins(LogPlugin::default())
             .add_plugins(AssetPlugin::default())
             .add_plugins(UtilityPlugin)

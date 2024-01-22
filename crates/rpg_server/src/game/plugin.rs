@@ -16,10 +16,7 @@ use bevy::{
         schedule::{common_conditions::in_state, IntoSystemConfigs, NextState, OnEnter},
         system::{Commands, Query, Res, ResMut, Resource},
     },
-    hierarchy::DespawnRecursiveExt,
     log::info,
-    math::Vec3,
-    prelude::{Deref, DerefMut},
     time::{Time, Timer},
 };
 
@@ -29,7 +26,6 @@ use lightyear::shared::replication::components::NetworkTarget;
 use rpg_account::account::AccountId;
 use rpg_core::{uid::Uid, unit::HeroGameMode};
 use rpg_network_protocol::protocol::*;
-use rpg_util::unit::{Hero, Unit, Villain};
 
 use util::random::{Rng, SharedRng};
 
@@ -78,10 +74,13 @@ impl Plugin for GamePlugin {
                 Update,
                 transition_to_game.run_if(in_state(AppState::SpawnSimulation)),
             )
-            .add_systems(FixedPreUpdate, unit::remove_corpses)
+            .add_systems(
+                FixedPreUpdate,
+                unit::remove_corpses.run_if(in_state(AppState::Simulation)),
+            )
             .add_systems(
                 FixedUpdate,
-                (unit::upkeep).run_if(in_state(AppState::Simulation)),
+                unit::upkeep.run_if(in_state(AppState::Simulation)),
             );
     }
 }
