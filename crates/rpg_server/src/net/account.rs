@@ -8,18 +8,16 @@ use crate::{
     state::AppState,
 };
 
-use super::server::{ClientType, NetworkParamsRO, NetworkParamsRW};
+use super::server::{ClientType, NetworkParamsRW};
 
 use bevy::{
     ecs::{
         bundle::Bundle,
-        component::Component,
         event::EventReader,
         schedule::NextState,
         system::{Commands, Query, Res, ResMut},
     },
     log::info,
-    prelude::{Deref, DerefMut},
 };
 
 use lightyear::prelude::server::*;

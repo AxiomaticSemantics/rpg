@@ -8,7 +8,7 @@ use bevy::{
         schedule::NextState,
         system::{Query, ResMut},
     },
-    log::debug,
+    log::{debug, info},
     math::Vec3,
     transform::components::Transform,
 };
@@ -87,5 +87,19 @@ pub(crate) fn receive_player_rotation(
 
         let (mut transform, player) = player_q.single_mut();
         transform.look_to(rot_msg.0, Vec3::Y);
+    }
+}
+
+pub(crate) fn receive_stat_updates(
+    mut update_events: EventReader<MessageEvent<SCStatUpdates>>,
+    mut player_q: Query<&Unit, With<Player>>,
+) {
+    for event in update_events.read() {
+        let update_msg = event.message();
+
+        let mut player = player_q.single_mut();
+        for update in &update_msg.updates {
+            info!("stat update: {update:?}");
+        }
     }
 }

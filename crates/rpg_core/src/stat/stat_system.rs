@@ -5,7 +5,7 @@ use crate::{
         modifier::Operation,
         stat_list::StatList,
         value::{Value, ValueKind},
-        Stat, StatId, StatModifier,
+        Stat, StatChange, StatId, StatModifier, StatUpdate,
     },
 };
 
@@ -125,7 +125,42 @@ impl StatAccumulators {
         }
     }
 
-    pub fn update_regeneration(&mut self, vital: &mut VitalStats, dt: f32) {
+    fn compute_stat_update(
+        &mut self,
+        metadata: &Metadata,
+        vital: &VitalStats,
+        accumulated: u32,
+        key: &'static str,
+    ) -> Option<StatUpdate> {
+        let key_max = format!("{key}Max");
+        let value_kind = metadata.stat.stats[key].value_kind;
+
+        let original_value = vital.stats[key].value;
+        let max_value = vital.stats[key_max.as_str()].value;
+
+        let updated_value = original_value + accumulated;
+        let capped_value = updated_value.clamp(Value::zero(value_kind), max_value);
+
+        let gain = capped_value - original_value;
+        if *gain.u32() > 0 {
+            Some(StatUpdate {
+                id: vital.stats[key].id,
+                total: capped_value,
+                change: StatChange::Gain(gain),
+            })
+        } else {
+            None
+        }
+    }
+
+    /// If stat accumulators produce any updates return the new total and absolute value gained
+    pub fn update_regeneration(
+        &mut self,
+        metadata: &Metadata,
+        vital: &mut VitalStats,
+        dt: f32,
+    ) -> Vec<StatUpdate> {
+        // Update the stat accumulators
         self.hp_regen.value +=
             vital.stats["HpRegen"].value * *vital.stats["HpMax"].value.u32() as f32 * dt;
         self.ep_regen.value +=
@@ -133,32 +168,50 @@ impl StatAccumulators {
         self.mp_regen.value +=
             vital.stats["MpRegen"].value * *vital.stats["MpMax"].value.u32() as f32 * dt;
 
+        let mut updates = vec![];
+
+        // If there is a value produced take it and update the stat
         if *self.hp_regen.value.f32() >= 1_f32 {
             let value = self.hp_regen.value.f32().floor() as u32;
-            vital.stats.get_mut("Hp").unwrap().value += value;
-            self.hp_regen.value -= value as f32;
-            if vital.stats["Hp"].value > vital.stats["HpMax"].value {
-                vital.stats.get_mut("Hp").unwrap().value = vital.stats["HpMax"].value;
+            if value != 0 {
+                self.hp_regen.value -= value as f32;
+
+                let hp_update = self.compute_stat_update(metadata, vital, value, "Hp");
+                if let Some(update) = hp_update {
+                    vital.stats.get_mut("Hp").unwrap().value = update.total;
+                    updates.push(update);
+                }
             }
         }
 
         if *self.ep_regen.value.f32() >= 1_f32 {
             let value = self.ep_regen.value.f32().floor() as u32;
-            vital.stats.get_mut("Ep").unwrap().value += value;
-            self.ep_regen.value -= value as f32;
-            if vital.stats["Ep"].value > vital.stats["EpMax"].value {
-                vital.stats.get_mut("Ep").unwrap().value = vital.stats["EpMax"].value;
+            if value != 0 {
+                self.ep_regen.value -= value as f32;
+
+                let ep_update = self.compute_stat_update(metadata, vital, value, "Ep");
+                if let Some(update) = ep_update {
+                    vital.stats.get_mut("Ep").unwrap().value = update.total;
+                    updates.push(update);
+                }
             }
         }
 
         if *self.mp_regen.value.f32() >= 1_f32 {
             let value = self.mp_regen.value.f32().floor() as u32;
-            vital.stats.get_mut("Mp").unwrap().value += value;
-            self.mp_regen.value -= value as f32;
-            if vital.stats["Mp"].value > vital.stats["MpMax"].value {
-                vital.stats.get_mut("Mp").unwrap().value = vital.stats["MpMax"].value;
+
+            if value != 0 {
+                self.mp_regen.value -= value as f32;
+
+                let mp_update = self.compute_stat_update(metadata, vital, value, "Mp");
+                if let Some(update) = mp_update {
+                    vital.stats.get_mut("Mp").unwrap().value = update.total;
+                    updates.push(update);
+                }
             }
         }
+
+        updates
     }
 
     pub fn consume_stamina(&mut self, base: &BaseStats, vital: &mut VitalStats, dt: f32) -> bool {
@@ -398,8 +451,9 @@ impl Stats {
         self.vitals.stats.get_mut("DodgeChance").unwrap().value = self.list["DodgeChance"].add_sum;
     }
 
-    pub fn apply_regeneration(&mut self, dt: f32) {
-        self.accumulators.update_regeneration(&mut self.vitals, dt);
+    pub fn apply_regeneration(&mut self, metadata: &Metadata, dt: f32) -> Vec<StatUpdate> {
+        self.accumulators
+            .update_regeneration(metadata, &mut self.vitals, dt)
     }
 
     pub fn consume_stamina(&mut self, dt: f32) -> bool {

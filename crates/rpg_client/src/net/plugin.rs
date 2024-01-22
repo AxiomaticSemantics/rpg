@@ -111,14 +111,17 @@ impl Plugin for NetworkClientPlugin {
                         game::receive_player_join_success,
                         game::receive_player_join_error,
                     ),
-                    (game::receive_player_rotation, game::receive_player_move),
                 ),
             )
-            /*.add_systems(
+            .add_systems(
                 FixedUpdate,
-                //(game::receive_player_rotation, game::receive_player_move)
-                //    .after(FixedUpdateSet::Main), //.in_set(FixedUpdateSet::Main),
-            )*/;
+                (
+                    game::receive_stat_updates,
+                    game::receive_player_rotation,
+                    game::receive_player_move,
+                )
+                    .after(FixedUpdateSet::Main),
+            );
     }
 }
 

@@ -11,7 +11,7 @@ use bevy::ecs::{
 
 use serde_derive::{Deserialize as De, Serialize as Ser};
 
-use std::{env, fs, path::Path};
+use std::{env, path::Path};
 
 #[derive(Debug, Ser, De)]
 pub(crate) struct ServerMetadata {

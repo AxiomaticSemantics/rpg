@@ -1,4 +1,4 @@
-use super::server::{NetworkParamsRO, NetworkParamsRW};
+use super::server::NetworkParamsRW;
 use crate::{account::AccountInstance, chat::ChatManager};
 
 use rpg_account::account::AccountId;
