@@ -7,6 +7,7 @@ use bevy::{
         query::With,
         system::{Commands, Query, Res, ResMut, Resource},
     },
+    log::{debug, info},
     math::{Quat, Vec3},
     pbr::{
         AmbientLight, CascadeShadowConfigBuilder, DirectionalLight, DirectionalLightBundle,
@@ -21,6 +22,9 @@ use bevy::{
 use rpg_world::zone::Kind as ZoneKind;
 
 use util::cleanup::CleanupStrategy;
+
+#[derive(Component)]
+pub(crate) struct PlayerSpotLight;
 
 #[derive(Component)]
 pub(crate) struct EnvironmentDirectionalLight;
@@ -45,11 +49,10 @@ pub(crate) fn setup(mut commands: Commands, zone: Res<Zone>) {
     commands.spawn((
         GameSessionCleanup,
         CleanupStrategy::Despawn,
+        PlayerSpotLight,
         SpotLightBundle {
             spot_light: SpotLight {
                 range: 20.,
-                //outer_angle: 0.6,
-                //inner_angle: 0.3,
                 shadows_enabled: true,
                 ..default()
             },
@@ -77,7 +80,7 @@ pub(crate) fn setup(mut commands: Commands, zone: Res<Zone>) {
         ));
     }
 
-    println!("game environment spawn complete");
+    debug!("game environment spawn complete");
 }
 
 pub(crate) fn cleanup(mut commands: Commands) {
@@ -87,7 +90,7 @@ pub(crate) fn cleanup(mut commands: Commands) {
 pub(crate) fn day_night_cycle(
     time: Res<Time>,
     mut light_q: Query<(&mut DirectionalLight, &mut Transform), With<EnvironmentDirectionalLight>>,
-    mut spot_light_q: Query<&mut SpotLight>,
+    mut spot_light_q: Query<&mut SpotLight, With<PlayerSpotLight>>,
     mut ambient_light: ResMut<AmbientLight>,
 ) {
     // Hacky trash code, but it's just to show the cycle is there, not for accuracy
@@ -103,19 +106,21 @@ pub(crate) fn day_night_cycle(
     let y_sin = back.y.sin();
 
     // println!("y_sin {y_sin}");
-    if y_sin <= 0.0 {
+    if y_sin < 0.0 {
+        // night-time
         ambient_light.brightness = 0.02;
-        light.illuminance = 800. + (1. - y_sin.abs() * 600.);
-        spot_light.intensity = 200. + y_sin.abs() * 4800.;
+        light.illuminance = 0.;
+        spot_light.intensity = 2000. + y_sin.abs() * 48000.;
     } else {
+        // day-time
         ambient_light.brightness = 0.02 + y_sin * 0.25;
-        light.illuminance = 800. + y_sin * 24000.;
-        spot_light.intensity = 200. + (1. - y_sin) * 200.;
+        light.illuminance = 80. + y_sin * 1000.;
+        spot_light.intensity = 0. + (1. - y_sin) * 2000.;
     }
 
-    light.illuminance = light.illuminance.clamp(600., 10000.);
-    spot_light.intensity = spot_light.intensity.clamp(1., 800.);
-    ambient_light.brightness = ambient_light.brightness.clamp(0.02, 0.2);
+    light.illuminance = light.illuminance.clamp(0., 1000.);
+    spot_light.intensity = spot_light.intensity.clamp(100., 80000.);
+    ambient_light.brightness = ambient_light.brightness.clamp(0.00, 0.00);
 
     transform.look_at(Vec3::ZERO, Vec3::Y);
     // println!("{rot_x} {}", transform.rotation.xyz());

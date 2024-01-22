@@ -4,6 +4,7 @@ use crate::{
         actor,
         assets::RenderResources,
         controls::{Controls, CursorPosition},
+        environment::PlayerSpotLight,
         metadata::MetadataResources,
         plugin::{GameCamera, GameState},
         world::zone::Zone,
@@ -40,6 +41,7 @@ use bevy::{
     transform::components::Transform,
 };
 
+/// Marker to denote the local player in the client
 #[derive(Component)]
 pub struct Player;
 
@@ -173,19 +175,24 @@ pub fn input_actions(
 
 pub fn update_spotlight(
     player_q: Query<&Transform, (With<Player>, Without<SpotLight>)>,
-    mut spotlight_q: Query<&mut Transform, (With<SpotLight>, Without<Player>)>,
+    mut spotlight_q: Query<
+        &mut Transform,
+        (With<PlayerSpotLight>, With<SpotLight>, Without<Player>),
+    >,
 ) {
     let player_transform = player_q.single();
 
-    let mut spotlight = spotlight_q.single_mut();
+    let mut spotlight_transform = spotlight_q.single_mut();
     let target = player_transform.translation + Vec3::new(0., 6., 8.);
-    if spotlight.translation != target {
-        spotlight.translation = target;
-        spotlight.look_at(
-            player_transform.translation + Vec3::new(0., 0., 0.),
+    if spotlight_transform.translation != target {
+        spotlight_transform.translation = target;
+        spotlight_transform.look_at(
+            player_transform.translation + Vec3::new(0., 1.2, 0.),
             Vec3::Y,
         );
     }
+
+    info!("spotlight update {spotlight_transform:?}");
 }
 
 pub fn update_camera(
