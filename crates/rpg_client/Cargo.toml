@@ -6,6 +6,7 @@ description = "A prototype Action RPG client"
 license = "MIT OR Apache-2.0"
 authors.workspace = true
 edition.workspace = true
+default-run = "rpg_client"
 
 [lints]
 workspace = true
