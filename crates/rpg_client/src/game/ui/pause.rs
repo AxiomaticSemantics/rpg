@@ -2,7 +2,7 @@
 
 use crate::assets::TextureAssets;
 
-use crate::game::plugin::{GameSessionCleanup, GameState, GameTime, PlayState, SessionStats};
+use crate::game::plugin::{GameSessionCleanup, GameState, PlayState, SessionStats};
 
 use ui_util::style::UiTheme;
 use util::cleanup::CleanupStrategy;
@@ -52,33 +52,27 @@ fn build_stats_string(stats: &SessionStats) -> String {
     )
 }
 
+// FIXME pausing no longer exists, this is temporary
 pub(crate) fn user_pause(
-    mut stopwatch: ResMut<GameTime>,
     mut game_state: ResMut<GameState>,
     input: Res<ButtonInput<KeyCode>>,
     mut pause_view_q: Query<&mut Style, With<PauseView>>,
     mut pause_stats_q: Query<&mut Text, With<PauseStats>>,
 ) {
     let mut pause_style = pause_view_q.single_mut();
-    if let PlayState::Paused = game_state.state {
-        if input.just_pressed(KeyCode::Escape) {
-            game_state.state = PlayState::Play;
-            stopwatch.watch.unpause();
-            pause_style.display = Display::None;
-        }
-    } else if let PlayState::Play = game_state.state {
-        if input.just_pressed(KeyCode::Escape) {
+    if input.just_pressed(KeyCode::Escape) {
+        if pause_style.display == Display::None {
             let mut pause_stats = pause_stats_q.single_mut();
             pause_stats.sections[0].value = build_stats_string(&game_state.session_stats);
-            game_state.state = PlayState::Paused;
-            stopwatch.watch.pause();
             pause_style.display = Display::Flex;
+        } else {
+            pause_style.display = Display::None;
         }
     }
 }
 
-pub(crate) fn save_button_pressed(
-    //mut save_event_writer: EventWriter<SaveGame>,
+pub(crate) fn game_exit_button_pressed(
+    //mut exit_writer: EventWriter<ExitGame>,
     mut pause_view_q: Query<&mut Style, With<PauseView>>,
     button_q: Query<&Interaction, (With<SaveButton>, Changed<Interaction>)>,
 ) {
@@ -88,7 +82,7 @@ pub(crate) fn save_button_pressed(
 
     if interaction == &Interaction::Pressed {
         pause_view_q.single_mut().display = Display::None;
-        //save_event_writer.send(SaveGame);
+        // TODO send event to trigger sending exit game packet to server
     }
 }
 

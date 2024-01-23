@@ -3,7 +3,6 @@
 use crate::{assets::AudioAssets, loader::plugin::OutOfGameCamera, state::AppState};
 
 use super::{
-    actions,
     actor::{self, player, unit, villain},
     assets::RenderResources,
     controls::{self, Controls, CursorPosition},
@@ -15,10 +14,11 @@ use super::{
     state_saver, ui, world,
 };
 
-use audio_manager::plugin::AudioActions;
 use rpg_core::{class::Class, uid::NextUid, unit::HeroGameMode};
 use rpg_network_protocol::protocol::*;
-use rpg_util::unit::Unit;
+use rpg_util::{actions, unit::Unit};
+
+use audio_manager::plugin::AudioActions;
 use util::{
     cleanup::CleanupStrategy,
     random::{Rng, SharedRng},
@@ -124,22 +124,22 @@ struct ActorSound;
 #[derive(Debug, Default, PartialEq)]
 pub enum PlayState {
     #[default]
-    Play,
-    Paused,
-    GameOver(GameOverState),
+    Loading,
+    Game,
+    Death(GameOverState),
 }
 
 impl PlayState {
-    pub fn playing(&self) -> bool {
-        matches!(self, Self::Play)
+    pub fn loading(&self) -> bool {
+        matches!(self, Self::Loading)
     }
 
-    pub fn paused(&self) -> bool {
-        matches!(self, Self::Paused)
+    pub fn game(&self) -> bool {
+        matches!(self, Self::Game)
     }
 
-    pub fn game_over(&self) -> bool {
-        matches!(self, Self::GameOver(_))
+    pub fn death(&self) -> bool {
+        matches!(self, Self::Death(_))
     }
 }
 
@@ -149,7 +149,6 @@ pub enum GameOverState {
     Pending,
     Restart,
     Exit,
-    Saved,
 }
 
 #[derive(Debug, Resource, Default)]
@@ -158,11 +157,6 @@ pub struct GameState {
     pub next_uid: NextUid,
     pub state: PlayState,
     pub mode: HeroGameMode,
-}
-
-#[derive(Debug, Resource, Default)]
-pub struct GameTime {
-    pub watch: Stopwatch,
 }
 
 pub struct GamePlugin;
@@ -176,7 +170,6 @@ impl Plugin for GamePlugin {
             .init_resource::<CursorPosition>()
             .init_resource::<CursorItem>()
             .init_resource::<GroundItemDrops>()
-            .init_resource::<GameTime>()
             .init_resource::<GameState>()
             .insert_resource(SharedRng(Rng::with_seed(1234)))
             .insert_resource(DirectionalLightShadowMap { size: 2048 })
@@ -256,13 +249,13 @@ impl Plugin for GamePlugin {
                         .chain()
                         .after(unit::pick_storable_items),
                 )
-                    .run_if(in_state(AppState::Game).and_then(is_playing)),
+                    .run_if(in_state(AppState::Game).and_then(is_game)),
             )
             .add_systems(
                 Update,
-                (ui::pause::user_pause, ui::pause::save_button_pressed)
+                (ui::pause::user_pause, ui::pause::game_exit_button_pressed)
                     .chain()
-                    .run_if(in_state(AppState::Game).and_then(is_paused)),
+                    .run_if(in_state(AppState::Game).and_then(is_game)),
             )
             .add_systems(
                 PostUpdate,
@@ -275,29 +268,28 @@ impl Plugin for GamePlugin {
                     item::animate_ground_items,
                     ui::hud::update,
                 )
-                    .run_if(in_state(AppState::Game).and_then(is_playing)),
+                    .run_if(in_state(AppState::Game).and_then(is_game)),
             )
             // This system is special and transitions from Game to GameOver when the player dies
             .add_systems(
                 PostUpdate,
                 (ui::hud::update, ui::game_over::game_over_transition)
                     .chain()
-                    .run_if(in_state(AppState::Game).and_then(is_game_over)),
+                    .run_if(in_state(AppState::Game).and_then(is_death)),
             )
             .add_systems(
                 PreUpdate,
                 (
                     environment::day_night_cycle,
-                    stopwatch,
                     // TODO decide if this will be needed again villain::spawner,
                     unit::remove_healthbar,
                     skill::clean_skills,
                     skill::update_invulnerability,
                     actions::action_tick,
                 )
-                    .run_if(in_state(AppState::Game).and_then(is_playing)),
+                    .run_if(in_state(AppState::Game).and_then(is_game)),
             )
-            .add_systems(OnEnter(AppState::Game), stopwatch_restart)
+            .add_systems(OnEnter(AppState::Game), set_playing)
             .add_systems(OnExit(AppState::GameSpawn), send_player_ready)
             // GameOver
             .add_systems(
@@ -335,6 +327,10 @@ impl Plugin for GamePlugin {
 fn transition_to_game(mut state: ResMut<NextState<AppState>>) {
     debug!("transition to game");
     state.set(AppState::Game);
+}
+
+fn set_playing(mut game_state: ResMut<GameState>) {
+    game_state.state = PlayState::Game;
 }
 
 pub(crate) fn background_audio(
@@ -387,16 +383,16 @@ pub(crate) fn unit_audio(
     }
 }
 
-fn is_playing(game_state: Res<GameState>) -> bool {
-    game_state.state.playing()
+fn is_loading(game_state: Res<GameState>) -> bool {
+    game_state.state.loading()
 }
 
-fn is_paused(game_state: Res<GameState>) -> bool {
-    game_state.state.paused()
+fn is_game(game_state: Res<GameState>) -> bool {
+    game_state.state.game()
 }
 
-fn is_game_over(game_state: Res<GameState>) -> bool {
-    game_state.state.game_over()
+fn is_death(game_state: Res<GameState>) -> bool {
+    game_state.state.death()
 }
 
 fn _calculate_normals(indices: &Vec<u32>, vertices: &[[f32; 3]], normals: &mut [[f32; 3]]) {
@@ -439,7 +435,7 @@ fn _make_indices(indices: &mut Vec<u32>, size: [u32; 2]) {
 }
 
 pub(crate) fn load_assets(mut commands: Commands) {
-    println!("loading game assets");
+    info!("loading game assets");
 
     commands.init_resource::<RenderResources>();
     commands.init_resource::<MetadataResources>();
@@ -458,10 +454,7 @@ fn setup_audio(mut commands: Commands) {
     ));
 }
 
-pub(crate) fn setup(
-    mut commands: Commands,
-    mut camera_2d_q: Query<&mut Camera, With<OutOfGameCamera>>,
-) {
+fn setup(mut commands: Commands, mut camera_2d_q: Query<&mut Camera, With<OutOfGameCamera>>) {
     info!("spawning world");
 
     camera_2d_q.single_mut().is_active = false;
@@ -591,26 +584,14 @@ fn cleanup(mut game_state: ResMut<GameState>, mut controls: ResMut<Controls>) {
     controls.reset();
 
     match game_state.state {
-        PlayState::GameOver(GameOverState::Restart) => {
+        PlayState::Death(GameOverState::Restart) => {
             game_state.state = PlayState::default();
         }
-        PlayState::GameOver(GameOverState::Exit) => {
-            *game_state = GameState::default();
-        }
-        PlayState::GameOver(GameOverState::Saved) => {
+        PlayState::Death(GameOverState::Exit) => {
             *game_state = GameState::default();
         }
         _ => {
             panic!("Should not get here. {game_state:?}");
         }
     }
-}
-
-fn stopwatch_restart(mut game_time: ResMut<GameTime>) {
-    game_time.watch.reset();
-    game_time.watch.unpause();
-}
-
-fn stopwatch(time: Res<Time>, mut game_time: ResMut<GameTime>) {
-    game_time.watch.tick(time.delta());
 }

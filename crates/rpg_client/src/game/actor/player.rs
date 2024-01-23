@@ -1,6 +1,5 @@
 use crate::{
     game::{
-        actions::{Action, ActionData, Actions, AttackData},
         actor,
         assets::RenderResources,
         controls::{Controls, CursorPosition},
@@ -19,6 +18,7 @@ use rpg_core::{
 };
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
+    actions::{Action, ActionData, Actions, AttackData},
     skill::*,
     unit::{Hero, Unit, Villain},
 };
@@ -85,7 +85,7 @@ pub fn update_debug_lines(
         Color::RED,
     );
 
-    // println!("nearest {nearest_distance:?} {nearest:?}");
+    // debug!("nearest {nearest_distance:?} {nearest:?}");
 }
 
 pub fn update_debug_gizmos(zone: Res<Zone>, mut gizmos: Gizmos) {

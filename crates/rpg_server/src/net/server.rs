@@ -67,8 +67,8 @@ impl Plugin for NetworkServerPlugin {
                     game::receive_movement,
                 )
                     .chain()
-                    //.in_set(FixedUpdateSet::Main)
-                    .run_if(in_state(AppState::Simulation)),
+                    .run_if(in_state(AppState::Simulation))
+                    .after(FixedUpdateSet::Main),
             )
             .add_systems(
                 Update,

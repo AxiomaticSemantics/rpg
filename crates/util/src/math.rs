@@ -1,4 +1,11 @@
-use bevy::math::{Vec3, Vec3A};
+use bevy::{
+    ecs::component::Component,
+    math::{Vec3, Vec3A},
+    prelude::{Deref, DerefMut},
+};
+
+#[derive(Component, Deref, DerefMut)]
+pub struct AabbComponent(pub Aabb);
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Aabb {

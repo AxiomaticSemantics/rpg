@@ -1,13 +1,12 @@
 #![allow(clippy::too_many_arguments)]
 
 use crate::game::{
-    actions::{ActionData, Actions, State},
     actor::{animation::AnimationState, player::Player},
     assets::RenderResources,
     health_bar::{HealthBar, HealthBarFrame, HealthBarRect},
     item::{GroundItem, ResourceItem, StorableItem, UnitStorage},
     metadata::MetadataResources,
-    plugin::{GameCamera, GameState, GameTime},
+    plugin::{GameCamera, GameState},
     skill,
 };
 
@@ -17,10 +16,13 @@ use rpg_core::{
     storage::Storage,
     unit::UnitKind,
 };
-use rpg_util::unit::{Corpse, Hero, Unit, UnitBundle, Villain};
+use rpg_util::{
+    actions::{ActionData, Actions, State},
+    unit::{Corpse, Hero, Unit, UnitBundle, Villain},
+};
 
 use util::{
-    math::{intersect_aabb, Aabb as UtilAabb},
+    math::{intersect_aabb, Aabb as UtilAabb, AabbComponent},
     random::SharedRng,
 };
 
@@ -38,7 +40,7 @@ use bevy::{
     input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
     math::Vec3,
     prelude::{Deref, DerefMut},
-    render::{mesh::Mesh, primitives::Aabb},
+    render::mesh::Mesh,
     time::{Time, Timer, TimerMode},
     transform::components::Transform,
 };
@@ -116,25 +118,12 @@ pub fn update_health_bars(
 }
 
 // TODO FIXME this is just a buggy hack
-pub fn collide_units(mut unit_q: Query<(&mut Transform, &Aabb), (With<Unit>, Without<Corpse>)>) {
+pub fn collide_units(
+    mut unit_q: Query<(&mut Transform, &AabbComponent), (With<Unit>, Without<Corpse>)>,
+) {
     let mut combinations = unit_q.iter_combinations_mut();
     while let Some([(mut t1, a1), (mut t2, a2)]) = combinations.fetch_next() {
-        while intersect_aabb(
-            (
-                &mut t1.translation,
-                &UtilAabb {
-                    center: a1.center,
-                    half_extents: a1.half_extents,
-                },
-            ),
-            (
-                &mut t2.translation,
-                &UtilAabb {
-                    center: a2.center,
-                    half_extents: a2.half_extents,
-                },
-            ),
-        ) {
+        while intersect_aabb((&mut t1.translation, &a1), (&mut t2.translation, &a2)) {
             let distance = t1.translation.distance(t2.translation);
 
             let offset = 0.01 * t1.forward();
@@ -241,7 +230,6 @@ pub fn attract_resource_items(
 pub fn action(
     mut commands: Commands,
     time: Res<Time>,
-    game_time: Res<GameTime>,
     metadata: Res<MetadataResources>,
     mut renderables: ResMut<RenderResources>,
     mut random: ResMut<SharedRng>,
@@ -266,14 +254,14 @@ pub fn action(
     for (entity, mut unit, mut transform, mut actions, mut anim_state, mut audio_actions) in
         &mut unit_q
     {
-        // println!("action request {:?}", action.request);
+        // debug!("action request {:?}", action.request);
 
         if let Some(action) = &mut actions.knockback {
             let ActionData::Knockback(knockback) = action.data else {
                 panic!("expected knockback data");
             };
 
-            if game_time.watch.elapsed_secs() < knockback.start + knockback.duration {
+            if time.elapsed_seconds() < knockback.start + knockback.duration {
                 let target =
                     -transform.forward() * time.delta_seconds() * (knockback.speed as f32 / 100.);
                 transform.translation += target;
@@ -362,7 +350,7 @@ pub fn action(
                         skill::prepare_skill(
                             entity,
                             &attack,
-                            &game_time,
+                            &time,
                             &mut random,
                             &mut renderables,
                             &mut meshes,

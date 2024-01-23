@@ -23,7 +23,7 @@ use bevy::{
             Mesh,
         },
         prelude::SpatialBundle,
-        primitives::Aabb,
+        //primitives::Aabb,
     },
     scene::SceneBundle,
     time::{Time, Timer, TimerMode},
@@ -32,12 +32,11 @@ use bevy::{
 };
 
 use super::{
-    actions::{Action, ActionData, Actions, AttackData, KnockbackData as KnockbackActionData},
     actor::animation::AnimationState,
     assets::RenderResources,
     item::{GroundItemDrop, GroundItemDrops},
     metadata::MetadataResources,
-    plugin::{GameOverState, GameSessionCleanup, GameState, GameTime, PlayState},
+    plugin::{GameOverState, GameSessionCleanup, GameState, PlayState},
     prop::{PropHandle, PropInfo},
 };
 
@@ -52,13 +51,14 @@ use rpg_core::{
     unit::UnitKind,
 };
 use rpg_util::{
+    actions::{Action, ActionData, Actions, AttackData, KnockbackData as KnockbackActionData},
     skill::*,
     unit::{Corpse, Unit},
 };
 
 use util::{
     cleanup::CleanupStrategy,
-    math::{intersect_aabb, Aabb as UtilAabb},
+    math::{intersect_aabb, Aabb as UtilAabb, AabbComponent},
     random::SharedRng,
 };
 
@@ -86,8 +86,8 @@ pub fn update_invulnerability(
 
 pub fn handle_contact(
     mut commands: Commands,
+    time: Res<Time>,
     metadata: Res<MetadataResources>,
-    mut game_time: ResMut<GameTime>,
     mut game_state: ResMut<GameState>,
     mut ground_drops: ResMut<GroundItemDrops>,
     mut random: ResMut<SharedRng>,
@@ -212,8 +212,7 @@ pub fn handle_contact(
                     }
                 } else {
                     game_state.session_stats.villain_hits += 1;
-                    game_state.state = PlayState::GameOver(GameOverState::Pending);
-                    game_time.watch.pause();
+                    game_state.state = PlayState::Death(GameOverState::Pending);
                 }
 
                 commands.entity(event.defender_entity).insert(Corpse);
@@ -231,7 +230,7 @@ pub fn handle_contact(
         if defender.is_alive()
             && !instance.effects.is_empty()
             && handle_effects(
-                &game_time,
+                &time,
                 &mut random,
                 &mut instance,
                 &mut s_transform,
@@ -247,7 +246,6 @@ pub fn handle_contact(
 pub fn clean_skills(
     mut commands: Commands,
     time: Res<Time>,
-    game_time: Res<GameTime>,
     mut skill_q: Query<(Entity, &Transform, &mut SkillTimer, &SkillUse)>,
 ) {
     for (entity, transform, mut timer, skill_use) in &mut skill_q {
@@ -260,7 +258,7 @@ pub fn clean_skills(
 
         let despawn = match &skill_use.instance {
             SkillInstance::Projectile(info) => match info.info.duration {
-                Some(d) => game_time.watch.elapsed_secs() - info.start_time >= d,
+                Some(d) => time.elapsed_seconds() - info.start_time >= d,
                 None => {
                     if info.info.aerial.is_some() {
                         transform.translation.y < info.info.size as f32 / 100.
@@ -275,7 +273,7 @@ pub fn clean_skills(
             }
             SkillInstance::Area(info) => {
                 //println!("area skill: {info:?}");
-                game_time.watch.elapsed_secs() - info.start_time >= info.info.duration
+                time.elapsed_seconds() - info.start_time >= info.info.duration
             }
         };
 
@@ -340,8 +338,14 @@ pub fn update_skill(time: Res<Time>, mut skill_q: Query<(&mut Transform, &mut Sk
 
 pub fn collide_skills(
     mut skill_events: EventWriter<SkillContactEvent>,
-    mut skill_q: Query<(Entity, &Transform, &Aabb, &Invulnerability, &SkillUse)>,
-    unit_q: Query<(Entity, &Transform, &Aabb, &Unit), Without<Corpse>>,
+    mut skill_q: Query<(
+        Entity,
+        &Transform,
+        &AabbComponent,
+        &Invulnerability,
+        &SkillUse,
+    )>,
+    unit_q: Query<(Entity, &Transform, &AabbComponent, &Unit), Without<Corpse>>,
 ) {
     for (s_entity, s_transform, s_aabb, invulnerability, instance) in &mut skill_q {
         if let Some(tickable) = &instance.tickable {
@@ -403,7 +407,7 @@ pub fn collide_skills(
 pub fn prepare_skill(
     owner: Entity,
     attack_data: &AttackData,
-    game_time: &GameTime,
+    time: &Time,
     random: &mut SharedRng,
     renderables: &mut RenderResources,
     meshes: &mut Assets<Mesh>,
@@ -412,7 +416,7 @@ pub fn prepare_skill(
     unit: &Unit,
     unit_transform: &Transform,
 ) -> (
-    Aabb,
+    UtilAabb,
     Transform,
     SkillUse,
     Option<PropHandle>,
@@ -477,8 +481,10 @@ pub fn prepare_skill(
                 let aabb = if renderables.aabbs.contains_key("bolt_01") {
                     renderables.aabbs["bolt_01"]
                 } else {
-                    let aabb =
-                        Aabb::from_min_max(Vec3::new(-0.1, -0.1, -0.25), Vec3::new(0.1, 0.1, 0.25));
+                    let aabb = UtilAabb::from_min_max(
+                        Vec3::new(-0.1, -0.1, -0.25),
+                        Vec3::new(0.1, 0.1, 0.25),
+                    );
                     renderables.aabbs.insert("bolt_01".into(), aabb);
                     aabb
                 };
@@ -504,6 +510,11 @@ pub fn prepare_skill(
                     let aabb = mesh.compute_aabb().unwrap();
                     let handle = meshes.add(mesh);
 
+                    let aabb = UtilAabb {
+                        center: aabb.center,
+                        half_extents: aabb.half_extents,
+                    };
+
                     renderables
                         .aabbs
                         .insert(Cow::Owned(key.as_str().into()), aabb);
@@ -519,7 +530,7 @@ pub fn prepare_skill(
                 (handle, aabb)
             };
 
-            let time = game_time.watch.elapsed_secs();
+            let time = time.elapsed_seconds();
             let forward = unit_transform.forward();
 
             let spawn_transform = if info.orbit.is_some() {
@@ -564,7 +575,7 @@ pub fn prepare_skill(
         SkillInfo::Area(info) => {
             let skill_instance = SkillInstance::Area(AreaInstance {
                 info: info.clone(),
-                start_time: game_time.watch.elapsed_secs(),
+                start_time: time.elapsed_seconds(),
             });
 
             let tickable = info.tick_rate.as_ref().map(|tr| Tickable {
@@ -589,7 +600,7 @@ pub fn prepare_skill(
                 //let aabb = mesh.compute_aabb().unwrap();
 
                 // 2d shapes are on the XY plane
-                let aabb = Aabb::from_min_max(
+                let aabb = UtilAabb::from_min_max(
                     Vec3::new(-radius, -radius, 0.0),
                     Vec3::new(radius, radius, 0.5),
                 );
@@ -634,7 +645,7 @@ pub fn prepare_skill(
 
 pub(crate) fn spawn_instance(
     commands: &mut Commands,
-    aabb: Aabb,
+    aabb: UtilAabb,
     transform: Transform,
     skill_use_instance: SkillUse,
     mesh: Option<PropHandle>,
@@ -645,7 +656,7 @@ pub(crate) fn spawn_instance(
     let common_bundle = (
         GameSessionCleanup,
         CleanupStrategy::DespawnRecursive,
-        aabb,
+        AabbComponent(aabb),
         Invulnerability::default(),
         skill_use,
     );
@@ -709,7 +720,7 @@ pub(crate) fn spawn_instance(
 
 /// Returns `true` if the skill should be destroyed
 fn handle_effects(
-    game_time: &GameTime,
+    time: &Time,
     random: &mut SharedRng,
     skill_use: &mut SkillUse,
     skill_transform: &mut Transform,
@@ -732,7 +743,7 @@ fn handle_effects(
             ActionData::Knockback(KnockbackActionData {
                 direction: skill_transform.forward(),
                 speed: info.speed,
-                start: game_time.watch.elapsed_secs(),
+                start: time.elapsed_seconds(),
                 duration: info.duration,
             }),
             None,
