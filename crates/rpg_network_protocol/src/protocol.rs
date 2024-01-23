@@ -1,7 +1,6 @@
 use bevy::{
-    ecs::{component::Component, entity::Entity},
+    ecs::{entity::Entity},
     math::Vec3,
-    prelude::{Deref, DerefMut},
 };
 
 use lightyear::prelude::*;
@@ -9,14 +8,14 @@ use serde_derive::{Deserialize, Serialize};
 
 // TODO split these up into multiple protocols once the basic design is settled
 use rpg_account::{
-    account::{Account, AccountId, AccountInfo},
+    account::{Account, AccountInfo},
     character::{CharacterInfo, CharacterRecord, CharacterSlot},
 };
-use rpg_chat::chat::{ChannelId, Message as ChatMessage, MessageId};
+use rpg_chat::chat::{ChannelId, Message as ChatMessage};
 use rpg_core::{
     class::Class,
     skill::SkillId,
-    stat::{value::Value, StatId, StatUpdate},
+    stat::{StatUpdate},
     unit::HeroGameMode,
 };
 use rpg_lobby::lobby::{Lobby, LobbyId, LobbyMessage};
