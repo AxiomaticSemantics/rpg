@@ -2,10 +2,10 @@ use super::{
     plugin::{AabbResources, GameState},
     skill,
 };
-use crate::assets::MetadataResources;
+use crate::{account::AccountInstance, assets::MetadataResources, net::server::NetworkParamsRW};
 
 use rpg_core::{skill::SkillUseResult, unit::UnitKind};
-
+use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions::{ActionData, Actions, State},
     unit::{Corpse, Unit},
@@ -13,12 +13,15 @@ use rpg_util::{
 
 use util::random::SharedRng;
 
+use lightyear::shared::replication::components::NetworkTarget;
+
 use bevy::{
     ecs::{
         entity::Entity,
         query::{With, Without},
         system::{Commands, Query, Res, ResMut},
     },
+    log::info,
     math::Vec3,
     time::{Time, Timer, TimerMode},
     transform::components::Transform,
@@ -26,19 +29,29 @@ use bevy::{
 
 pub(crate) fn action(
     mut commands: Commands,
+    mut net_params: NetworkParamsRW,
     time: Res<Time>,
     metadata: Res<MetadataResources>,
     mut aabbs: ResMut<AabbResources>,
     mut rng: ResMut<SharedRng>,
     mut game_state: ResMut<GameState>,
-    mut unit_q: Query<(Entity, &mut Unit, &mut Transform, &mut Actions), Without<Corpse>>,
+    mut unit_q: Query<
+        (
+            Entity,
+            &mut Unit,
+            &mut Transform,
+            &mut Actions,
+            Option<&AccountInstance>,
+        ),
+        Without<Corpse>,
+    >,
 ) {
     use std::f32::consts;
 
     let dt = time.delta_seconds();
 
-    for (entity, mut unit, mut transform, mut actions) in &mut unit_q {
-        // debug!("action request {:?}", action.request);
+    for (entity, mut unit, mut transform, mut actions, account) in &mut unit_q {
+        info!("actions: {actions:?}");
 
         if let Some(action) = &mut actions.knockback {
             let ActionData::Knockback(knockback) = action.data else {
@@ -158,6 +171,21 @@ pub(crate) fn action(
             transform.translation += translation;
 
             // send movement
+
+            if unit.kind == UnitKind::Hero {
+                let client = net_params
+                    .context
+                    .get_client_from_account_id(account.as_ref().unwrap().0.info.id)
+                    .unwrap();
+
+                net_params
+                    .server
+                    .send_message_to_target::<Channel1, SCMovePlayer>(
+                        SCMovePlayer(transform.translation),
+                        NetworkTarget::Only(vec![client.id]),
+                    )
+                    .unwrap();
+            }
 
             action.state = State::Completed;
         }

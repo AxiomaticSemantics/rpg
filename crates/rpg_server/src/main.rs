@@ -23,7 +23,6 @@ use crate::{
     net::server::NetworkServerPlugin,
     server_state::ServerMetadataResource,
     state::AppState,
-    world::WorldPlugin,
 };
 
 use rpg_network_protocol::*;
@@ -61,7 +60,6 @@ use signal_hook::consts::signal::*;
 use signal_hook::consts::TERM_SIGNALS;
 use signal_hook::flag;
 use signal_hook::iterator::Signals;
-use signal_hook::iterator::SignalsInfo;
 
 fn main() -> Result<(), Error> {
     let cli = Cli::parse();
