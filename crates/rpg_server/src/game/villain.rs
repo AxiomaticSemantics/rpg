@@ -18,7 +18,7 @@ use bevy::{
     math::Vec3,
     prelude::{Deref, DerefMut},
     time::{Time, Timer},
-    transform::components::Transform,
+    transform::{components::Transform, TransformBundle},
 };
 
 #[derive(Component, Default, Debug, Deref, DerefMut)]
@@ -69,10 +69,13 @@ pub(crate) fn spawn(
     );
 
     // spawn
-    commands.spawn((VillainBundle {
-        villain: Villain,
-        unit: UnitBundle::new(Unit(unit)),
-    },));
+    commands.spawn((
+        VillainBundle {
+            villain: Villain,
+            unit: UnitBundle::new(Unit(unit)),
+        },
+        TransformBundle::from(transform),
+    ));
 
     // TODO ensure aabb is added
     // TODO decide is shared spawning is desired
