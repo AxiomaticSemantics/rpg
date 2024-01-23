@@ -85,7 +85,7 @@ pub fn update_debug_lines(
         Color::RED,
     );
 
-    // println!("nearest {nearest_distance:?} {nearest:?}");
+    // debug!("nearest {nearest_distance:?} {nearest:?}");
 }
 
 pub fn update_debug_gizmos(zone: Res<Zone>, mut gizmos: Gizmos) {

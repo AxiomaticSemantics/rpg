@@ -3,6 +3,8 @@ use super::{
     prop::{PropHandle, PropInfo},
 };
 
+use util::math::Aabb;
+
 use bevy::{
     asset::{AssetServer, Assets, Handle},
     ecs::{
@@ -14,7 +16,6 @@ use bevy::{
     render::{
         color::Color,
         mesh::{shape, Mesh},
-        primitives::Aabb,
         texture::Image,
     },
     sprite::ColorMaterial,

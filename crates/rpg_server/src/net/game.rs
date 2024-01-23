@@ -144,6 +144,8 @@ pub(crate) fn receive_skill_use_direct(
 
             let skill_use_msg = event.message();
             info!("{skill_use_msg:?}");
+
+            //
         }
     }
 }

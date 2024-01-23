@@ -48,6 +48,10 @@ pub(crate) fn upkeep(
     }
 }
 
+pub(crate) fn collide_units() {
+    //
+}
+
 pub(crate) fn remove_corpses(
     mut commands: Commands,
     time: Res<Time>,

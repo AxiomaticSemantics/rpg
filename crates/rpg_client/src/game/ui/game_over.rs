@@ -63,15 +63,13 @@ pub(crate) fn game_over_transition(
     mut gameover_view_q: Query<&mut Style, With<GameOverView>>,
     mut gameover_stats_q: Query<&mut Text, With<GameOverStats>>,
 ) {
-    if let PlayState::GameOver(GameOverState::Exit) = game_state.state {
+    if let PlayState::Death(GameOverState::Exit) = game_state.state {
         println!("game_over_transition");
         let mut stats = gameover_stats_q.single_mut();
         stats.sections[0].value = build_stats_string(&game_state.session_stats);
         let mut view = gameover_view_q.single_mut();
         view.display = Display::Flex;
 
-        state.set(AppState::GameCleanup);
-    } else if let PlayState::GameOver(GameOverState::Saved) = game_state.state {
         state.set(AppState::GameCleanup);
     }
 }
@@ -89,7 +87,7 @@ pub(crate) fn game_over(
     for (interaction, mut bg_color) in restart.iter_mut() {
         match interaction {
             Interaction::Pressed => {
-                game_state.state = PlayState::GameOver(GameOverState::Restart);
+                game_state.state = PlayState::Death(GameOverState::Restart);
                 game_state.session_stats = SessionStats::default();
                 state.set(AppState::GameSpawn);
                 println!("game_over: restarting with current character");
@@ -104,7 +102,7 @@ pub(crate) fn game_over(
         match interaction {
             Interaction::Pressed => {
                 println!("game_over: returning to menu");
-                game_state.state = PlayState::GameOver(GameOverState::Exit);
+                game_state.state = PlayState::Death(GameOverState::Exit);
 
                 state.set(AppState::Menu);
             }

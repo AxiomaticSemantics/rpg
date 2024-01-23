@@ -27,7 +27,13 @@ use rpg_account::account::AccountId;
 use rpg_core::{uid::Uid, unit::HeroGameMode};
 use rpg_network_protocol::protocol::*;
 
-use util::random::{Rng, SharedRng};
+use util::{
+    math::Aabb,
+    random::{Rng, SharedRng},
+};
+
+use std::borrow::Cow;
+use std::collections::HashMap;
 
 #[derive(Default, Debug)]
 pub(crate) struct GameOptions {
@@ -48,6 +54,11 @@ pub(crate) struct GameState {
     pub(crate) options: GameOptions,
 }
 
+#[derive(Default, Resource)]
+pub(crate) struct AabbResources {
+    pub(crate) aabbs: HashMap<Cow<'static, str>, Aabb>,
+}
+
 impl GameState {
     pub(crate) fn client_ids(&self) -> Vec<ClientId> {
         self.players.iter().map(|p| p.client_id).collect()
@@ -61,12 +72,16 @@ impl GameState {
     }
 }
 
+#[derive(Default, Component)]
+pub(crate) struct GameSessionCleanup;
+
 pub(crate) struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(WorldPlugin)
             .init_resource::<GameState>()
+            .init_resource::<AabbResources>()
             .insert_resource(SharedRng(Rng::with_seed(1234)))
             .add_systems(OnEnter(AppState::SpawnSimulation), setup_simulation)
             .add_systems(OnEnter(AppState::Simulation), join_clients)
