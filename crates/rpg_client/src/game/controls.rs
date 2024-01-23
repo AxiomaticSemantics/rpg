@@ -17,6 +17,7 @@ use bevy::{
         mouse::{MouseButton, MouseMotion, MouseWheel},
         ButtonInput,
     },
+    log::error,
     math::{primitives::Plane3d, Vec2, Vec3},
     render::camera::Camera,
     transform::components::GlobalTransform,
@@ -171,19 +172,19 @@ pub fn update_controls(
     };
 
     let Some(ray) = camera.viewport_to_world(transform, position) else {
-        println!("could not convert viewport position to world");
+        error!("could not convert viewport position to world");
         return;
     };
 
     let Some(ground_distance) = ray.intersect_plane(Vec3::ZERO, Plane3d::new(Vec3::Y)) else {
-        println!("could not determine ground distance");
+        error!("could not determine ground distance");
         return;
     };
     let ground_point = ray.get_point(ground_distance);
 
     let Some(body_distance) = ray.intersect_plane(Vec3::new(0., 1.2, 0.), Plane3d::new(Vec3::Y))
     else {
-        println!("could not determine body distance");
+        error!("could not determine body distance");
         return;
     };
     let body_point = ray.get_point(body_distance);

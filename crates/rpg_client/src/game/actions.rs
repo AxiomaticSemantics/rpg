@@ -6,4 +6,4 @@ use bevy::ecs::{
 };
 
 // TODO reuse this, functionality was moved to a shared library, any client
-// specific behavrious will can here.
+// specific behaviour will be added here.

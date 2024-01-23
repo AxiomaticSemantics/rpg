@@ -47,14 +47,14 @@ pub struct CreateRoot;
 #[derive(Component)]
 pub struct CreateButton;
 
-#[derive(Component)]
+#[derive(Debug, Component)]
 pub struct CreatePlayerClass(Class);
 
 #[derive(Component)]
 pub struct CancelButton;
 
-#[derive(Deref, DerefMut, Resource)]
-pub struct SelectedClass(pub Class);
+#[derive(Default, Deref, DerefMut, Resource)]
+pub struct SelectedClass(pub Option<Class>);
 
 pub fn spawn(
     textures: &TextureAssets,
@@ -233,6 +233,13 @@ pub fn spawn(
                 ..default()
             })
             .with_children(|p| {
+                p.spawn((button.clone(), CreateButton)).with_children(|p| {
+                    p.spawn(TextBundle::from_section(
+                        "Create",
+                        ui_theme.text_style_regular.clone(),
+                    ));
+                });
+
                 p.spawn((button.clone(), CancelButton)).with_children(|p| {
                     p.spawn(TextBundle::from_section(
                         "Cancel",
@@ -278,42 +285,71 @@ pub fn set_game_mode(
     }
 }
 
-pub fn create_class(
-    mut net_client: ResMut<Client>,
-    mut game_state: ResMut<GameState>,
-    selected_character: Res<SelectedCharacter>,
+pub fn select_class(
+    mut selected_class: ResMut<SelectedClass>,
     interaction_q: Query<
         (&Interaction, &CreatePlayerClass),
         (Changed<Interaction>, With<CreatePlayerClass>),
     >,
+) {
+    let Ok((interaction, create_class)) = interaction_q.get_single() else {
+        return;
+    };
+
+    if interaction == &Interaction::Pressed {
+        if let Some(selected_class) = &mut selected_class.0 {
+            *selected_class = create_class.0;
+        } else {
+            selected_class.0 = Some(create_class.0);
+        }
+
+        info!("setting class to {create_class:?}");
+    }
+}
+
+pub fn create_button(
+    mut net_client: ResMut<Client>,
+    mut game_state: ResMut<GameState>,
+    selected_class: Res<SelectedClass>,
+    selected_character: Res<SelectedCharacter>,
+    interaction_q: Query<(&Interaction, &CreateButton), (Changed<Interaction>, With<CreateButton>)>,
     game_mode_q: Query<&CreateMode>,
     mut menu_root_q: Query<&mut Style, With<UiRoot>>,
-    player_name_text_q: Query<&Text, With<CreatePlayerName>>,
+    mut player_name_text_q: Query<&mut Text, With<CreatePlayerName>>,
 ) {
     if !net_client.is_connected() {
         return;
     }
 
     if let Ok((Interaction::Pressed, create_class)) = interaction_q.get_single() {
-        let Some(selected_character) = &selected_character.0 else {
-            info!("no slot selected");
-            return;
-        };
-
-        let player_name_text = player_name_text_q.single();
+        let mut player_name_text = player_name_text_q.single_mut();
         if player_name_text.sections[0].value.is_empty() {
             info!("no player name provided");
             return;
         }
 
+        let Some(selected_character) = &selected_character.0 else {
+            info!("no slot selected");
+            return;
+        };
+
+        let Some(selected_class) = &selected_class.0 else {
+            info!("no class selected");
+            return;
+        };
+
+        info!("selected class: {selected_class:?}");
+
         let game_mode = game_mode_q.single();
 
         let create_msg = CSCreateCharacter {
             name: player_name_text.sections[0].value.clone(),
-            class: create_class.0,
+            class: *selected_class,
             game_mode: game_mode.0,
             slot: selected_character.slot,
         };
+
+        player_name_text.sections[0].value.clear();
 
         net_client.send_message::<Channel1, _>(create_msg).unwrap();
     }
