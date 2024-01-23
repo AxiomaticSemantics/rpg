@@ -16,7 +16,10 @@ use lightyear::prelude::server::*;
 use lightyear::prelude::*;
 
 use rpg_network_protocol::protocol::*;
-use rpg_util::unit::{Hero, Unit, UnitBundle};
+use rpg_util::{
+    actions::{Action, ActionData, Actions},
+    unit::{Hero, Unit, UnitBundle},
+};
 
 pub(crate) fn receive_player_ready(
     mut commands: Commands,
@@ -58,14 +61,22 @@ pub(crate) fn receive_player_ready(
             },
             NetworkTarget::Only(vec![client_id]),
         );
+
+        // TODO ensure the player is spawned in a town
+
+        // TODO send message to all connected players
     }
 }
 
 /// Move player
+// TODO
+// - FIXME this needs to be sent to all characters in range of each player
+//   that moves for now a naive approach will be taken
+// - FIXME add action request, move message send to action handler
 pub(crate) fn receive_movement(
     mut movement_reader: EventReader<MessageEvent<CSMovePlayer>>,
     mut net_params: NetworkParamsRW,
-    mut player_q: Query<(&mut Transform, &Unit, &AccountInstance), With<Hero>>,
+    mut player_q: Query<(&mut Transform, &Unit, &mut Actions, &AccountInstance), With<Hero>>,
 ) {
     for event in movement_reader.read() {
         let client_id = *event.context();
@@ -74,21 +85,13 @@ pub(crate) fn receive_movement(
             continue;
         };
 
-        for (mut transform, player, account) in &mut player_q {
+        for (mut transform, player, mut actions, account) in &mut player_q {
             if client.account_id.unwrap() != account.info.id {
                 continue;
             }
 
-            transform.translation = transform.translation + transform.forward() * 0.01;
-            //info!("move player to {}", transform.translation);
-
-            net_params
-                .server
-                .send_message_to_target::<Channel1, SCMovePlayer>(
-                    SCMovePlayer(transform.translation),
-                    NetworkTarget::Only(vec![client_id]),
-                )
-                .unwrap();
+            actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
+            // info!("move player to {}", transform.translation);
         }
     }
 }
@@ -167,6 +170,9 @@ pub(crate) fn receive_skill_use_targeted(
                 continue;
             }
             let skill_use_msg = event.message();
+            info!("{skill_use_msg:?}");
+
+            //
         }
     }
 }

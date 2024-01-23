@@ -167,15 +167,15 @@ impl Client {
 
 #[derive(Resource, Default)]
 pub(crate) struct NetworkContext {
-    pub clients: HashMap<ClientId, Client>,
+    pub(crate) clients: HashMap<ClientId, Client>,
 }
 
 impl NetworkContext {
-    pub fn get_client_from_client_id(&self, id: ClientId) -> Option<&Client> {
+    pub(crate) fn get_client_from_client_id(&self, id: ClientId) -> Option<&Client> {
         self.clients.get(&id)
     }
 
-    pub fn get_client_from_account_id(&self, id: AccountId) -> Option<&Client> {
+    pub(crate) fn get_client_from_account_id(&self, id: AccountId) -> Option<&Client> {
         self.clients.values().find(|a| {
             if let Some(aid) = a.account_id {
                 aid == id
@@ -185,27 +185,23 @@ impl NetworkContext {
         })
     }
 
-    pub fn is_client_authenticated(&self, id: ClientId) -> bool {
+    pub(crate) fn is_client_authenticated(&self, id: ClientId) -> bool {
         if let Some(client) = self.clients.get(&id) {
             client.is_authenticated()
         } else {
             false
         }
     }
-}
 
-pub(crate) fn handle_disconnections(
-    mut game_state: ResMut<GameState>,
-    mut disconnect_reader: EventReader<DisconnectEvent>,
-    mut net_params: NetworkParamsRW,
-    mut commands: Commands,
-) {
-    for event in disconnect_reader.read() {
-        let client_id = *event.context();
-        game_state.players.retain(|p| p.client_id != client_id);
+    pub(crate) fn add_client(&mut self, id: ClientId) {
+        assert!(!self.clients.contains_key(&id));
 
-        if let Some(client) = net_params.context.clients.remove(&client_id) {
-            info!("Removing {client_id} from global map");
+        self.clients.insert(id, Client::new(id));
+    }
+
+    pub(crate) fn remove_client(&mut self, commands: &mut Commands, id: ClientId) {
+        if let Some(client) = self.clients.remove(&id) {
+            info!("Removed {id} from global map");
 
             if client.entity != Entity::PLACEHOLDER {
                 info!("despawning client entity");
@@ -215,17 +211,28 @@ pub(crate) fn handle_disconnections(
     }
 }
 
-pub(crate) fn handle_connections(
+fn handle_disconnections(
+    mut game_state: ResMut<GameState>,
+    mut disconnect_reader: EventReader<DisconnectEvent>,
+    mut net_params: NetworkParamsRW,
+    mut commands: Commands,
+) {
+    for event in disconnect_reader.read() {
+        let client_id = *event.context();
+        game_state.players.retain(|p| p.client_id != client_id);
+
+        net_params.context.remove_client(&mut commands, client_id);
+    }
+}
+
+fn handle_connections(
     mut connect_reader: EventReader<ConnectEvent>,
     mut net_params: NetworkParamsRW,
 ) {
     for event in connect_reader.read() {
         let client_id = *event.context();
 
-        net_params
-            .context
-            .clients
-            .insert(client_id, Client::new(client_id));
+        net_params.context.add_client(client_id);
 
         net_params
             .server

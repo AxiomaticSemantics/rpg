@@ -13,14 +13,11 @@ use bevy::{
     app::{App, FixedPreUpdate, FixedUpdate, Plugin, Update},
     ecs::{
         component::Component,
-        entity::Entity,
-        query::{With, Without},
         schedule::{common_conditions::in_state, IntoSystemConfigs, NextState, OnEnter},
         system::{Commands, Query, Res, ResMut, Resource},
     },
     log::info,
     math::Vec3,
-    time::{Time, Timer},
 };
 
 use lightyear::netcode::ClientId;

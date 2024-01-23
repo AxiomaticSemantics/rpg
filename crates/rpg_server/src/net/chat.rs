@@ -16,7 +16,6 @@ use bevy::{
 use lightyear::{server::events::MessageEvent, shared::replication::components::NetworkTarget};
 
 pub(crate) fn receive_chat_join(
-    mut commands: Commands,
     mut chat: ResMut<ChatManager>,
     mut join_reader: EventReader<MessageEvent<CSChatJoin>>,
     mut net_params: NetworkParamsRW,
@@ -52,7 +51,6 @@ pub(crate) fn receive_chat_join(
 }
 
 pub(crate) fn receive_chat_leave(
-    mut commands: Commands,
     mut leave_reader: EventReader<MessageEvent<CSChatLeave>>,
     mut net_params: NetworkParamsRW,
 ) {
@@ -73,7 +71,6 @@ pub(crate) fn receive_chat_leave(
 }
 
 pub(crate) fn receive_chat_channel_message(
-    mut commands: Commands,
     mut message_reader: EventReader<MessageEvent<CSChatChannelMessage>>,
     mut net_params: NetworkParamsRW,
     mut chat: ResMut<ChatManager>,
