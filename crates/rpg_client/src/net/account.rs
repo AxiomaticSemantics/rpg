@@ -1,7 +1,8 @@
 use crate::{
     state::AppState,
-    ui::menu::account::{
-        self, AccountCharacter, AccountCreateRoot, AccountListRoot, AccountLoginRoot,
+    ui::menu::{
+        account::{self, AccountCharacter, AccountCreateRoot, AccountListRoot, AccountLoginRoot},
+        create::CreateRoot,
     },
 };
 
@@ -150,6 +151,10 @@ pub(crate) fn receive_account_login_error(
 pub(crate) fn receive_character_create_success(
     mut account_events: EventReader<MessageEvent<SCCreateCharacterSuccess>>,
     mut account_q: Query<&mut RpgAccount>,
+    mut style_set: ParamSet<(
+        Query<&mut Style, With<CreateRoot>>,
+        Query<&mut Style, With<AccountListRoot>>,
+    )>,
 ) {
     let mut account = account_q.single_mut();
 
@@ -175,6 +180,9 @@ pub(crate) fn receive_character_create_success(
 
             account.0.characters.push(character_record);
         }
+
+        style_set.p0().single_mut().display = Display::None;
+        style_set.p1().single_mut().display = Display::Flex;
 
         account_events.clear();
         return;

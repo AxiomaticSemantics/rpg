@@ -42,6 +42,7 @@ impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
         println!("Initializing menu plugin.");
         app.init_resource::<menu::account::SelectedCharacter>()
+            .init_resource::<menu::create::SelectedClass>()
             .add_systems(OnEnter(AppState::MenuLoad), spawn)
             .add_systems(OnEnter(AppState::Menu), display_menu)
             .add_systems(
@@ -69,7 +70,8 @@ impl Plugin for MenuPlugin {
                     ),
                     (
                         menu::create::cancel_button,
-                        menu::create::create_class,
+                        menu::create::create_button,
+                        menu::create::select_class,
                         menu::create::set_game_mode,
                     ),
                     (

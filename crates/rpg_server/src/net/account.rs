@@ -294,6 +294,19 @@ pub(crate) fn receive_character_create(
                     continue;
                 };
                 serde_json::to_writer(file, &account.0).unwrap();
+
+                let meta_file_path = format!(
+                    "{}/server/meta.json",
+                    std::env::var("RPG_SAVE_ROOT").unwrap(),
+                );
+                let meta_path = Path::new(meta_file_path.as_str());
+                let meta_file = open_write(meta_path);
+
+                let Ok(meta_file) = meta_file else {
+                    info!("cannot open {meta_file_path} for writing");
+                    return;
+                };
+                serde_json::to_writer(meta_file, &server_metadata.0).unwrap();
             }
         }
     }

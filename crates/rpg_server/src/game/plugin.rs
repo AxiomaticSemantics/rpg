@@ -1,8 +1,10 @@
-use super::{action, unit};
+use super::{action, unit, villain};
 
 use crate::{
     account::AccountInstance,
+    assets::MetadataResources,
     net::server::NetworkParamsRW,
+    server_state::ServerMetadataResource,
     state::AppState,
     world::{RpgWorld, WorldPlugin},
 };
@@ -17,6 +19,7 @@ use bevy::{
         system::{Commands, Query, Res, ResMut, Resource},
     },
     log::info,
+    math::Vec3,
     time::{Time, Timer},
 };
 
@@ -102,7 +105,14 @@ impl Plugin for GamePlugin {
     }
 }
 
-pub(crate) fn setup_simulation(game_state: Res<GameState>, account_q: Query<&AccountInstance>) {
+pub(crate) fn setup_simulation(
+    mut commands: Commands,
+    game_state: Res<GameState>,
+    mut rng: ResMut<SharedRng>,
+    metadata: Res<MetadataResources>,
+    mut server_metadata: ResMut<ServerMetadataResource>,
+    account_q: Query<&AccountInstance>,
+) {
     info!("spawning game");
 
     for account in &account_q {
@@ -112,12 +122,23 @@ pub(crate) fn setup_simulation(game_state: Res<GameState>, account_q: Query<&Acc
             }
         }
     }
+
+    for _ in 0..50 {
+        let position = Vec3::new(rng.f32() * 128.0 - 64.0, 0., rng.f32() * 128.0 - 64.0);
+
+        villain::spawn(
+            &mut commands,
+            &mut server_metadata.0.next_uid,
+            &position,
+            &metadata.0,
+            &mut rng,
+        );
+    }
+
+    // TODO write server metadata
 }
 
-pub(crate) fn transition_to_game(
-    mut net_params: NetworkParamsRW,
-    mut state: ResMut<NextState<AppState>>,
-) {
+pub(crate) fn transition_to_game(mut state: ResMut<NextState<AppState>>) {
     info!("transitioning to game simulation");
     state.set(AppState::Simulation);
 }

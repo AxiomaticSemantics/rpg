@@ -53,15 +53,11 @@ impl HeroInfo {
 #[derive(Ser, De, Debug, Clone)]
 pub struct VillainInfo {
     pub id: VillainId,
-    pub looted_items: Vec<Item>,
 }
 
 impl VillainInfo {
     pub fn new(id: VillainId) -> Self {
-        Self {
-            id,
-            looted_items: Vec::new(),
-        }
+        Self { id }
     }
 }
 
