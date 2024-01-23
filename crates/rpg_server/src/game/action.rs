@@ -24,7 +24,7 @@ use bevy::{
     transform::components::Transform,
 };
 
-pub fn action(
+pub(crate) fn action(
     mut commands: Commands,
     time: Res<Time>,
     metadata: Res<MetadataResources>,

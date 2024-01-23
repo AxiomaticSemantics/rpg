@@ -1,4 +1,4 @@
-use super::unit;
+use super::{action, unit};
 
 use crate::{
     account::AccountInstance,
@@ -95,7 +95,9 @@ impl Plugin for GamePlugin {
             )
             .add_systems(
                 FixedUpdate,
-                unit::upkeep.run_if(in_state(AppState::Simulation)),
+                (unit::upkeep, action::action)
+                    .chain()
+                    .run_if(in_state(AppState::Simulation)),
             );
     }
 }

@@ -3,8 +3,8 @@ use super::{
     player::{Player, PlayerBundle},
 };
 use crate::game::{
-    actions::Actions, assets::RenderResources, health_bar::HealthBar, item::UnitStorage,
-    metadata::MetadataResources, passive_tree::PassiveTree, plugin::GameSessionCleanup,
+    assets::RenderResources, health_bar::HealthBar, item::UnitStorage, metadata::MetadataResources,
+    passive_tree::PassiveTree, plugin::GameSessionCleanup,
 };
 
 use bevy::{
@@ -30,7 +30,10 @@ use rpg_core::{
     unit::{Unit as RpgUnit, UnitKind},
     villain::VillainId,
 };
-use rpg_util::unit::{Hero, Unit, UnitBundle, Villain, VillainBundle};
+use rpg_util::{
+    actions::Actions,
+    unit::{Hero, Unit, UnitBundle, Villain, VillainBundle},
+};
 use util::cleanup::CleanupStrategy;
 
 #[derive(Default, Debug, Component, Deref, DerefMut)]

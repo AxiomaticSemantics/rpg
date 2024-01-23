@@ -3,7 +3,6 @@
 use crate::{assets::AudioAssets, loader::plugin::OutOfGameCamera, state::AppState};
 
 use super::{
-    actions,
     actor::{self, player, unit, villain},
     assets::RenderResources,
     controls::{self, Controls, CursorPosition},
@@ -15,10 +14,11 @@ use super::{
     state_saver, ui, world,
 };
 
-use audio_manager::plugin::AudioActions;
 use rpg_core::{class::Class, uid::NextUid, unit::HeroGameMode};
 use rpg_network_protocol::protocol::*;
-use rpg_util::unit::Unit;
+use rpg_util::{actions, unit::Unit};
+
+use audio_manager::plugin::AudioActions;
 use util::{
     cleanup::CleanupStrategy,
     random::{Rng, SharedRng},
@@ -435,7 +435,7 @@ fn _make_indices(indices: &mut Vec<u32>, size: [u32; 2]) {
 }
 
 pub(crate) fn load_assets(mut commands: Commands) {
-    println!("loading game assets");
+    info!("loading game assets");
 
     commands.init_resource::<RenderResources>();
     commands.init_resource::<MetadataResources>();
@@ -454,10 +454,7 @@ fn setup_audio(mut commands: Commands) {
     ));
 }
 
-pub(crate) fn setup(
-    mut commands: Commands,
-    mut camera_2d_q: Query<&mut Camera, With<OutOfGameCamera>>,
-) {
+fn setup(mut commands: Commands, mut camera_2d_q: Query<&mut Camera, With<OutOfGameCamera>>) {
     info!("spawning world");
 
     camera_2d_q.single_mut().is_active = false;

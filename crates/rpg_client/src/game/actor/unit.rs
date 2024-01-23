@@ -1,7 +1,6 @@
 #![allow(clippy::too_many_arguments)]
 
 use crate::game::{
-    actions::{ActionData, Actions, State},
     actor::{animation::AnimationState, player::Player},
     assets::RenderResources,
     health_bar::{HealthBar, HealthBarFrame, HealthBarRect},
@@ -17,7 +16,10 @@ use rpg_core::{
     storage::Storage,
     unit::UnitKind,
 };
-use rpg_util::unit::{Corpse, Hero, Unit, UnitBundle, Villain};
+use rpg_util::{
+    actions::{ActionData, Actions, State},
+    unit::{Corpse, Hero, Unit, UnitBundle, Villain},
+};
 
 use util::{
     math::{intersect_aabb, Aabb as UtilAabb, AabbComponent},

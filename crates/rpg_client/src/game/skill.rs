@@ -32,7 +32,6 @@ use bevy::{
 };
 
 use super::{
-    actions::{Action, ActionData, Actions, AttackData, KnockbackData as KnockbackActionData},
     actor::animation::AnimationState,
     assets::RenderResources,
     item::{GroundItemDrop, GroundItemDrops},
@@ -52,6 +51,7 @@ use rpg_core::{
     unit::UnitKind,
 };
 use rpg_util::{
+    actions::{Action, ActionData, Actions, AttackData, KnockbackData as KnockbackActionData},
     skill::*,
     unit::{Corpse, Unit},
 };
