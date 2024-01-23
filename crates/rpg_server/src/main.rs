@@ -60,10 +60,8 @@ use std::time;
 use signal_hook::consts::signal::*;
 use signal_hook::consts::TERM_SIGNALS;
 use signal_hook::flag;
-use signal_hook::iterator::exfiltrator::WithOrigin;
 use signal_hook::iterator::Signals;
 use signal_hook::iterator::SignalsInfo;
-use signal_hook::low_level;
 
 fn main() -> Result<(), Error> {
     let cli = Cli::parse();
@@ -75,14 +73,6 @@ fn main() -> Result<(), Error> {
         flag::register_conditional_shutdown(*sig, 1, Arc::clone(&term_now))?;
         flag::register(*sig, Arc::clone(&term_now))?;
     }
-
-    /*
-    let mut signals = vec![SIGTSTP, SIGCONT, SIGWINCH, SIGHUP];
-
-    let mut has_terminal = true;
-    for info in &mut signals {
-        eprintln!("Received a signal {:?}", info);
-    }*/
 
     let mut signals = Signals::new(TERM_SIGNALS)?;
 
@@ -105,37 +95,42 @@ fn main() -> Result<(), Error> {
             .init_resource::<ChatManager>()
             .init_resource::<LobbyManager>()
             .add_systems(Startup, chat::setup)
-            .add_systems(Update, load_metadata.run_if(in_state(AppState::LoadAssets)))
+            .add_systems(Update, load_metadata.run_if(in_state(AppState::Loading)))
             .add_plugins(NetworkServerPlugin { port: cli.port })
             .add_plugins(GamePlugin)
             .run();
     });
 
     'outer: loop {
-        let mut count = 0;
+        let mut caught = false;
         for signal in signals.pending() {
             match signal {
                 SIGINT => {
-                    println!("\nCaught: SIGINT; joining app thread");
+                    caught = true;
+                    eprintln!("\nCaught: SIGINT; joining app thread");
                     break 'outer;
                 }
                 SIGTERM => {
-                    println!("\nCaught: SIGTERM; joining app thread");
+                    caught = true;
+                    eprintln!("\nCaught: SIGTERM; joining app thread");
                     break 'outer;
                 }
                 term_sig => {
-                    println!("\nCaught: {:?}; joining app thread", term_sig);
+                    caught = true;
+                    eprintln!("\nCaught: {:?}; joining app thread", term_sig);
                     break 'outer;
                 }
             }
-            count += 1;
         }
-        if count == 0 {
+
+        if !caught {
             thread::sleep(time::Duration::from_millis(1));
         }
     }
 
-    println!("\nReceived kill signal, joining app thread. Enter Ctrl+C again to exit immediately.");
+    eprintln!(
+        "\nReceived kill signal, joining app thread. Enter Ctrl+C again to exit immediately."
+    );
 
     t.join().unwrap();
 

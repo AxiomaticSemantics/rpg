@@ -14,6 +14,7 @@ use bevy::{
         query::{With, Without},
         system::{Commands, Query, Res, ResMut},
     },
+    log::info,
     math::Vec3,
     prelude::{Deref, DerefMut},
     time::{Time, Timer},
@@ -26,6 +27,7 @@ pub(crate) struct ThinkTimer(pub(crate) Timer);
 #[derive(Debug, Default, PartialEq, Eq, Copy, Clone)]
 pub(crate) enum VillainState {
     #[default]
+    Deactivated,
     Idle,
     Roaming,
     Tracking,
@@ -42,7 +44,7 @@ impl VillainController {
     }
 }
 
-pub(crate) fn spawn_villain(
+pub(crate) fn spawn(
     commands: &mut Commands,
     next_uid: &mut NextUid,
     origin: &Vec3,
@@ -54,14 +56,17 @@ pub(crate) fn spawn_villain(
     unit.add_default_skills(metadata);
 
     let dir_roll = std::f32::consts::TAU * (0.5 - rng.f32());
-    let distance = 14_f32;
 
     let mut transform = Transform::from_translation(*origin);
     transform.rotate_y(dir_roll);
-    transform.translation += transform.forward() * distance;
 
     let unit_info = unit.info.villain();
     let villain_info = &metadata.unit.villains[&unit_info.id];
+
+    info!(
+        "spawning villain {unit_info:?} at {:?}",
+        transform.translation
+    );
 
     // spawn
     commands.spawn((VillainBundle {
@@ -69,17 +74,8 @@ pub(crate) fn spawn_villain(
         unit: UnitBundle::new(Unit(unit)),
     },));
 
-    /*
-    actor::spawn_actor(
-        commands,
-        metadata,
-        rnderables,
-        unit,
-        None,
-        None,
-        Some(transform),
-    );
-    */
+    // TODO ensure aabb is added
+    // TODO decide is shared spawning is desired
 }
 
 pub fn villain_think(
