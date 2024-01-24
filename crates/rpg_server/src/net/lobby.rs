@@ -63,7 +63,6 @@ pub(crate) fn receive_lobby_join(
     mut net_params: NetworkParamsRW,
 ) {
     for event in join_reader.read() {
-        info!("lobby join");
         let client_id = event.context();
         let client = net_params.context.clients.get(client_id).unwrap();
         if !client.is_authenticated() {
@@ -73,6 +72,8 @@ pub(crate) fn receive_lobby_join(
         let account_id = client.account_id.unwrap();
 
         let join_msg = event.message();
+
+        info!("lobby join");
 
         if let Some(lobby) = lobby_manager.get_lobby_mut(join_msg.0) {
             if lobby.add_account(account_id) {
@@ -132,11 +133,12 @@ pub(crate) fn receive_lobby_message(
         }
 
         let message_id = server_metadata.0.next_message_id;
+        server_metadata.0.next_message_id.0 += 1;
 
         let lobby_msg = event.message();
         info!("lobby message: {lobby_msg:?}");
 
-        let Some(lobby) = lobby_manager.get_lobby_mut(LobbyId(0)) else {
+        let Some(lobby) = lobby_manager.get_lobby_mut(lobby_msg.id) else {
             info!("client sent message to a lobby that does not exist: {client:?}");
             continue;
         };
@@ -150,19 +152,9 @@ pub(crate) fn receive_lobby_message(
             message: lobby_msg.message.clone(),
         };
 
-        let client_ids: Vec<_> = lobby
-            .accounts
-            .iter()
-            .map(|a| {
-                *net_params
-                    .context
-                    .clients
-                    .iter()
-                    .find(|(k, v)| v.account_id.unwrap() == *a)
-                    .unwrap()
-                    .0
-            })
-            .collect();
+        let client_ids = net_params
+            .context
+            .get_client_ids_for_account_ids(&lobby.accounts);
 
         net_params.server.send_message_to_target::<Channel1, _>(
             SCLobbyMessage(LobbyMessage {

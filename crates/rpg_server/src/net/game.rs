@@ -18,8 +18,18 @@ use lightyear::prelude::*;
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions::{Action, ActionData, Actions},
-    unit::{Hero, Unit, UnitBundle},
+    unit::{Hero, HeroBundle, Unit, UnitBundle},
 };
+
+pub(crate) fn receive_player_leave(
+    mut commands: Commands,
+    mut leave_reader: EventReader<MessageEvent<CSPlayerLeave>>,
+    mut net_params: NetworkParamsRW,
+    game_state: Res<GameState>,
+    mut account_q: Query<&AccountInstance>,
+) {
+    //
+}
 
 pub(crate) fn receive_player_ready(
     mut commands: Commands,
@@ -50,8 +60,10 @@ pub(crate) fn receive_player_ready(
 
         commands.entity(client.entity).insert((
             Transform::from_translation(Vec3::ZERO).looking_to(Vec3::NEG_Z, Vec3::Y),
-            UnitBundle { unit: Unit(unit) },
-            Hero,
+            HeroBundle {
+                unit: UnitBundle::new(Unit(unit)),
+                hero: Hero,
+            },
         ));
 
         net_params.server.send_message_to_target::<Channel1, _>(
@@ -85,14 +97,14 @@ pub(crate) fn receive_movement(
             continue;
         };
 
-        for (mut transform, player, mut actions, account) in &mut player_q {
-            if client.account_id.unwrap() != account.info.id {
-                continue;
-            }
+        let Ok((mut transform, player, mut actions, account)) = player_q.get_mut(client.entity)
+        else {
+            info!("{client:?}");
+            continue;
+        };
 
-            actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
-            // info!("move player to {}", transform.translation);
-        }
+        actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
+        info!("move request {}", transform.translation);
     }
 }
 

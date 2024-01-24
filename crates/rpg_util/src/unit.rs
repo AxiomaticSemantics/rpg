@@ -1,3 +1,5 @@
+use crate::actions::Actions;
+
 use bevy::{
     ecs::{bundle::Bundle, component::Component},
     prelude::{Deref, DerefMut},
@@ -18,11 +20,15 @@ pub struct Unit(pub rpg_core::unit::Unit);
 #[derive(Bundle)]
 pub struct UnitBundle {
     pub unit: Unit,
+    pub actions: Actions,
 }
 
 impl UnitBundle {
     pub fn new(unit: Unit) -> Self {
-        Self { unit }
+        Self {
+            unit,
+            actions: Actions::default(),
+        }
     }
 }
 

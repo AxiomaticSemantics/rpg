@@ -47,7 +47,8 @@ pub(crate) fn receive_account_create(
     mut net_params: NetworkParamsRW,
 ) {
     for event in account_create_reader.read() {
-        let client = net_params.context.clients.get_mut(event.context()).unwrap();
+        let client_id = *event.context();
+        let client = net_params.context.clients.get_mut(&client_id).unwrap();
         if client.is_authenticated_player() {
             info!("already authenticated client attempted to create account {client:?}");
             continue;
@@ -91,18 +92,35 @@ pub(crate) fn receive_account_create(
                     character_slots: 12,
                     name: event.message().name.clone(),
                     id: server_metadata.0.next_account_id,
+                    selected_slot: None,
                 },
                 characters: vec![],
             };
 
-            serde_json::to_writer(account_file, &account).unwrap();
-            serde_json::to_writer(meta_file, &server_metadata.0).unwrap();
-
-            let account_entity = commands.spawn(AccountInstance(account)).id();
-            client.entity = account_entity;
+            // finally update the server metadata
             server_metadata.0.next_account_id.0 += 1;
 
             info!("writing account file to {account_file_path}");
+            serde_json::to_writer(meta_file, &server_metadata.0).unwrap();
+            serde_json::to_writer(account_file, &account).unwrap();
+
+            // Set the newly created account to be autenticated
+            client.client_type = ClientType::Player;
+            client.account_id = Some(account.info.id);
+            info!("spawning account for {client:?}");
+
+            let account_entity = commands
+                .spawn(AccountInstanceBundle {
+                    account: AccountInstance(account.clone()),
+                })
+                .id();
+
+            client.entity = account_entity;
+
+            net_params.server.send_message_to_target::<Channel1, _>(
+                SCCreateAccountSuccess(account.clone()),
+                NetworkTarget::Only(vec![client_id]),
+            );
         }
     }
 }
@@ -126,34 +144,42 @@ pub(crate) fn receive_admin_login(
 
         let file_path = format!(
             "{}/server/admin_accounts/{}.json",
-            std::env::var("RPG_SAVE_ROOT").unwrap(),
+            env::var("RPG_SAVE_ROOT").unwrap(),
             event.message().name
         );
         let path = Path::new(file_path.as_str());
         let file = open_read(path);
 
-        if let Ok(_) = file {
-            info!("admin account already exists");
-        } else {
-            let Ok(file) = open_write(path) else {
-                info!("unable to open admin account file for writing");
-                continue;
-            };
+        let Ok(file) = file else {
+            info!("account does not exist {client:?}");
+            continue;
+        };
 
-            let account = AdminAccount {
-                info: AdminAccountInfo {
-                    name: event.message().name.clone(),
-                    id: server_metadata.0.next_account_id,
-                },
-            };
+        let account: Result<AdminAccount, _> = serde_json::from_reader(file);
+        if let Ok(account) = account {
+            // FIXME assign a client id and send it to the client
+            client.client_type = ClientType::Player;
+            client.account_id = Some(account.info.id);
+            info!("spawning admin account for {client:?}");
 
-            serde_json::to_writer(file, &account).unwrap();
+            let account_entity = commands
+                .spawn(AdminAccountInstanceBundle {
+                    account: AdminAccountInstance(account.clone()),
+                })
+                .id();
+
+            client.entity = account_entity;
+
+            /* TODO disabled for now
+            net_params.server.send_message_to_target::<Channel1, _>(
+                SCLoginAdminAccountSuccess(account.clone()),
+                NetworkTarget::Only(vec![*client_id]),
+            );
 
             commands.spawn(AdminAccountInstance(account));
-
-            server_metadata.0.next_account_id.0 += 1;
-
-            info!("writing account file to {file_path}");
+            */
+        } else {
+            info!("unable to deserialize account: {file_path}");
         }
     }
 }
@@ -293,7 +319,6 @@ pub(crate) fn receive_character_create(
                     info!("unable to open account file for writing");
                     continue;
                 };
-                serde_json::to_writer(file, &account.0).unwrap();
 
                 let meta_file_path = format!(
                     "{}/server/meta.json",
@@ -306,6 +331,8 @@ pub(crate) fn receive_character_create(
                     info!("cannot open {meta_file_path} for writing");
                     return;
                 };
+
+                serde_json::to_writer(file, &account.0).unwrap();
                 serde_json::to_writer(meta_file, &server_metadata.0).unwrap();
             }
         }

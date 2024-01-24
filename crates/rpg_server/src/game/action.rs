@@ -51,8 +51,6 @@ pub(crate) fn action(
     let dt = time.delta_seconds();
 
     for (entity, mut unit, mut transform, mut actions, account) in &mut unit_q {
-        info!("actions: {actions:?}");
-
         if let Some(action) = &mut actions.knockback {
             let ActionData::Knockback(knockback) = action.data else {
                 panic!("expected knockback data");

@@ -1,4 +1,12 @@
-use crate::{game::actor::player::Player, net::account::RpgAccount, state::AppState};
+use crate::{
+    game::{
+        actor::{player::Player, spawn_actor},
+        assets::RenderResources,
+        metadata::MetadataResources,
+    },
+    net::account::RpgAccount,
+    state::AppState,
+};
 
 use bevy::{
     ecs::{
@@ -6,15 +14,19 @@ use bevy::{
         event::EventReader,
         query::With,
         schedule::NextState,
-        system::{Query, ResMut},
+        system::{Commands, Query, Res, ResMut},
     },
     log::{debug, info},
     math::Vec3,
     transform::components::Transform,
 };
 
+use rpg_core::{
+    class::Class,
+    unit::{UnitInfo, UnitKind},
+};
 use rpg_network_protocol::protocol::*;
-use rpg_util::unit::Unit;
+use rpg_util::unit::{Unit, UnitBundle, Villain, VillainBundle};
 
 use lightyear::client::events::MessageEvent;
 
@@ -73,6 +85,7 @@ pub(crate) fn receive_player_move(
     for event in move_events.read() {
         let move_msg = event.message();
 
+        info!("move: {move_msg:?}");
         let (mut transform, player) = player_q.single_mut();
         transform.translation = move_msg.0;
     }
@@ -85,6 +98,7 @@ pub(crate) fn receive_player_rotation(
     for event in rotation_events.read() {
         let rot_msg = event.message();
 
+        // info!("rot: {rot_msg:?}");
         let (mut transform, player) = player_q.single_mut();
         transform.look_to(rot_msg.0, Vec3::Y);
     }
@@ -101,5 +115,41 @@ pub(crate) fn receive_stat_updates(
         for update in &update_msg.updates {
             info!("stat update: {update:?}");
         }
+    }
+}
+
+pub(crate) fn receive_villain_spawn(
+    mut commands: Commands,
+    mut spawn_reader: EventReader<MessageEvent<SCSpawnVillain>>,
+    metadata: Res<MetadataResources>,
+    renderables: Res<RenderResources>,
+) {
+    for event in spawn_reader.read() {
+        let spawn_msg = event.message();
+
+        info!("spawning villain {spawn_msg:?}");
+
+        let unit = rpg_core::unit::Unit::new(
+            spawn_msg.uid,
+            spawn_msg.class,
+            UnitKind::Villain,
+            UnitInfo::Villain(spawn_msg.info.clone()),
+            1,
+            "Foo",
+            None,
+            &metadata.rpg,
+        );
+
+        let transform = Transform::from_translation(spawn_msg.position)
+            .looking_to(spawn_msg.direction, Vec3::Y);
+        spawn_actor(
+            &mut commands,
+            &metadata,
+            &renderables,
+            unit,
+            None,
+            None,
+            Some(transform),
+        );
     }
 }

@@ -143,6 +143,7 @@ pub fn input_actions(
         net_client.send_message::<Channel1, _>(CSMovePlayer);
     } else if controls.mouse_secondary.just_released || controls.gamepad_a.just_released {
         actions.request(Action::new(ActionData::MoveEnd, None, true));
+        net_client.send_message::<Channel1, _>(CSMovePlayerEnd);
     }
 
     /*if controls.gamepad_axis_left != Vec2::ZERO {
