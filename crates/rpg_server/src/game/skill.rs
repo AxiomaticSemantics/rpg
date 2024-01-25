@@ -6,18 +6,23 @@ use rpg_core::skill::{
 };
 use rpg_util::{
     actions::AttackData,
-    skill::{Invulnerability, SkillTimer, SkillUse, SkillUseBundle, Tickable},
-    unit::Unit,
+    skill::{Invulnerability, SkillContactEvent, SkillTimer, SkillUse, SkillUseBundle, Tickable},
+    unit::{Corpse, Unit},
 };
 
 use util::{
     cleanup::CleanupStrategy,
-    math::{Aabb, AabbComponent},
+    math::{intersect_aabb, Aabb, AabbComponent},
     random::SharedRng,
 };
 
 use bevy::{
-    ecs::{entity::Entity, system::Commands},
+    ecs::{
+        entity::Entity,
+        event::EventWriter,
+        query::{With, Without},
+        system::{Commands, Query},
+    },
     math::Vec3,
     time::{Time, Timer, TimerMode},
     transform::{components::Transform, TransformBundle},
@@ -218,4 +223,72 @@ pub(crate) fn spawn_instance(
         skill_use,
         TransformBundle::from(transform),
     ));
+}
+
+pub(crate) fn collide_skills(
+    mut skill_events: EventWriter<SkillContactEvent>,
+    mut skill_q: Query<(
+        Entity,
+        &Transform,
+        &AabbComponent,
+        &Invulnerability,
+        &SkillUse,
+    )>,
+    unit_q: Query<(Entity, &Transform, &AabbComponent, &Unit), Without<Corpse>>,
+) {
+    for (s_entity, s_transform, s_aabb, invulnerability, instance) in &mut skill_q {
+        if let Some(tickable) = &instance.tickable {
+            if !tickable.can_damage {
+                continue;
+            }
+        }
+
+        for (u_entity, u_transform, u_aabb, unit) in &unit_q {
+            if !unit.is_alive()
+                || unit.kind == instance.owner_kind
+                || u_entity == instance.owner
+                || invulnerability.iter().any(|i| i.entity == u_entity)
+            {
+                continue;
+            }
+
+            /*println!(
+                "unit {} skill {}",
+                u_transform.translation, s_transform.translation
+            );*/
+
+            let unit_offset = Vec3::new(0.0, 1.2, 0.0);
+
+            let collision = match &instance.instance {
+                SkillInstance::Direct(_) | SkillInstance::Projectile(_) => intersect_aabb(
+                    (
+                        &(s_transform.translation),
+                        &Aabb {
+                            center: s_aabb.center,
+                            half_extents: s_aabb.half_extents,
+                        },
+                    ),
+                    (
+                        &(u_transform.translation + unit_offset),
+                        &Aabb {
+                            center: u_aabb.center,
+                            half_extents: u_aabb.half_extents,
+                        },
+                    ),
+                ),
+                SkillInstance::Area(info) => {
+                    s_transform.translation.distance(u_transform.translation)
+                        <= info.info.radius as f32 / 100.
+                }
+            };
+
+            if collision {
+                skill_events.send(SkillContactEvent {
+                    entity: s_entity,
+                    owner_entity: instance.owner,
+                    defender_entity: u_entity,
+                });
+            }
+        }
+    }
 }

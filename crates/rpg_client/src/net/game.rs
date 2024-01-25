@@ -85,7 +85,7 @@ pub(crate) fn receive_player_move(
     for event in move_events.read() {
         let move_msg = event.message();
 
-        info!("move: {move_msg:?}");
+        // info!("move: {move_msg:?}");
         let (mut transform, player) = player_q.single_mut();
         transform.translation = move_msg.0;
     }

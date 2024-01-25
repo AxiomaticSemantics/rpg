@@ -1,5 +1,5 @@
 use bevy::{
-    ecs::{bundle::Bundle, component::Component, entity::Entity},
+    ecs::{bundle::Bundle, component::Component, entity::Entity, event::Event},
     log::info,
     math::Vec3,
     prelude::{Deref, DerefMut},
@@ -13,6 +13,13 @@ use rpg_core::{
     skill::{effect::*, Origin, SkillId, SkillInstance},
     unit::UnitKind,
 };
+
+#[derive(Event)]
+pub struct SkillContactEvent {
+    pub entity: Entity,
+    pub owner_entity: Entity,
+    pub defender_entity: Entity,
+}
 
 #[derive(Default, Debug, Component, Deref, DerefMut)]
 pub struct SkillTimer(pub Option<Timer>);

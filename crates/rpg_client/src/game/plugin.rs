@@ -9,14 +9,12 @@ use super::{
     environment,
     item::{self, CursorItem, GroundItemDrops},
     metadata::MetadataResources,
-    passive_tree,
-    skill::{self, SkillContactEvent},
-    state_saver, ui, world,
+    passive_tree, skill, state_saver, ui, world,
 };
 
 use rpg_core::{class::Class, uid::NextUid, unit::HeroGameMode};
 use rpg_network_protocol::protocol::*;
-use rpg_util::{actions, unit::Unit};
+use rpg_util::{actions, skill::SkillContactEvent, unit::Unit};
 
 use audio_manager::plugin::AudioActions;
 use util::{

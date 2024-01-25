@@ -1,4 +1,4 @@
-use super::{action, unit, villain};
+use super::{action, skill, unit, villain};
 
 use crate::{
     account::AccountInstance,
@@ -26,6 +26,7 @@ use lightyear::shared::replication::components::NetworkTarget;
 use rpg_account::account::AccountId;
 use rpg_core::{uid::Uid, unit::HeroGameMode};
 use rpg_network_protocol::protocol::*;
+use rpg_util::skill::SkillContactEvent;
 
 use util::{
     math::Aabb,
@@ -80,6 +81,7 @@ pub(crate) struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(WorldPlugin)
+            .add_event::<SkillContactEvent>()
             .init_resource::<GameState>()
             .init_resource::<AabbResources>()
             .insert_resource(SharedRng(Rng::with_seed(1234)))
@@ -100,7 +102,12 @@ impl Plugin for GamePlugin {
             )
             .add_systems(
                 FixedUpdate,
-                (unit::upkeep, villain::villain_think, action::action)
+                (
+                    unit::upkeep,
+                    skill::collide_skills,
+                    villain::villain_think,
+                    action::action,
+                )
                     .chain()
                     .run_if(in_state(AppState::Simulation)),
             );

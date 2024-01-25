@@ -1,4 +1,34 @@
 #![allow(clippy::too_many_arguments)]
+use super::{
+    actor::animation::AnimationState,
+    assets::RenderResources,
+    item::{GroundItemDrop, GroundItemDrops},
+    metadata::MetadataResources,
+    plugin::{GameOverState, GameSessionCleanup, GameState, PlayState},
+    prop::{PropHandle, PropInfo},
+};
+
+use audio_manager::plugin::AudioActions;
+use rpg_core::{
+    combat::{AttackResult, CombatResult},
+    damage::Damage,
+    skill::{
+        effect::*, skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData, Origin,
+        ProjectileInstance, ProjectileShape, Skill, SkillId, SkillInfo, SkillInstance,
+    },
+    unit::UnitKind,
+};
+use rpg_util::{
+    actions::{Action, ActionData, Actions, AttackData, KnockbackData as KnockbackActionData},
+    skill::*,
+    unit::{Corpse, Unit},
+};
+
+use util::{
+    cleanup::CleanupStrategy,
+    math::{intersect_aabb, Aabb as UtilAabb, AabbComponent},
+    random::SharedRng,
+};
 
 use bevy::{
     animation::RepeatAnimation,
@@ -31,45 +61,7 @@ use bevy::{
     utils::default,
 };
 
-use super::{
-    actor::animation::AnimationState,
-    assets::RenderResources,
-    item::{GroundItemDrop, GroundItemDrops},
-    metadata::MetadataResources,
-    plugin::{GameOverState, GameSessionCleanup, GameState, PlayState},
-    prop::{PropHandle, PropInfo},
-};
-
-use audio_manager::plugin::AudioActions;
-use rpg_core::{
-    combat::{AttackResult, CombatResult},
-    damage::Damage,
-    skill::{
-        effect::*, skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData, Origin,
-        ProjectileInstance, ProjectileShape, Skill, SkillId, SkillInfo, SkillInstance,
-    },
-    unit::UnitKind,
-};
-use rpg_util::{
-    actions::{Action, ActionData, Actions, AttackData, KnockbackData as KnockbackActionData},
-    skill::*,
-    unit::{Corpse, Unit},
-};
-
-use util::{
-    cleanup::CleanupStrategy,
-    math::{intersect_aabb, Aabb as UtilAabb, AabbComponent},
-    random::SharedRng,
-};
-
 use std::borrow::Cow;
-
-#[derive(Event)]
-pub struct SkillContactEvent {
-    entity: Entity,
-    owner_entity: Entity,
-    defender_entity: Entity,
-}
 
 pub fn update_invulnerability(
     time: Res<Time>,
