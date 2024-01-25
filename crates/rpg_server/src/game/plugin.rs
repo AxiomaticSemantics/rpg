@@ -91,7 +91,11 @@ impl Plugin for GamePlugin {
             )
             .add_systems(
                 FixedPreUpdate,
-                (villain::remote_spawn, unit::remove_corpses)
+                (
+                    villain::remote_spawn,
+                    unit::attract_resource_items,
+                    unit::remove_corpses,
+                )
                     .run_if(in_state(AppState::Simulation)),
             )
             .add_systems(

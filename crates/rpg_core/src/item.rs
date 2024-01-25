@@ -50,7 +50,7 @@ pub enum ItemInfo {
     Gem(GemInfo),
 }
 
-#[derive(Debug, Clone, Ser, De)]
+#[derive(Debug, Clone, PartialEq, Ser, De)]
 pub struct Item {
     pub uid: ItemUid,
     pub id: ItemId,

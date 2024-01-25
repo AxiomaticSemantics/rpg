@@ -11,6 +11,7 @@ use rpg_account::{
 use rpg_chat::chat::{ChannelId, Message as ChatMessage};
 use rpg_core::{
     class::Class,
+    item::{Item, ItemId},
     skill::SkillId,
     stat::StatUpdate,
     uid::Uid,
@@ -143,6 +144,12 @@ pub struct CSSkillUseTargeted {
     pub target: Vec3,
 }
 
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSItemDrop;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSItemPickup;
+
 // Server -> Client
 
 // Account Messages
@@ -268,9 +275,28 @@ pub struct SCMovePlayer(pub Vec3);
 pub struct SCRotPlayer(pub Vec3);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCStatUpdates {
-    pub updates: Vec<StatUpdate>,
+pub struct SCStatUpdate(pub StatUpdate);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCStatUpdates(pub Vec<StatUpdate>);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCSpawnSkill {
+    pub id: SkillId,
+    pub uid: Uid,
 }
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCDespawnSkill(pub Uid);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCSpawnItem(pub Item);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCSpawnItems(pub Vec<Item>);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCDespawnItem(pub Uid);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCSpawnVillain {
@@ -280,6 +306,9 @@ pub struct SCSpawnVillain {
     pub uid: Uid,
     pub info: VillainInfo,
 }
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCDespawnVillain(pub Uid);
 
 #[message_protocol(protocol = "RpgProtocol")]
 pub enum Messages {
@@ -328,8 +357,15 @@ pub enum Messages {
     SCPlayerSpawn(SCPlayerSpawn),
     SCMovePlayer(SCMovePlayer),
     SCRotPlayer(SCRotPlayer),
+    SCStatUpdate(SCStatUpdate),
     SCStatUpdates(SCStatUpdates),
+    SCSpawnSkill(SCSpawnSkill),
+    SCDespawnSkill(SCDespawnSkill),
+    SCSpawnItem(SCSpawnItem),
+    SCSpawnItems(SCSpawnItems),
+    SCDespawnItem(SCDespawnItem),
     SCSpawnVillain(SCSpawnVillain),
+    SCDespawnVillain(SCDespawnVillain),
 
     // Client -> Server
 

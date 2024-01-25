@@ -67,6 +67,8 @@ impl Plugin for NetworkServerPlugin {
                     game::receive_rotation,
                     game::receive_skill_use_direct,
                     game::receive_skill_use_targeted,
+                    game::receive_item_drop,
+                    game::receive_item_pickup,
                     game::receive_movement,
                 )
                     .chain()
