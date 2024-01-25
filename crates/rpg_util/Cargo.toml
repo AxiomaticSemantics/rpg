@@ -12,6 +12,7 @@ workspace = true
 
 [dependencies]
 rpg_core = { path = "../rpg_core" }
+util = { path = "../util" }
 
 [dependencies.bevy]
 git = "https://github.com/AxiomaticSemantics/bevy"

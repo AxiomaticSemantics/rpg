@@ -19,6 +19,8 @@ use lightyear::prelude::*;
 use rpg_account::account::AccountId;
 use rpg_network_protocol::{protocol::*, *};
 
+use rpg_util::unit::collide_units;
+
 use std::collections::HashMap;
 use std::net::{Ipv4Addr, SocketAddr};
 
@@ -61,6 +63,7 @@ impl Plugin for NetworkServerPlugin {
             .add_systems(
                 FixedUpdate,
                 (
+                    collide_units,
                     game::receive_rotation,
                     game::receive_skill_use_direct,
                     game::receive_skill_use_targeted,

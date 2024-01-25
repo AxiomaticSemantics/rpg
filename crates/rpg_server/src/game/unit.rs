@@ -1,3 +1,4 @@
+use super::plugin::GameState;
 use crate::{account::AccountInstance, assets::MetadataResources, net::server::NetworkParamsRW};
 
 use bevy::{
@@ -11,11 +12,15 @@ use bevy::{
     log::info,
     prelude::{Deref, DerefMut},
     time::{Time, Timer},
+    transform::components::Transform,
 };
 
 use lightyear::shared::replication::components::NetworkTarget;
 use rpg_network_protocol::protocol::*;
-use rpg_util::unit::{Corpse, Unit};
+use rpg_util::{
+    item::{GroundItem, ResourceItem},
+    unit::{Corpse, Hero, Unit},
+};
 
 #[derive(Component, Default, Debug, Deref, DerefMut)]
 pub struct CorpseTimer(pub Timer);
@@ -50,6 +55,42 @@ pub(crate) fn upkeep(
 
 pub(crate) fn collide_units() {
     //
+}
+
+// TODO factor out unit targetting code to a component
+pub(crate) fn attract_resource_items(
+    mut commands: Commands,
+    mut game_state: ResMut<GameState>,
+    time: Res<Time>,
+    metadata: Res<MetadataResources>,
+    mut item_q: Query<(Entity, &mut Transform, &mut GroundItem), With<ResourceItem>>,
+    mut hero_q: Query<(&Transform, &mut Unit), (With<Hero>, Without<GroundItem>, Without<Corpse>)>,
+) {
+    let Ok((u_transform, mut unit)) = hero_q.get_single_mut() else {
+        return;
+    };
+
+    for (i_entity, mut i_transform, mut i_item) in &mut item_q {
+        let mut i_ground = i_transform.translation;
+        i_ground.y = 0.;
+
+        let pickup_radius = *unit.stats.vitals.stats["PickupRadius"].value.u32() as f32 / 100.;
+
+        let distance = u_transform.translation.distance(i_ground);
+        if distance > pickup_radius {
+            continue;
+        } else if distance < 0.25 {
+            let item = i_item.0.take().unwrap();
+            let _leveled_up = unit.apply_rewards(&metadata.0, &item);
+            //u_audio.push("item_pickup".into());
+            //game_state.stats.items_looted += 1;
+
+            commands.entity(i_entity).despawn_recursive();
+        } else {
+            let target_dir = (u_transform.translation - i_ground).normalize_or_zero();
+            i_transform.translation += target_dir * time.delta_seconds() * 4.;
+        }
+    }
 }
 
 pub(crate) fn remove_corpses(

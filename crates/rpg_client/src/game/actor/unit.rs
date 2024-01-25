@@ -4,7 +4,7 @@ use crate::game::{
     actor::{animation::AnimationState, player::Player},
     assets::RenderResources,
     health_bar::{HealthBar, HealthBarFrame, HealthBarRect},
-    item::{GroundItem, ResourceItem, StorableItem, UnitStorage},
+    item::UnitStorage,
     metadata::MetadataResources,
     plugin::{GameCamera, GameState},
     skill,
@@ -18,6 +18,7 @@ use rpg_core::{
 };
 use rpg_util::{
     actions::{ActionData, Actions, State},
+    item::{GroundItem, ResourceItem, StorableItem},
     unit::{Corpse, Hero, Unit, UnitBundle, Villain},
 };
 
@@ -117,26 +118,6 @@ pub fn update_health_bars(
     }
 }
 
-// TODO FIXME this is just a buggy hack
-pub fn collide_units(
-    mut unit_q: Query<(&mut Transform, &AabbComponent), (With<Unit>, Without<Corpse>)>,
-) {
-    let mut combinations = unit_q.iter_combinations_mut();
-    while let Some([(mut t1, a1), (mut t2, a2)]) = combinations.fetch_next() {
-        while intersect_aabb((&mut t1.translation, &a1), (&mut t2.translation, &a2)) {
-            let distance = t1.translation.distance(t2.translation);
-
-            let offset = 0.01 * t1.forward();
-
-            if (t1.translation + offset).distance(t2.translation) > distance {
-                t1.translation += offset;
-            } else {
-                t1.translation -= offset;
-            }
-        }
-    }
-}
-
 // TODO move this to somewhere else
 pub fn pick_storable_items(
     mut commands: Commands,
@@ -183,8 +164,8 @@ pub fn pick_storable_items(
     }
 }
 
-// TODO factor out unit targetting code to a component
-pub fn attract_resource_items(
+// NOTE some desync is acceptible here
+pub(crate) fn attract_resource_items(
     mut commands: Commands,
     mut game_state: ResMut<GameState>,
     time: Res<Time>,
@@ -192,12 +173,7 @@ pub fn attract_resource_items(
     mut item_q: Query<(Entity, &mut Transform, &mut GroundItem), With<ResourceItem>>,
     mut hero_q: Query<
         (&Transform, &mut Unit, &mut AudioActions),
-        (
-            With<Hero>,
-            With<Player>,
-            Without<GroundItem>,
-            Without<Corpse>,
-        ),
+        (With<Hero>, Without<GroundItem>, Without<Corpse>),
     >,
 ) {
     let Ok((u_transform, mut unit, mut u_audio)) = hero_q.get_single_mut() else {
@@ -214,8 +190,8 @@ pub fn attract_resource_items(
         if distance > pickup_radius {
             continue;
         } else if distance < 0.25 {
-            let item = i_item.0.take().unwrap();
-            let _leveled_up = unit.apply_rewards(&metadata.rpg, &item);
+            //let item = i_item.0.take().unwrap();
+            //let _leveled_up = unit.apply_rewards(&metadata.rpg, &item);
             u_audio.push("item_pickup".into());
             game_state.session_stats.items_looted += 1;
 

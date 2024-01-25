@@ -216,7 +216,7 @@ impl Plugin for GamePlugin {
                             player::input_actions,
                             unit::action,
                             skill::update_skill,
-                            unit::collide_units,
+                            // reuse for local unit::collide_units,
                             skill::collide_skills,
                             skill::handle_contact,
                             unit::attract_resource_items,

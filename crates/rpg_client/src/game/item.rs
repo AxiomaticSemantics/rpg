@@ -9,7 +9,10 @@ use rpg_core::{
     metadata::Metadata,
     storage::{StorageSlot as RpgStorageSlot, UnitStorage as RpgUnitStorage},
 };
-use rpg_util::unit::Unit;
+use rpg_util::{
+    item::{GroundItem, GroundItemBundle, ResourceItem, StorableItem},
+    unit::Unit,
+};
 use util::{cleanup::CleanupStrategy, random::SharedRng};
 
 use bevy::{
@@ -52,20 +55,11 @@ pub struct CursorItem {
     pub item: Option<StorageSlot>,
 }
 
-#[derive(Component, Deref, DerefMut)]
-pub(crate) struct GroundItem(pub Option<Item>);
-
 #[derive(Component)]
 pub struct GroundItemHover;
 
 #[derive(Component)]
 pub struct GroundItemStats;
-
-#[derive(Component)]
-pub struct ResourceItem;
-
-#[derive(Component)]
-pub struct StorableItem;
 
 pub(crate) struct GroundItemDrop {
     pub source: Entity,
@@ -74,12 +68,6 @@ pub(crate) struct GroundItemDrop {
 
 #[derive(Resource, Default, Deref, DerefMut)]
 pub(crate) struct GroundItemDrops(pub Vec<GroundItemDrop>);
-
-#[derive(Bundle)]
-pub struct GroundItemBundle {
-    pub prop: SceneBundle,
-    pub item: GroundItem,
-}
 
 pub(crate) fn hover_ground_item(
     input: Res<ButtonInput<MouseButton>>,
@@ -226,12 +214,12 @@ fn spawn_item(
         .spawn((
             GameSessionCleanup,
             CleanupStrategy::DespawnRecursive,
+            SceneBundle {
+                scene: handle.clone_weak(),
+                transform,
+                ..default()
+            },
             GroundItemBundle {
-                prop: SceneBundle {
-                    scene: handle.clone_weak(),
-                    transform,
-                    ..default()
-                },
                 item: GroundItem(Some(item)),
             },
             aabb,
