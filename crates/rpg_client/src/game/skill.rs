@@ -2,7 +2,6 @@
 use super::{
     actor::animation::AnimationState,
     assets::RenderResources,
-    item::{GroundItemDrop, GroundItemDrops},
     metadata::MetadataResources,
     plugin::{GameOverState, GameSessionCleanup, GameState, PlayState},
     prop::{PropHandle, PropInfo},
@@ -20,6 +19,7 @@ use rpg_core::{
 };
 use rpg_util::{
     actions::{Action, ActionData, Actions, AttackData, KnockbackData as KnockbackActionData},
+    item::{GroundItemDrop, GroundItemDrops},
     skill::*,
     unit::{Corpse, Unit},
 };
@@ -62,19 +62,6 @@ use bevy::{
 };
 
 use std::borrow::Cow;
-
-pub fn update_invulnerability(
-    time: Res<Time>,
-    mut skill_q: Query<&mut Invulnerability, With<SkillUse>>,
-) {
-    for mut invulnerability in &mut skill_q {
-        invulnerability.iter_mut().for_each(|i| {
-            i.timer.tick(time.delta());
-        });
-
-        invulnerability.retain(|i| !i.timer.finished());
-    }
-}
 
 pub fn handle_contact(
     mut commands: Commands,
@@ -158,19 +145,6 @@ pub fn handle_contact(
                     } else {
                         game_state.session_stats.villain_hits += 1;
                     }
-
-                    if let SkillInstance::Projectile(_) = &instance.instance {
-                        if instance
-                            .effects
-                            .iter()
-                            .any(|e| matches!(e.info, EffectInfo::Pierce(_)))
-                        {
-                            invulnerability.push(InvulnerabilityTimer {
-                                entity: d_entity,
-                                timer: Timer::from_seconds(0.5, TimerMode::Once),
-                            });
-                        }
-                    }
                 }
             },
             CombatResult::Death(_) => {
@@ -189,6 +163,7 @@ pub fn handle_contact(
                     game_state.session_stats.kills += 1;
                     game_state.session_stats.hits += 1;
 
+                    /*
                     if let Some(death) = defender.handle_death(
                         &mut attacker,
                         &metadata.rpg,
@@ -201,7 +176,7 @@ pub fn handle_contact(
                             source: event.defender_entity,
                             items: death.items,
                         });
-                    }
+                    }*/
                 } else {
                     game_state.session_stats.villain_hits += 1;
                     game_state.state = PlayState::Death(GameOverState::Pending);

@@ -75,6 +75,15 @@ pub(crate) fn action(
             match &mut action.state {
                 State::Pending => {
                     let distance = (attack.user.distance(attack.target) * 100.).round() as u32;
+                    let skill_id = unit.active_skills.primary.skill.unwrap();
+                    assert_eq!(skill_id, attack.skill_id);
+
+                    let Some(skill_info) = metadata.0.skill.skills.get(&skill_id) else {
+                        panic!("skill metadata not found");
+                    };
+
+                    info!("attempting to use {skill_id:?}");
+
                     match unit.can_use_skill(&metadata.0, attack.skill_id, distance) {
                         SkillUseResult::Blocked
                         | SkillUseResult::OutOfRange
@@ -88,11 +97,6 @@ pub(crate) fn action(
                             panic!("Skill use error");
                         }
                     }
-
-                    let skill_id = unit.active_skills.primary.skill.unwrap();
-                    let Some(skill_info) = metadata.0.skill.skills.get(&skill_id) else {
-                        panic!("skill metadata not found");
-                    };
 
                     let duration = skill_info.use_duration_secs
                         * unit.stats.vitals.stats["Cooldown"].value.f32();

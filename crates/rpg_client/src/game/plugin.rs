@@ -7,14 +7,14 @@ use super::{
     assets::RenderResources,
     controls::{self, Controls, CursorPosition},
     environment,
-    item::{self, CursorItem, GroundItemDrops},
+    item::{self, CursorItem},
     metadata::MetadataResources,
     passive_tree, skill, state_saver, ui, world,
 };
 
 use rpg_core::{class::Class, uid::NextUid, unit::HeroGameMode};
 use rpg_network_protocol::protocol::*;
-use rpg_util::{actions, skill::SkillContactEvent, unit::Unit};
+use rpg_util::{actions, item::GroundItemDrops, skill::SkillContactEvent, unit::Unit};
 
 use audio_manager::plugin::AudioActions;
 use util::{
@@ -152,7 +152,6 @@ pub enum GameOverState {
 #[derive(Debug, Resource, Default)]
 pub struct GameState {
     pub session_stats: SessionStats,
-    pub next_uid: NextUid,
     pub state: PlayState,
     pub mode: HeroGameMode,
 }
@@ -192,7 +191,7 @@ impl Plugin for GamePlugin {
                         ui::hud::setup,
                         ui::hero::setup,
                         ui::inventory::setup,
-                        ui::pause::setup,
+                        ui::menu::setup,
                         ui::game_over::setup,
                         passive_tree::setup,
                     )
@@ -233,7 +232,7 @@ impl Plugin for GamePlugin {
                             background_audio,
                             unit_audio,
                             actor::animation::animator,
-                            ui::pause::user_pause,
+                            ui::menu::toggle_menu,
                         )
                             .after(player::update_camera),
                     ),
@@ -251,7 +250,11 @@ impl Plugin for GamePlugin {
             )
             .add_systems(
                 Update,
-                (ui::pause::user_pause, ui::pause::game_exit_button_pressed)
+                (
+                    ui::menu::toggle_menu,
+                    ui::menu::save_button,
+                    ui::menu::cancel_button,
+                )
                     .chain()
                     .run_if(in_state(AppState::Game).and_then(is_game)),
             )
@@ -282,7 +285,6 @@ impl Plugin for GamePlugin {
                     // TODO decide if this will be needed again villain::spawner,
                     unit::remove_healthbar,
                     skill::clean_skills,
-                    skill::update_invulnerability,
                     actions::action_tick,
                 )
                     .run_if(in_state(AppState::Game).and_then(is_game)),

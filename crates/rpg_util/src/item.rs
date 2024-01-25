@@ -1,5 +1,5 @@
 use bevy::{
-    ecs::{bundle::Bundle, component::Component},
+    ecs::{bundle::Bundle, component::Component, entity::Entity, system::Resource},
     prelude::{Deref, DerefMut},
 };
 
@@ -18,3 +18,11 @@ pub struct StorableItem;
 pub struct GroundItemBundle {
     pub item: GroundItem,
 }
+
+pub struct GroundItemDrop {
+    pub source: Entity,
+    pub items: Vec<Item>,
+}
+
+#[derive(Resource, Default, Deref, DerefMut)]
+pub struct GroundItemDrops(pub Vec<GroundItemDrop>);

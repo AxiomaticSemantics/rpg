@@ -26,13 +26,16 @@ use bevy::{
 };
 
 #[derive(Component)]
-pub struct PauseView;
+pub struct MenuView;
 
 #[derive(Component)]
-pub struct PauseStats;
+pub struct GameStats;
 
 #[derive(Component)]
 pub struct SaveButton;
+
+#[derive(Component)]
+pub struct CancelButton;
 
 fn build_stats_string(stats: &SessionStats) -> String {
     format!(
@@ -53,35 +56,49 @@ fn build_stats_string(stats: &SessionStats) -> String {
 }
 
 // FIXME pausing no longer exists, this is temporary
-pub(crate) fn user_pause(
+pub(crate) fn toggle_menu(
     mut game_state: ResMut<GameState>,
     input: Res<ButtonInput<KeyCode>>,
-    mut pause_view_q: Query<&mut Style, With<PauseView>>,
-    mut pause_stats_q: Query<&mut Text, With<PauseStats>>,
+    mut menu_q: Query<&mut Style, With<MenuView>>,
+    mut stats_q: Query<&mut Text, With<GameStats>>,
 ) {
-    let mut pause_style = pause_view_q.single_mut();
+    let mut style = menu_q.single_mut();
     if input.just_pressed(KeyCode::Escape) {
-        if pause_style.display == Display::None {
-            let mut pause_stats = pause_stats_q.single_mut();
-            pause_stats.sections[0].value = build_stats_string(&game_state.session_stats);
-            pause_style.display = Display::Flex;
+        if style.display == Display::None {
+            style.display = Display::Flex;
+
+            let mut stats = stats_q.single_mut();
+            stats.sections[0].value = build_stats_string(&game_state.session_stats);
         } else {
-            pause_style.display = Display::None;
+            style.display = Display::None;
         }
     }
 }
 
-pub(crate) fn game_exit_button_pressed(
-    //mut exit_writer: EventWriter<ExitGame>,
-    mut pause_view_q: Query<&mut Style, With<PauseView>>,
-    button_q: Query<&Interaction, (With<SaveButton>, Changed<Interaction>)>,
+pub(crate) fn save_button(
+    mut menu_q: Query<&mut Style, With<MenuView>>,
+    save_button_q: Query<&Interaction, (With<SaveButton>, Changed<Interaction>)>,
 ) {
-    let Ok(interaction) = button_q.get_single() else {
+    let Ok(interaction) = save_button_q.get_single() else {
         return;
     };
 
     if interaction == &Interaction::Pressed {
-        pause_view_q.single_mut().display = Display::None;
+        menu_q.single_mut().display = Display::None;
+        // TODO send event to trigger sending exit game packet to server
+    }
+}
+
+pub(crate) fn cancel_button(
+    mut menu_q: Query<&mut Style, With<MenuView>>,
+    cancel_button_q: Query<&Interaction, (With<CancelButton>, Changed<Interaction>)>,
+) {
+    let Ok(interaction) = cancel_button_q.get_single() else {
+        return;
+    };
+
+    if interaction == &Interaction::Pressed {
+        menu_q.single_mut().display = Display::None;
         // TODO send event to trigger sending exit game packet to server
     }
 }
@@ -131,7 +148,7 @@ pub(crate) fn setup(
         .spawn((
             GameSessionCleanup,
             CleanupStrategy::DespawnRecursive,
-            PauseView,
+            MenuView,
             NodeBundle {
                 style: container_hidden_style.clone(),
                 ..default()
@@ -141,13 +158,13 @@ pub(crate) fn setup(
             p.spawn(frame_col_node.clone()).with_children(|p| {
                 p.spawn(col_node.clone()).with_children(|p| {
                     p.spawn(TextBundle::from_section(
-                        "Paused",
+                        "Stats",
                         ui_theme.text_style_regular.clone(),
                     ));
                 });
 
                 p.spawn((
-                    PauseStats,
+                    GameStats,
                     TextBundle {
                         text: Text::from_section("", ui_theme.text_style_regular.clone()),
                         style: Style {
@@ -158,7 +175,6 @@ pub(crate) fn setup(
                         ..default()
                     },
                 ));
-
                 p.spawn((
                     SaveButton,
                     ButtonBundle {
@@ -169,7 +185,22 @@ pub(crate) fn setup(
                 ))
                 .with_children(|p| {
                     p.spawn(TextBundle::from_section(
-                        "Save",
+                        "Exit",
+                        ui_theme.text_style_regular.clone(),
+                    ));
+                });
+
+                p.spawn((
+                    CancelButton,
+                    ButtonBundle {
+                        style: ui_theme.button_theme.style.clone(),
+                        border_color: BorderColor(Color::rgb(0.3, 0.3, 0.3)),
+                        ..default()
+                    },
+                ))
+                .with_children(|p| {
+                    p.spawn(TextBundle::from_section(
+                        "Cancel",
                         ui_theme.text_style_regular.clone(),
                     ));
                 });
