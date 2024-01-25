@@ -1,5 +1,5 @@
 use super::server::{ClientType, NetworkContext, NetworkParamsRW};
-use crate::{account::AccountInstance, game::plugin::GameState};
+use crate::{account::AccountInstance, assets::MetadataResources, game::plugin::GameState};
 
 use bevy::{
     ecs::{
@@ -17,7 +17,8 @@ use lightyear::prelude::*;
 
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
-    actions::{Action, ActionData, Actions},
+    actions::{Action, ActionData, Actions, AttackData},
+    skill::get_skill_origin,
     unit::{Hero, HeroBundle, Unit, UnitBundle},
 };
 
@@ -28,7 +29,13 @@ pub(crate) fn receive_player_leave(
     game_state: Res<GameState>,
     mut account_q: Query<&AccountInstance>,
 ) {
-    //
+    for event in leave_reader.read() {
+        let client_id = *event.context();
+        let client = net_params.context.clients.get(&client_id).unwrap();
+        if !client.is_authenticated_player() {
+            continue;
+        };
+    }
 }
 
 pub(crate) fn receive_player_ready(
@@ -143,7 +150,8 @@ pub(crate) fn receive_rotation(
 pub(crate) fn receive_skill_use_direct(
     mut skill_use_reader: EventReader<MessageEvent<CSSkillUseDirect>>,
     mut net_params: NetworkParamsRW,
-    mut player_q: Query<(&mut Transform, &Unit, &AccountInstance), With<Hero>>,
+    metadata: Res<MetadataResources>,
+    mut player_q: Query<(&mut Transform, &Unit, &mut Actions, &AccountInstance), With<Hero>>,
 ) {
     for event in skill_use_reader.read() {
         let client_id = *event.context();
@@ -152,7 +160,7 @@ pub(crate) fn receive_skill_use_direct(
             continue;
         };
 
-        for (mut transform, player, account) in &mut player_q {
+        for (mut transform, player, mut actions, account) in &mut player_q {
             if client.account_id.unwrap() != account.info.id {
                 continue;
             }
@@ -160,7 +168,26 @@ pub(crate) fn receive_skill_use_direct(
             let skill_use_msg = event.message();
             info!("{skill_use_msg:?}");
 
-            //
+            let (origin, target) = get_skill_origin(
+                &metadata.0,
+                &transform,
+                transform.translation, // FIXMEcursor_position.ground,
+                skill_use_msg.0,
+            );
+
+            if actions.attack.is_none() && actions.knockback.is_none() {
+                actions.request(Action::new(
+                    ActionData::Attack(AttackData {
+                        skill_id: skill_use_msg.0,
+                        user: transform.translation,
+                        origin,
+                        target,
+                    }),
+                    None,
+                    true,
+                ));
+                //
+            }
         }
     }
 }

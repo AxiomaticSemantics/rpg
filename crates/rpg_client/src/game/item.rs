@@ -10,7 +10,9 @@ use rpg_core::{
     storage::{StorageSlot as RpgStorageSlot, UnitStorage as RpgUnitStorage},
 };
 use rpg_util::{
-    item::{GroundItem, GroundItemBundle, ResourceItem, StorableItem},
+    item::{
+        GroundItem, GroundItemBundle, GroundItemDrop, GroundItemDrops, ResourceItem, StorableItem,
+    },
     unit::Unit,
 };
 use util::{cleanup::CleanupStrategy, random::SharedRng};
@@ -60,14 +62,6 @@ pub struct GroundItemHover;
 
 #[derive(Component)]
 pub struct GroundItemStats;
-
-pub(crate) struct GroundItemDrop {
-    pub source: Entity,
-    pub items: Vec<Item>,
-}
-
-#[derive(Resource, Default, Deref, DerefMut)]
-pub(crate) struct GroundItemDrops(pub Vec<GroundItemDrop>);
 
 pub(crate) fn hover_ground_item(
     input: Res<ButtonInput<MouseButton>>,
@@ -123,7 +117,7 @@ pub(crate) fn spawn_ground_items(
     mut commands: Commands,
     metadata: Res<MetadataResources>,
     renderables: Res<RenderResources>,
-    mut random: ResMut<SharedRng>,
+    mut rng: ResMut<SharedRng>,
     mut ground_drop_items: ResMut<GroundItemDrops>,
     mut unit_q: Query<(&mut AudioActions, &Transform), With<Unit>>,
 ) {
@@ -139,7 +133,7 @@ pub(crate) fn spawn_ground_items(
 
             spawn_item(
                 &mut commands,
-                &mut random.0,
+                &mut rng.0,
                 &renderables,
                 &metadata.rpg,
                 transform.translation,
@@ -208,7 +202,6 @@ fn spawn_item(
 
     let mut transform = Transform::from_xyz(position.x, 0.8, position.z);
     transform.rotate_y(dir);
-    transform.translation += transform.forward() * 0.5;
 
     let id = commands
         .spawn((

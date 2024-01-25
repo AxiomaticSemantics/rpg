@@ -302,8 +302,8 @@ pub struct SCDespawnItem(pub Uid);
 pub struct SCSpawnVillain {
     pub position: Vec3,
     pub direction: Vec3,
-    pub class: Class,
     pub uid: Uid,
+    pub level: u8,
     pub info: VillainInfo,
 }
 
@@ -392,6 +392,8 @@ pub enum Messages {
     CSChatChannelLeave(CSChatChannelLeave),
 
     // Game Messages
+    CSItemDrop(CSItemDrop),
+    CSItemPickup(CSItemPickup),
     CSPlayerReady(CSPlayerReady),
     CSPlayerLeave(CSPlayerLeave),
     CSJoinZone(CSJoinZone),

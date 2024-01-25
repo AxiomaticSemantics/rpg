@@ -1,4 +1,4 @@
-use super::{action, unit, villain};
+use super::{action, skill, unit, villain};
 
 use crate::{
     account::AccountInstance,
@@ -26,6 +26,7 @@ use lightyear::shared::replication::components::NetworkTarget;
 use rpg_account::account::AccountId;
 use rpg_core::{uid::Uid, unit::HeroGameMode};
 use rpg_network_protocol::protocol::*;
+use rpg_util::{item::GroundItemDrops, skill::SkillContactEvent};
 
 use util::{
     math::Aabb,
@@ -80,8 +81,10 @@ pub(crate) struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(WorldPlugin)
+            .add_event::<SkillContactEvent>()
             .init_resource::<GameState>()
             .init_resource::<AabbResources>()
+            .init_resource::<GroundItemDrops>()
             .insert_resource(SharedRng(Rng::with_seed(1234)))
             .add_systems(OnEnter(AppState::SpawnSimulation), setup_simulation)
             .add_systems(OnEnter(AppState::Simulation), join_clients)
@@ -93,14 +96,22 @@ impl Plugin for GamePlugin {
                 FixedPreUpdate,
                 (
                     villain::remote_spawn,
+                    skill::update_invulnerability,
                     unit::attract_resource_items,
                     unit::remove_corpses,
+                    rpg_util::actions::action_tick,
                 )
                     .run_if(in_state(AppState::Simulation)),
             )
             .add_systems(
                 FixedUpdate,
-                (unit::upkeep, villain::villain_think, action::action)
+                (
+                    unit::upkeep,
+                    skill::collide_skills,
+                    skill::handle_contacts,
+                    villain::villain_think,
+                    action::action,
+                )
                     .chain()
                     .run_if(in_state(AppState::Simulation)),
             );

@@ -1,29 +1,58 @@
-use super::plugin::{AabbResources, GameSessionCleanup};
+use super::plugin::{AabbResources, GameSessionCleanup, GameState};
+use crate::{assets::MetadataResources, server_state::ServerMetadataResource};
 
-use rpg_core::skill::{
-    effect::*, skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData, Origin,
-    ProjectileInstance, ProjectileShape, Skill, SkillInfo, SkillInstance,
+use rpg_core::{
+    combat::{AttackResult, CombatResult},
+    skill::{
+        effect::*, skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData, Origin,
+        ProjectileInstance, ProjectileShape, Skill, SkillInfo, SkillInstance,
+    },
+    unit::UnitKind,
 };
 use rpg_util::{
-    actions::AttackData,
-    skill::{Invulnerability, SkillTimer, SkillUse, SkillUseBundle, Tickable},
-    unit::Unit,
+    actions::{Action, ActionData, Actions, AttackData, KnockbackData as KnockbackActionData},
+    item::{GroundItemDrop, GroundItemDrops},
+    skill::{
+        Invulnerability, InvulnerabilityTimer, SkillContactEvent, SkillTimer, SkillUse,
+        SkillUseBundle, Tickable,
+    },
+    unit::{Corpse, Unit},
 };
 
 use util::{
     cleanup::CleanupStrategy,
-    math::{Aabb, AabbComponent},
-    random::SharedRng,
+    math::{intersect_aabb, Aabb, AabbComponent},
+    random::{Rng, SharedRng},
 };
 
 use bevy::{
-    ecs::{entity::Entity, system::Commands},
+    ecs::{
+        entity::Entity,
+        event::{EventReader, EventWriter},
+        query::{With, Without},
+        system::{Commands, Query, Res, ResMut},
+    },
+    hierarchy::DespawnRecursiveExt,
+    log::{debug, info},
     math::Vec3,
     time::{Time, Timer, TimerMode},
     transform::{components::Transform, TransformBundle},
 };
 
 use std::borrow::Cow;
+
+pub fn update_invulnerability(
+    time: Res<Time>,
+    mut skill_q: Query<&mut Invulnerability, With<SkillUse>>,
+) {
+    for mut invulnerability in &mut skill_q {
+        invulnerability.iter_mut().for_each(|i| {
+            i.timer.tick(time.delta());
+        });
+
+        invulnerability.retain(|i| !i.timer.finished());
+    }
+}
 
 pub(crate) fn prepare_skill(
     owner: Entity,
@@ -218,4 +247,324 @@ pub(crate) fn spawn_instance(
         skill_use,
         TransformBundle::from(transform),
     ));
+}
+
+pub(crate) fn clean_skills(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut skill_q: Query<(Entity, &Transform, &mut SkillTimer, &SkillUse)>,
+) {
+    for (entity, transform, mut timer, skill_use) in &mut skill_q {
+        if let Some(timer) = &mut timer.0 {
+            if timer.tick(time.delta()).finished() {
+                // TODO send message to all clients that have spawned this skill
+                // or rely on the client to auto-despawn?
+                commands.entity(entity).despawn_recursive();
+                continue;
+            }
+        }
+
+        let despawn = match &skill_use.instance {
+            SkillInstance::Projectile(info) => match info.info.duration {
+                Some(d) => time.elapsed_seconds() - info.start_time >= d,
+                None => {
+                    if info.info.aerial.is_some() {
+                        transform.translation.y < info.info.size as f32 / 100.
+                    } else {
+                        false
+                    }
+                }
+            },
+            SkillInstance::Direct(info) => {
+                //println!("direct skill: {info:?}");
+                info.frame >= info.info.frames
+            }
+            SkillInstance::Area(info) => {
+                //println!("area skill: {info:?}");
+                time.elapsed_seconds() - info.start_time >= info.info.duration
+            }
+        };
+
+        if despawn {
+            commands.entity(entity).despawn_recursive();
+        }
+    }
+}
+
+pub(crate) fn collide_skills(
+    mut skill_events: EventWriter<SkillContactEvent>,
+    mut skill_q: Query<(
+        Entity,
+        &Transform,
+        &AabbComponent,
+        &Invulnerability,
+        &SkillUse,
+    )>,
+    unit_q: Query<(Entity, &Transform, &AabbComponent, &Unit), Without<Corpse>>,
+) {
+    for (s_entity, s_transform, s_aabb, invulnerability, instance) in &mut skill_q {
+        if let Some(tickable) = &instance.tickable {
+            if !tickable.can_damage {
+                continue;
+            }
+        }
+
+        for (u_entity, u_transform, u_aabb, unit) in &unit_q {
+            info!("{:?}", unit.info);
+            if !unit.is_alive()
+                || unit.kind == instance.owner_kind
+                || u_entity == instance.owner
+                || invulnerability.iter().any(|i| i.entity == u_entity)
+            {
+                continue;
+            }
+
+            // info!("{:?}", unit.info);
+            /*println!(
+                "unit {} skill {}",
+                u_transform.translation, s_transform.translation
+            );*/
+
+            let unit_offset = Vec3::new(0.0, 1.2, 0.0);
+
+            let collision = match &instance.instance {
+                SkillInstance::Direct(_) | SkillInstance::Projectile(_) => intersect_aabb(
+                    (
+                        &(s_transform.translation),
+                        &Aabb {
+                            center: s_aabb.center,
+                            half_extents: s_aabb.half_extents,
+                        },
+                    ),
+                    (
+                        &(u_transform.translation + unit_offset),
+                        &Aabb {
+                            center: u_aabb.center,
+                            half_extents: u_aabb.half_extents,
+                        },
+                    ),
+                ),
+                SkillInstance::Area(info) => {
+                    s_transform.translation.distance(u_transform.translation)
+                        <= info.info.radius as f32 / 100.
+                }
+            };
+
+            if collision {
+                skill_events.send(SkillContactEvent {
+                    entity: s_entity,
+                    owner_entity: instance.owner,
+                    defender_entity: u_entity,
+                });
+            }
+        }
+    }
+}
+
+pub fn handle_contacts(
+    mut commands: Commands,
+    time: Res<Time>,
+    metadata: Res<MetadataResources>,
+    mut server_metadata: ResMut<ServerMetadataResource>,
+    mut game_state: ResMut<GameState>,
+    mut ground_drops: ResMut<GroundItemDrops>,
+    mut rng: ResMut<SharedRng>,
+    mut skill_events: EventReader<SkillContactEvent>,
+    mut skill_q: Query<(Entity, &mut Transform, &mut Invulnerability, &mut SkillUse)>,
+    mut unit_q: Query<(Entity, &mut Unit, &mut Actions, Option<&Corpse>), Without<SkillUse>>,
+) {
+    for event in skill_events.read() {
+        let Ok([(_, mut attacker, _, _), (d_entity, mut defender, mut d_actions, d_corpse)]) =
+            unit_q.get_many_mut([event.owner_entity, event.defender_entity])
+        else {
+            panic!("Unable to query attacker and/or defender unit(s)");
+        };
+
+        if d_corpse.is_some() {
+            continue;
+        }
+
+        let (s_entity, mut s_transform, mut invulnerability, mut instance) =
+            skill_q.get_mut(event.entity).unwrap();
+        let combat_result =
+            defender.handle_attack(&attacker, &metadata.0, &mut rng.0, &instance.damage);
+
+        match combat_result {
+            CombatResult::Attack(attack) => match attack {
+                AttackResult::Blocked => {
+                    debug!("blocked");
+                    /*if defender.kind == UnitKind::Hero {
+                        game_state.session_stats.blocks += 1;
+                    } else {
+                        game_state.session_stats.times_blocked += 1;
+                    }*/
+
+                    match &instance.instance {
+                        SkillInstance::Direct(_) | SkillInstance::Projectile(_) => {
+                            commands.entity(s_entity).despawn_recursive();
+                            continue;
+                        }
+                        SkillInstance::Area(_) => {}
+                    }
+                }
+                AttackResult::Dodged => {
+                    debug!("dodge");
+                    /*if defender.kind == UnitKind::Hero {
+                        game_state.session_stats.dodges += 1;
+                    } else {
+                        game_state.session_stats.times_dodged += 1;
+                    }*/
+                }
+                _ => {
+                    /*if defender.kind == UnitKind::Villain {
+                        game_state.session_stats.hits += 1;
+                    } else {
+                        game_state.session_stats.villain_hits += 1;
+                    }*/
+
+                    if let SkillInstance::Projectile(_) = &instance.instance {
+                        if instance
+                            .effects
+                            .iter()
+                            .any(|e| matches!(e.info, EffectInfo::Pierce(_)))
+                        {
+                            invulnerability.push(InvulnerabilityTimer {
+                                entity: d_entity,
+                                timer: Timer::from_seconds(0.5, TimerMode::Once),
+                            });
+                        }
+                    }
+                }
+            },
+            CombatResult::Death(_) => {
+                debug!("death");
+
+                d_actions.reset();
+
+                if defender.kind == UnitKind::Villain {
+                    /*game_state.session_stats.kills += 1;
+                    game_state.session_stats.hits += 1;*/
+
+                    if let Some(death) = defender.handle_death(
+                        &mut attacker,
+                        &metadata.0,
+                        &mut rng.0,
+                        &mut server_metadata.0.next_uid,
+                    ) {
+                        //game_state.session_stats.items_spawned += death.items.len() as u32;
+
+                        ground_drops.0.push(GroundItemDrop {
+                            source: event.defender_entity,
+                            items: death.items,
+                        });
+                    }
+                } else {
+                    // game_state.session_stats.villain_hits += 1;
+                    // FIXME let the client know that it has died
+                }
+
+                commands.entity(event.defender_entity).insert(Corpse);
+                /*commands
+                .entity(event.defender_entity)
+                .insert(CorpseTimer(Timer::from_seconds(60., TimerMode::Once)));*/
+            }
+            _ => {}
+        }
+
+        if let Some(tickable) = &mut instance.tickable {
+            tickable.can_damage = false;
+        }
+
+        if defender.is_alive()
+            && !instance.effects.is_empty()
+            && handle_effects(
+                &time,
+                &mut rng.0,
+                &mut instance,
+                &mut s_transform,
+                &mut d_actions,
+            )
+        {
+            // println!("Despawning skill");
+            commands.entity(event.entity).despawn_recursive();
+        }
+    }
+}
+
+/// Returns `true` if the skill should be destroyed
+fn handle_effects(
+    time: &Time,
+    rng: &mut Rng,
+    skill_use: &mut SkillUse,
+    skill_transform: &mut Transform,
+    defender_actions: &mut Actions,
+) -> bool {
+    //println!("info {:?}", skill_use.effects);
+
+    if let Some(effect) = &mut skill_use.effects.iter_mut().find(|e| e.info.is_knockback()) {
+        let EffectInfo::Knockback(info) = &effect.info else {
+            panic!("expected knockback info");
+        };
+
+        let EffectData::Knockback(_) = &mut effect.data else {
+            panic!("expected knockback data");
+        };
+
+        defender_actions.reset();
+
+        defender_actions.set(Action::new(
+            ActionData::Knockback(KnockbackActionData {
+                direction: skill_transform.forward(),
+                speed: info.speed,
+                start: time.elapsed_seconds(),
+                duration: info.duration,
+            }),
+            None,
+            false,
+        ));
+    }
+
+    let despawn =
+        if let Some(effect) = &mut skill_use.effects.iter_mut().find(|e| e.info.is_pierce()) {
+            let EffectInfo::Pierce(info) = &effect.info else {
+                panic!("expected pierce info");
+            };
+
+            let EffectData::Pierce(data) = &mut effect.data else {
+                panic!("expected pierce data");
+            };
+
+            //println!("pierce {} {}", info.pierces, data.count);
+            data.count += 1;
+
+            data.count > info.pierces
+        } else {
+            false
+        };
+
+    if despawn {
+        return true;
+    }
+
+    let despawn =
+        if let Some(effect) = &mut skill_use.effects.iter_mut().find(|e| e.info.is_chain()) {
+            let EffectInfo::Chain(info) = &mut effect.info else {
+                panic!("expected chain info");
+            };
+
+            let EffectData::Chain(data) = &mut effect.data else {
+                panic!("expected chain data");
+            };
+
+            //println!("chain {}", info.chains);
+            data.count += 1;
+
+            skill_transform.rotate_y(0.5 - rng.f32());
+
+            data.count > info.chains
+        } else {
+            false
+        };
+
+    despawn
 }
