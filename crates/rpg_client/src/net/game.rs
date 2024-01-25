@@ -104,6 +104,18 @@ pub(crate) fn receive_player_rotation(
     }
 }
 
+pub(crate) fn receive_stat_update(
+    mut update_events: EventReader<MessageEvent<SCStatUpdate>>,
+    mut player_q: Query<&Unit, With<Player>>,
+) {
+    for event in update_events.read() {
+        let update_msg = event.message();
+
+        let mut player = player_q.single_mut();
+        info!("stat update: {:?}", update_msg.0);
+    }
+}
+
 pub(crate) fn receive_stat_updates(
     mut update_events: EventReader<MessageEvent<SCStatUpdates>>,
     mut player_q: Query<&Unit, With<Player>>,
@@ -112,13 +124,35 @@ pub(crate) fn receive_stat_updates(
         let update_msg = event.message();
 
         let mut player = player_q.single_mut();
-        for update in &update_msg.updates {
+        for update in &update_msg.0 {
             info!("stat update: {update:?}");
         }
     }
 }
 
-pub(crate) fn receive_villain_spawn(
+pub(crate) fn receive_spawn_item(
+    mut spawn_reader: EventReader<MessageEvent<SCSpawnItem>>,
+    mut player_q: Query<&Unit, With<Player>>,
+) {
+    for event in spawn_reader.read() {
+        let spawn_msg = event.message();
+
+        info!("item drop: {:?}", spawn_msg.0);
+    }
+}
+
+pub(crate) fn receive_spawn_items(
+    mut spawn_reader: EventReader<MessageEvent<SCSpawnItems>>,
+    mut player_q: Query<&Unit, With<Player>>,
+) {
+    for event in spawn_reader.read() {
+        let spawn_msg = event.message();
+
+        info!("item drops: {:?}", spawn_msg.0);
+    }
+}
+
+pub(crate) fn receive_spawn_villain(
     mut commands: Commands,
     mut spawn_reader: EventReader<MessageEvent<SCSpawnVillain>>,
     metadata: Res<MetadataResources>,
@@ -151,5 +185,16 @@ pub(crate) fn receive_villain_spawn(
             None,
             Some(transform),
         );
+    }
+}
+
+pub(crate) fn receive_despawn_villain(
+    mut commands: Commands,
+    mut despawn_reader: EventReader<MessageEvent<SCDespawnVillain>>,
+) {
+    for event in despawn_reader.read() {
+        let despawn_msg = event.message();
+
+        info!("despawning villain {despawn_msg:?}");
     }
 }

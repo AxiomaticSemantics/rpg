@@ -117,7 +117,11 @@ impl Plugin for NetworkClientPlugin {
                 FixedUpdate,
                 (
                     game::receive_stat_updates,
-                    game::receive_villain_spawn,
+                    game::receive_stat_update,
+                    game::receive_spawn_villain,
+                    game::receive_despawn_villain,
+                    game::receive_spawn_item,
+                    game::receive_spawn_items,
                     game::receive_player_rotation,
                     game::receive_player_move,
                 )

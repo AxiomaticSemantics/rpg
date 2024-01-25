@@ -195,7 +195,7 @@ pub(crate) fn attract_resource_items(
             u_audio.push("item_pickup".into());
             game_state.session_stats.items_looted += 1;
 
-            commands.entity(i_entity).despawn_recursive();
+            //commands.entity(i_entity).despawn_recursive();
         } else {
             let target_dir = (u_transform.translation - i_ground).normalize_or_zero();
             i_transform.translation += target_dir * time.delta_seconds() * 4.;

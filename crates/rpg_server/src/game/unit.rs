@@ -46,18 +46,13 @@ pub(crate) fn upkeep(
             info!("{updates:?}");
 
             net_params.server.send_message_to_target::<Channel1, _>(
-                SCStatUpdates { updates },
+                SCStatUpdates(updates),
                 NetworkTarget::Only(vec![client.id]),
             );
         }
     }
 }
 
-pub(crate) fn collide_units() {
-    //
-}
-
-// TODO factor out unit targetting code to a component
 pub(crate) fn attract_resource_items(
     mut commands: Commands,
     mut game_state: ResMut<GameState>,
@@ -66,6 +61,9 @@ pub(crate) fn attract_resource_items(
     mut item_q: Query<(Entity, &mut Transform, &mut GroundItem), With<ResourceItem>>,
     mut hero_q: Query<(&Transform, &mut Unit), (With<Hero>, Without<GroundItem>, Without<Corpse>)>,
 ) {
+    // This is being reworked for multiplayer support.
+    // for each item, find the closest hero that is in range and move towards that unit at that
+    // it's item attraction speed
     let Ok((u_transform, mut unit)) = hero_q.get_single_mut() else {
         return;
     };
@@ -85,7 +83,8 @@ pub(crate) fn attract_resource_items(
             //u_audio.push("item_pickup".into());
             //game_state.stats.items_looted += 1;
 
-            commands.entity(i_entity).despawn_recursive();
+            info!("hero would have picked up item");
+            //commands.entity(i_entity).despawn_recursive();
         } else {
             let target_dir = (u_transform.translation - i_ground).normalize_or_zero();
             i_transform.translation += target_dir * time.delta_seconds() * 4.;

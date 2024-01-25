@@ -165,6 +165,34 @@ pub(crate) fn receive_skill_use_direct(
     }
 }
 
+pub(crate) fn receive_item_drop(
+    mut drop_reader: EventReader<MessageEvent<CSItemDrop>>,
+    mut net_params: NetworkParamsRW,
+    mut player_q: Query<(&mut Transform, &Unit, &AccountInstance), With<Hero>>,
+) {
+    for event in drop_reader.read() {
+        let client_id = *event.context();
+        let client = net_params.context.clients.get(&client_id).unwrap();
+        if !client.is_authenticated_player() {
+            continue;
+        };
+    }
+}
+
+pub(crate) fn receive_item_pickup(
+    mut pickup_reader: EventReader<MessageEvent<CSItemPickup>>,
+    mut net_params: NetworkParamsRW,
+    mut player_q: Query<(&mut Transform, &Unit, &AccountInstance), With<Hero>>,
+) {
+    for event in pickup_reader.read() {
+        let client_id = *event.context();
+        let client = net_params.context.clients.get(&client_id).unwrap();
+        if !client.is_authenticated_player() {
+            continue;
+        };
+    }
+}
+
 pub(crate) fn receive_skill_use_targeted(
     mut skill_use_reader: EventReader<MessageEvent<CSSkillUseTargeted>>,
     mut net_params: NetworkParamsRW,
