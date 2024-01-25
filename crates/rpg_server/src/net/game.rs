@@ -28,7 +28,13 @@ pub(crate) fn receive_player_leave(
     game_state: Res<GameState>,
     mut account_q: Query<&AccountInstance>,
 ) {
-    //
+    for event in leave_reader.read() {
+        let client_id = *event.context();
+        let client = net_params.context.clients.get(&client_id).unwrap();
+        if !client.is_authenticated_player() {
+            continue;
+        };
+    }
 }
 
 pub(crate) fn receive_player_ready(

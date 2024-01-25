@@ -139,7 +139,7 @@ pub(crate) fn remote_spawn(
                     position: transform.translation,
                     direction: transform.forward(),
                     info: villain_info,
-                    class: unit.class,
+                    level: unit.level,
                     uid: unit.uid,
                 },
                 NetworkTarget::Only(vec![client_id]),
