@@ -6,10 +6,7 @@ use crate::game::{
     actor::player::Player,
     assets::RenderResources,
     controls::Controls,
-    item::{
-        self, CursorItem, GroundItem, GroundItemBundle, GroundItemHover, GroundItemStats,
-        StorableItem, StorageSlot, UnitStorage,
-    },
+    item::{self, CursorItem, GroundItemHover, GroundItemStats, StorageSlot, UnitStorage},
     metadata::MetadataResources,
     plugin::{GameSessionCleanup, GameState},
     prop::PropHandle,
@@ -23,7 +20,10 @@ use rpg_core::{
         SlotIndex, Storage, StorageIndex, StorageSlot as RpgStorageSlot,
     },
 };
-use rpg_util::unit::Unit;
+use rpg_util::{
+    item::{GroundItem, GroundItemBundle, StorableItem},
+    unit::Unit,
+};
 
 use ui_util::style::UiTheme;
 use util::cleanup::CleanupStrategy;
@@ -216,12 +216,12 @@ pub(crate) fn update_cursor_item(
                         GameSessionCleanup,
                         CleanupStrategy::DespawnRecursive,
                         StorableItem,
+                        SceneBundle {
+                            scene: handle.clone_weak(),
+                            transform: *player_transform,
+                            ..default()
+                        },
                         GroundItemBundle {
-                            prop: SceneBundle {
-                                scene: handle.clone_weak(),
-                                transform: *player_transform,
-                                ..default()
-                            },
                             item: GroundItem(Some(item)),
                         },
                         aabb,

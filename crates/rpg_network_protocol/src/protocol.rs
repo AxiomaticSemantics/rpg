@@ -1,7 +1,4 @@
-use bevy::{
-    ecs::{entity::Entity},
-    math::Vec3,
-};
+use bevy::{ecs::entity::Entity, math::Vec3};
 
 use lightyear::prelude::*;
 use serde_derive::{Deserialize, Serialize};
@@ -15,8 +12,9 @@ use rpg_chat::chat::{ChannelId, Message as ChatMessage};
 use rpg_core::{
     class::Class,
     skill::SkillId,
-    stat::{StatUpdate},
-    unit::HeroGameMode,
+    stat::StatUpdate,
+    uid::Uid,
+    unit::{HeroGameMode, UnitKind, VillainInfo},
 };
 use rpg_lobby::lobby::{Lobby, LobbyId, LobbyMessage};
 use rpg_world::zone::ZoneId;
@@ -122,10 +120,16 @@ pub struct CSChatChannelLeave(pub ChannelId);
 pub struct CSPlayerReady;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSPlayerLeave;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSJoinZone(pub ZoneId);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSMovePlayer;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSMovePlayerEnd;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSRotPlayer(pub Vec3);
@@ -268,6 +272,15 @@ pub struct SCStatUpdates {
     pub updates: Vec<StatUpdate>,
 }
 
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCSpawnVillain {
+    pub position: Vec3,
+    pub direction: Vec3,
+    pub class: Class,
+    pub uid: Uid,
+    pub info: VillainInfo,
+}
+
 #[message_protocol(protocol = "RpgProtocol")]
 pub enum Messages {
     // Server -> Client
@@ -316,6 +329,7 @@ pub enum Messages {
     SCMovePlayer(SCMovePlayer),
     SCRotPlayer(SCRotPlayer),
     SCStatUpdates(SCStatUpdates),
+    SCSpawnVillain(SCSpawnVillain),
 
     // Client -> Server
 
@@ -343,9 +357,11 @@ pub enum Messages {
 
     // Game Messages
     CSPlayerReady(CSPlayerReady),
+    CSPlayerLeave(CSPlayerLeave),
     CSJoinZone(CSJoinZone),
     CSRotPlayer(CSRotPlayer),
     CSMovePlayer(CSMovePlayer),
+    CSMovePlayerEnd(CSMovePlayerEnd),
     CSSkillUseDirect(CSSkillUseDirect),
     CSSkillUseTargeted(CSSkillUseTargeted),
 }

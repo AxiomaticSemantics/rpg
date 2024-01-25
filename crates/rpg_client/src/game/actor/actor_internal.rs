@@ -47,7 +47,6 @@ pub enum ActorHandle {
 
 #[derive(Default, Bundle)]
 pub(crate) struct ActorBasicBundle {
-    pub actions: Actions,
     pub aabb: Aabb,
     pub animation_state: AnimationState,
     pub actor_key: ActorKey,
@@ -169,12 +168,6 @@ pub(crate) fn spawn_actor(
             let villain_info = &metadata.rpg.unit.villains[&unit_info.id];
 
             let actor = renderables.actors[actor_key].actor.clone();
-
-            /* FIXME remove me
-            let think_timer = ThinkTimer(Timer::from_seconds(
-                villain_info.think_cooldown,
-                TimerMode::Repeating,
-            ));*/
 
             let actor_villain_bundle = (
                 GameSessionCleanup,

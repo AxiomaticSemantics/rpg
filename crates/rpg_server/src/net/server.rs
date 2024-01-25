@@ -6,7 +6,7 @@ use bevy::{
     ecs::{
         entity::Entity,
         event::EventReader,
-        schedule::{common_conditions::*, Condition, IntoSystemConfigs},
+        schedule::{common_conditions::*, Condition, IntoSystemConfigs, NextState},
         system::{Commands, Res, ResMut, Resource, SystemParam},
     },
     hierarchy::DespawnRecursiveExt,
@@ -18,6 +18,8 @@ use lightyear::prelude::*;
 
 use rpg_account::account::AccountId;
 use rpg_network_protocol::{protocol::*, *};
+
+use rpg_util::unit::collide_units;
 
 use std::collections::HashMap;
 use std::net::{Ipv4Addr, SocketAddr};
@@ -61,6 +63,7 @@ impl Plugin for NetworkServerPlugin {
             .add_systems(
                 FixedUpdate,
                 (
+                    collide_units,
                     game::receive_rotation,
                     game::receive_skill_use_direct,
                     game::receive_skill_use_targeted,
@@ -100,7 +103,8 @@ impl Plugin for NetworkServerPlugin {
                                 .or_else(in_state(AppState::SpawnSimulation))
                                 .or_else(in_state(AppState::Simulation)),
                         ),
-                    (game::receive_player_ready).run_if(in_state(AppState::Simulation)),
+                    (game::receive_player_leave, game::receive_player_ready)
+                        .run_if(in_state(AppState::Simulation)),
                 ),
             );
     }
@@ -185,6 +189,28 @@ impl NetworkContext {
         })
     }
 
+    // TODO rework this to be move flexible, for now this is fine
+    pub(crate) fn get_client_ids_for_account_ids(
+        &self,
+        account_ids: &Vec<AccountId>,
+    ) -> Vec<ClientId> {
+        let client_ids: Vec<_> = account_ids
+            .iter()
+            .map(|a| {
+                *self
+                    .clients
+                    .iter()
+                    .find(|(k, v)| v.is_authenticated() && v.account_id.unwrap() == *a)
+                    .unwrap()
+                    .0
+            })
+            .collect();
+
+        assert_eq!(client_ids.len(), account_ids.len());
+
+        client_ids
+    }
+
     pub(crate) fn is_client_authenticated(&self, id: ClientId) -> bool {
         if let Some(client) = self.clients.get(&id) {
             client.is_authenticated()
@@ -212,6 +238,7 @@ impl NetworkContext {
 }
 
 fn handle_disconnections(
+    mut state: ResMut<NextState<AppState>>,
     mut game_state: ResMut<GameState>,
     mut disconnect_reader: EventReader<DisconnectEvent>,
     mut net_params: NetworkParamsRW,
@@ -222,6 +249,11 @@ fn handle_disconnections(
         game_state.players.retain(|p| p.client_id != client_id);
 
         net_params.context.remove_client(&mut commands, client_id);
+
+        if game_state.players.is_empty() {
+            state.set(AppState::Lobby);
+            return;
+        }
     }
 }
 

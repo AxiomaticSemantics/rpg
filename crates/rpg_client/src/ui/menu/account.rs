@@ -963,10 +963,11 @@ pub fn update_character_list(
                     info!("slot match, updating");
 
                     let slot_string = format!(
-                        "{} {:?} {}",
+                        "{} ({:?})\nLevel {} {}",
                         character.info.name,
                         character.info.game_mode,
-                        character.character.unit.level
+                        character.character.unit.level,
+                        character.character.unit.class
                     );
 
                     if text.sections[0].value != slot_string {

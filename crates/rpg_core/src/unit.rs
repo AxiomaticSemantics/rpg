@@ -35,7 +35,7 @@ pub enum HeroGameMode {
     Hardcore,
 }
 
-#[derive(Ser, De, Clone, Debug)]
+#[derive(Ser, De, Clone, Debug, PartialEq)]
 pub struct HeroInfo {
     pub game_mode: HeroGameMode,
     pub xp_curr: Stat,
@@ -50,7 +50,7 @@ impl HeroInfo {
     }
 }
 
-#[derive(Ser, De, Debug, Clone)]
+#[derive(Ser, De, Debug, Clone, PartialEq)]
 pub struct VillainInfo {
     pub id: VillainId,
 }

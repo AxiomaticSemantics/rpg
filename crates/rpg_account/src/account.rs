@@ -39,4 +39,5 @@ pub struct AccountInfo {
     pub id: AccountId,
     pub name: String,
     pub character_slots: usize,
+    pub selected_slot: Option<CharacterSlot>,
 }
