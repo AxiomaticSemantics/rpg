@@ -70,6 +70,7 @@ impl Plugin for NetworkServerPlugin {
                     game::receive_item_drop,
                     game::receive_item_pickup,
                     game::receive_movement,
+                    game::receive_movement_end,
                 )
                     .chain()
                     .run_if(in_state(AppState::Simulation))

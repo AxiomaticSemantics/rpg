@@ -24,6 +24,7 @@ use bevy::{
 
 use rpg_core::{
     class::Class,
+    stat::StatChange,
     unit::{UnitInfo, UnitKind},
 };
 use rpg_network_protocol::protocol::*;
@@ -123,6 +124,19 @@ pub(crate) fn receive_player_move(
     }
 }
 
+pub(crate) fn receive_player_move_end(
+    mut move_events: EventReader<MessageEvent<SCMovePlayerEnd>>,
+    mut player_q: Query<(&mut Transform, &Unit), With<Player>>,
+) {
+    for event in move_events.read() {
+        let move_msg = event.message();
+
+        // info!("move: {move_msg:?}");
+        let (mut transform, player) = player_q.single_mut();
+        transform.translation = move_msg.0;
+    }
+}
+
 pub(crate) fn receive_player_rotation(
     mut rotation_events: EventReader<MessageEvent<SCRotPlayer>>,
     mut player_q: Query<(&mut Transform, &Unit), With<Player>>,
@@ -138,25 +152,44 @@ pub(crate) fn receive_player_rotation(
 
 pub(crate) fn receive_stat_update(
     mut update_events: EventReader<MessageEvent<SCStatUpdate>>,
-    mut player_q: Query<&Unit, With<Player>>,
+    mut player_q: Query<&mut Unit, With<Player>>,
 ) {
     for event in update_events.read() {
         let update_msg = event.message();
 
-        let mut player = player_q.single_mut();
         info!("stat update: {:?}", update_msg.0);
+
+        let mut player = player_q.single_mut();
+
+        player
+            .stats
+            .vitals
+            .get_mut_stat_from_id(update_msg.0.id)
+            .unwrap()
+            .value = update_msg.0.total;
     }
 }
 
 pub(crate) fn receive_stat_updates(
     mut update_events: EventReader<MessageEvent<SCStatUpdates>>,
-    mut player_q: Query<&Unit, With<Player>>,
+    mut player_q: Query<&mut Unit, With<Player>>,
 ) {
     for event in update_events.read() {
         let update_msg = event.message();
 
         let mut player = player_q.single_mut();
         for update in &update_msg.0 {
+            match &update.change {
+                StatChange::Gain(v) => {}
+                StatChange::Loss(v) => {}
+            }
+
+            player
+                .stats
+                .vitals
+                .get_mut_stat_from_id(update.id)
+                .unwrap()
+                .value = update.total;
             info!("stat update: {update:?}");
         }
     }

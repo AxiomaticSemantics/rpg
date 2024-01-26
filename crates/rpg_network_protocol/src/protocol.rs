@@ -275,6 +275,9 @@ pub struct SCPlayerSpawn {
 pub struct SCMovePlayer(pub Vec3);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCMovePlayerEnd(pub Vec3);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCRotPlayer(pub Vec3);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -359,6 +362,7 @@ pub enum Messages {
     SCPlayerJoinError(SCPlayerJoinError),
     SCPlayerSpawn(SCPlayerSpawn),
     SCMovePlayer(SCMovePlayer),
+    SCMovePlayerEnd(SCMovePlayerEnd),
     SCRotPlayer(SCRotPlayer),
     SCStatUpdate(SCStatUpdate),
     SCStatUpdates(SCStatUpdates),

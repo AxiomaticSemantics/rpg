@@ -138,7 +138,7 @@ pub fn input_actions(
         }
     }
 
-    if controls.mouse_secondary.pressed || controls.gamepad_a.pressed {
+    if controls.mouse_secondary.just_pressed || controls.gamepad_a.just_pressed {
         actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
         net_client.send_message::<Channel1, _>(CSMovePlayer);
     } else if controls.mouse_secondary.just_released || controls.gamepad_a.just_released {

@@ -125,6 +125,7 @@ impl Plugin for NetworkClientPlugin {
                     game::receive_spawn_items,
                     game::receive_player_rotation,
                     game::receive_player_move,
+                    game::receive_player_move_end,
                 )
                     .after(FixedUpdateSet::Main),
             );

@@ -285,11 +285,11 @@ pub(crate) fn update_skill(time: Res<Time>, mut skill_q: Query<(&mut Transform, 
             }
             SkillInstance::Direct(info) => {
                 info.frame += 1;
-                //println!("direct skill: {info:?}");
+                // info!("direct skill: {info:?}");
             }
             SkillInstance::Area(_) => {
                 transform.rotate_local_z(2. * dt);
-                //println!("update area skill");
+                // info!("update area skill");
                 if let Some(tickable) = &mut skill_use.tickable {
                     tickable.timer.tick(time.delta());
                     if tickable.timer.just_finished() {
@@ -329,11 +329,11 @@ pub(crate) fn clean_skills(
                 }
             },
             SkillInstance::Direct(info) => {
-                //println!("direct skill: {info:?}");
+                // info!("direct skill: {info:?}");
                 info.frame >= info.info.frames
             }
             SkillInstance::Area(info) => {
-                //println!("area skill: {info:?}");
+                // info!("area skill: {info:?}");
                 time.elapsed_seconds() - info.start_time >= info.info.duration
             }
         };
@@ -346,7 +346,7 @@ pub(crate) fn clean_skills(
 
 pub(crate) fn collide_skills(
     mut skill_events: EventWriter<SkillContactEvent>,
-    mut skill_q: Query<(
+    skill_q: Query<(
         Entity,
         &Transform,
         &AabbComponent,
@@ -355,7 +355,7 @@ pub(crate) fn collide_skills(
     )>,
     unit_q: Query<(Entity, &Transform, &AabbComponent, &Unit), Without<Corpse>>,
 ) {
-    for (s_entity, s_transform, s_aabb, invulnerability, instance) in &mut skill_q {
+    for (s_entity, s_transform, s_aabb, invulnerability, instance) in &skill_q {
         if let Some(tickable) = &instance.tickable {
             if !tickable.can_damage {
                 continue;
@@ -371,8 +371,7 @@ pub(crate) fn collide_skills(
                 continue;
             }
 
-            info!("collide {instance:?}");
-            /*println!(
+            /*info!(
                 "unit {} skill {}",
                 u_transform.translation, s_transform.translation
             );*/
@@ -402,9 +401,8 @@ pub(crate) fn collide_skills(
                 }
             };
 
-            info!("{collision} {:?}", unit.info);
-
             if collision {
+                info!("collide {instance:?}");
                 skill_events.send(SkillContactEvent {
                     entity: s_entity,
                     owner_entity: instance.owner,
