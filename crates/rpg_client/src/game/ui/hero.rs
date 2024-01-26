@@ -5,7 +5,7 @@ use crate::assets::TextureAssets;
 use crate::game::{
     actor::player::Player,
     metadata::MetadataResources,
-    plugin::{GameSessionCleanup, GameState, PlayerOptions},
+    plugin::{GameSessionCleanup, GameState},
 };
 use rpg_util::unit::Unit;
 use ui_util::style::UiTheme;

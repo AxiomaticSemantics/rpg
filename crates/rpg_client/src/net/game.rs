@@ -1,6 +1,6 @@
 use crate::{
     game::{
-        actor::{player::Player, spawn_actor},
+        actor::{self, player::Player, spawn_actor},
         assets::RenderResources,
         metadata::MetadataResources,
     },
@@ -11,6 +11,7 @@ use crate::{
 use bevy::{
     ecs::{
         component::Component,
+        entity::Entity,
         event::EventReader,
         query::With,
         schedule::NextState,
@@ -36,9 +37,11 @@ pub(crate) fn receive_player_join_success(
 ) {
     for event in join_events.read() {
         let join_msg = event.message();
-        debug!("join success {join_msg:?}");
+        info!("player joined game {join_msg:?}");
 
         state.set(AppState::GameSpawn);
+
+        join_events.clear();
         return;
     }
 }
@@ -48,28 +51,57 @@ pub(crate) fn receive_player_join_error(
     mut join_events: EventReader<MessageEvent<SCPlayerJoinError>>,
 ) {
     for event in join_events.read() {
-        debug!("join error");
+        info!("join error");
         // TODO Error screen
 
         state.set(AppState::Menu);
+
+        join_events.clear();
         return;
     }
 }
 
 pub(crate) fn receive_player_spawn(
+    mut commands: Commands,
     mut state: ResMut<NextState<AppState>>,
+    metadata: Res<MetadataResources>,
+    renderables: Res<RenderResources>,
     mut spawn_events: EventReader<MessageEvent<SCPlayerSpawn>>,
-    mut player_q: Query<(&mut Transform, &Unit), With<Player>>,
+    mut account_q: Query<(Entity, &mut RpgAccount)>,
 ) {
     for event in spawn_events.read() {
-        debug!("spawning");
+        info!("spawning");
 
         let spawn_msg = event.message();
 
-        let (mut transform, player) = player_q.single_mut();
+        let (entity, mut account) = account_q.single_mut();
 
-        transform.translation = spawn_msg.position;
-        transform.look_to(spawn_msg.direction, Vec3::Y);
+        let transform = Transform::from_translation(spawn_msg.position)
+            .looking_to(spawn_msg.direction, Vec3::Y);
+
+        let character_record = account
+            .0
+            .get_character_from_slot(account.0.info.selected_slot.unwrap())
+            .unwrap();
+
+        let (unit, storage, passive_tree) = {
+            (
+                character_record.character.unit.clone(),
+                character_record.character.storage.clone(),
+                character_record.character.passive_tree.clone(),
+            )
+        };
+
+        actor::spawn_actor(
+            entity,
+            &mut commands,
+            &metadata,
+            &renderables,
+            unit,
+            Some(storage),
+            Some(passive_tree),
+            None,
+        );
 
         state.set(AppState::Game);
 
@@ -182,6 +214,7 @@ pub(crate) fn receive_spawn_villain(
         let transform = Transform::from_translation(spawn_msg.position)
             .looking_to(spawn_msg.direction, Vec3::Y);
         spawn_actor(
+            Entity::PLACEHOLDER,
             &mut commands,
             &metadata,
             &renderables,

@@ -91,7 +91,6 @@ pub(crate) fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     textures: Res<TextureAssets>,
-    player_q: Query<&Unit, With<Player>>,
 ) {
     let first_pass_layer = RenderLayers::layer(1);
 
@@ -206,9 +205,6 @@ pub(crate) fn setup(
     renderables
         .color_materials
         .insert("line_allocated".into(), line_allocated_material.clone());
-
-    let player = player_q.single();
-    let class_root = PassiveSkillGraph::get_class_root(player.class);
 
     /*
     let node_scale = 3.0;
@@ -386,14 +382,16 @@ pub(crate) fn setup(
     }
     */
 
+    // FIXME this needs to be split into two functions
+    // one that spawns the base resource and another function that uses the players skill graph
     for node in &metadata.rpg.passive_tree.nodes {
         let (circle_material, circle_mesh) = match node.kind {
             NodeKind::Root => {
-                if node.id == class_root {
-                    (circle_material_root_allocated.clone(), circle_root.clone())
-                } else {
-                    (circle_material_root.clone(), circle_root.clone())
-                }
+                //if node.id == class_root {
+                //    (circle_material_root_allocated.clone(), circle_root.clone())
+                //} else {
+                (circle_material_root.clone(), circle_root.clone())
+                //} FIXME
             }
             NodeKind::Major => (circle_material_major.clone(), circle_major.clone()),
             NodeKind::Minor => (circle_material_minor.clone(), circle_minor.clone()),
@@ -443,16 +441,19 @@ pub(crate) fn setup(
             ));
         }
     }
+    /*
+        let player = player_q.single();
+        let class_root = PassiveSkillGraph::get_class_root(player.class);
 
-    let root_pos = metadata
-        .rpg
-        .passive_tree
-        .nodes
-        .iter()
-        .find(|n| n.id == class_root)
-        .unwrap()
-        .position;
-
+        let root_pos = metadata
+            .rpg
+            .passive_tree
+            .nodes
+            .iter()
+            .find(|n| n.id == class_root)
+            .unwrap()
+            .position;
+    */
     commands.spawn((
         GameSessionCleanup,
         CleanupStrategy::Despawn,
@@ -465,7 +466,7 @@ pub(crate) fn setup(
                 is_active: false,
                 ..default()
             },
-            transform: Transform::from_translation((root_pos * 100.).extend(1.)),
+            transform: Transform::from_translation(Vec2::ZERO.extend(1.)),
             ..default()
         },
     ));

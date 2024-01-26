@@ -120,15 +120,10 @@ fn main() -> Result<(), Error> {
                 }
             }
         }
-
-        if !caught {
-            thread::sleep(time::Duration::from_millis(1));
-        }
+        thread::sleep(time::Duration::from_millis(1));
     }
 
-    eprintln!(
-        "\nReceived kill signal, joining app thread. Enter Ctrl+C again to exit immediately."
-    );
+    eprintln!("\nEnter Ctrl+C again to exit immediately.");
 
     t.join().unwrap();
 

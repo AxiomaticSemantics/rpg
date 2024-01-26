@@ -34,7 +34,7 @@ use bevy::{
     },
     hierarchy::DespawnRecursiveExt,
     log::{debug, info},
-    math::Vec3,
+    math::{Quat, Vec3},
     time::{Time, Timer, TimerMode},
     transform::{components::Transform, TransformBundle},
 };
@@ -249,6 +249,59 @@ pub(crate) fn spawn_instance(
     ));
 }
 
+pub(crate) fn update_skill(time: Res<Time>, mut skill_q: Query<(&mut Transform, &mut SkillUse)>) {
+    let dt = time.delta_seconds();
+    for (mut transform, mut skill_use) in &mut skill_q {
+        match &mut skill_use.instance {
+            SkillInstance::Projectile(info) => {
+                // The skill would have been destroyed if it was expired, advance it
+                if let Some(orbit) = &info.orbit {
+                    let rotation = Quat::from_rotation_y(
+                        ((info.info.speed as f32 / 100.) * time.elapsed_seconds())
+                            % std::f32::consts::TAU,
+                    );
+
+                    let mut target =
+                        Transform::from_translation(orbit.origin).with_rotation(rotation);
+
+                    let Some(orbit_info) = &info.info.orbit else {
+                        panic!("expected orbit info");
+                    };
+
+                    target.translation += target.forward() * (orbit_info.range as f32 / 100.);
+                    target.rotate_x(dt.sin());
+
+                    transform.translation = target.translation;
+                    transform.rotate_y(dt.cos());
+                    transform.rotate_z(dt.sin());
+                } else if let Some(_aerial) = &info.info.aerial {
+                    transform.translation = transform.translation
+                        + transform.forward() * dt * (info.info.speed as f32 / 100.);
+                } else {
+                    let move_delta = transform.forward() * (dt * (info.info.speed as f32 / 100.));
+                    transform.translation += move_delta;
+                    transform.rotate_local_z(std::f32::consts::TAU * dt);
+                }
+            }
+            SkillInstance::Direct(info) => {
+                info.frame += 1;
+                //println!("direct skill: {info:?}");
+            }
+            SkillInstance::Area(_) => {
+                transform.rotate_local_z(2. * dt);
+                //println!("update area skill");
+                if let Some(tickable) = &mut skill_use.tickable {
+                    tickable.timer.tick(time.delta());
+                    if tickable.timer.just_finished() {
+                        tickable.can_damage = true;
+                        tickable.timer.reset();
+                    }
+                }
+            }
+        }
+    }
+}
+
 pub(crate) fn clean_skills(
     mut commands: Commands,
     time: Res<Time>,
@@ -310,7 +363,6 @@ pub(crate) fn collide_skills(
         }
 
         for (u_entity, u_transform, u_aabb, unit) in &unit_q {
-            info!("{:?}", unit.info);
             if !unit.is_alive()
                 || unit.kind == instance.owner_kind
                 || u_entity == instance.owner
@@ -319,7 +371,7 @@ pub(crate) fn collide_skills(
                 continue;
             }
 
-            // info!("{:?}", unit.info);
+            info!("collide {instance:?}");
             /*println!(
                 "unit {} skill {}",
                 u_transform.translation, s_transform.translation
@@ -349,6 +401,8 @@ pub(crate) fn collide_skills(
                         <= info.info.radius as f32 / 100.
                 }
             };
+
+            info!("{collision} {:?}", unit.info);
 
             if collision {
                 skill_events.send(SkillContactEvent {

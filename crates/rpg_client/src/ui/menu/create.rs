@@ -1,6 +1,6 @@
 use crate::{
     assets::TextureAssets,
-    game::plugin::{GameState, PlayerOptions},
+    game::plugin::GameState,
     state::AppState,
     ui::menu::{
         account::{AccountListRoot, SelectedCharacter},

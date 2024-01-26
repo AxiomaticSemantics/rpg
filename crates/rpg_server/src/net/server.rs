@@ -105,7 +105,11 @@ impl Plugin for NetworkServerPlugin {
                                 .or_else(in_state(AppState::SpawnSimulation))
                                 .or_else(in_state(AppState::Simulation)),
                         ),
-                    (game::receive_player_leave, game::receive_player_ready)
+                    (
+                        game::receive_player_leave,
+                        game::receive_player_join,
+                        game::receive_player_loaded,
+                    )
                         .run_if(in_state(AppState::Simulation)),
                 ),
             );

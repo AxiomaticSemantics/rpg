@@ -118,10 +118,13 @@ pub struct CSChatChannelLeave(pub ChannelId);
 
 // Game Messages
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CSPlayerReady;
+pub struct CSClientReady;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSPlayerLeave;
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSPlayerJoin;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSJoinZone(pub ZoneId);
@@ -394,7 +397,8 @@ pub enum Messages {
     // Game Messages
     CSItemDrop(CSItemDrop),
     CSItemPickup(CSItemPickup),
-    CSPlayerReady(CSPlayerReady),
+    CSClientReady(CSClientReady),
+    CSPlayerJoin(CSPlayerJoin),
     CSPlayerLeave(CSPlayerLeave),
     CSJoinZone(CSJoinZone),
     CSRotPlayer(CSRotPlayer),

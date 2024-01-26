@@ -344,7 +344,7 @@ pub(crate) fn receive_game_create(
     mut game_state: ResMut<GameState>,
     mut net_params: NetworkParamsRW,
     mut create_events: EventReader<MessageEvent<CSCreateGame>>,
-    account_q: Query<&AccountInstance>,
+    mut account_q: Query<&mut AccountInstance>,
 ) {
     for create in create_events.read() {
         let client_id = *create.context();
@@ -356,7 +356,7 @@ pub(crate) fn receive_game_create(
         let create_msg = create.message();
         info!("create game {create_msg:?}");
 
-        let account = account_q.get(client.entity).unwrap();
+        let mut account = account_q.get_mut(client.entity).unwrap();
 
         let Some(character) = account.get_character_from_slot(create_msg.slot) else {
             info!("no character in slot");
@@ -366,6 +366,7 @@ pub(crate) fn receive_game_create(
         // FIXME temporarily clear, this will be handled properly later
         game_state.players.clear();
         game_state.players.push(PlayerIdInfo {
+            slot: create_msg.slot,
             account_id: account.0.info.id,
             character_id: character.info.uid,
             client_id,
@@ -376,6 +377,8 @@ pub(crate) fn receive_game_create(
             SCGameCreateSuccess,
             NetworkTarget::Only(vec![client_id]),
         );
+
+        account.info.selected_slot = Some(create_msg.slot);
 
         // FIXME turn this into an event
         state.set(AppState::SpawnSimulation);
@@ -419,6 +422,7 @@ pub(crate) fn receive_game_join(
         };
 
         game_state.players.push(PlayerIdInfo {
+            slot: join_msg.slot,
             account_id: account.0.info.id,
             character_id: character.info.uid,
             client_id,

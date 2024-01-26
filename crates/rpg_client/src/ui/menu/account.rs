@@ -30,10 +30,9 @@ use bevy::{
         component::Component,
         entity::Entity,
         query::{Changed, With},
-        schedule::NextState,
         system::{Commands, ParamSet, Query, Res, ResMut, Resource},
     },
-    hierarchy::{BuildChildren, ChildBuilder, Children, DespawnRecursiveExt},
+    hierarchy::{BuildChildren, ChildBuilder},
     log::*,
     prelude::{Deref, DerefMut},
     text::Text,
@@ -914,6 +913,7 @@ pub fn list_select_slot(
                 }
 
                 let Some(selected_character) = &mut selected_character.0 else {
+                    info!("setting selected character slot to {slot_character:?}");
                     selected_character.0 = Some(slot_character.clone());
                     continue;
                 };

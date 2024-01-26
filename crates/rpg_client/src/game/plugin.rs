@@ -12,7 +12,7 @@ use super::{
     passive_tree, skill, state_saver, ui, world,
 };
 
-use rpg_core::{class::Class, uid::NextUid, unit::HeroGameMode};
+use rpg_core::{class::Class, unit::HeroGameMode};
 use rpg_network_protocol::protocol::*;
 use rpg_util::{actions, item::GroundItemDrops, skill::SkillContactEvent, unit::Unit};
 
@@ -60,13 +60,6 @@ pub struct GameCamera {
     pub offset: Vec3,
     pub min_y: f32,
     pub max_y: f32,
-}
-
-#[derive(Debug)]
-pub struct PlayerOptions {
-    pub class: Class,
-    pub name: String,
-    pub game_mode: HeroGameMode,
 }
 
 #[derive(Debug, Default)]
@@ -162,8 +155,7 @@ impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         debug!("initializing");
 
-        app.add_event::<SkillContactEvent>()
-            .init_resource::<Controls>()
+        app.init_resource::<Controls>()
             .init_resource::<CursorPosition>()
             .init_resource::<CursorItem>()
             .init_resource::<GroundItemDrops>()
@@ -178,15 +170,8 @@ impl Plugin for GamePlugin {
             .add_systems(
                 OnEnter(AppState::GameSpawn),
                 (
-                    (
-                        setup,
-                        setup_audio,
-                        world::zone::setup,
-                        environment::setup,
-                        actor::player::spawn_player,
-                    )
-                        .chain(),
-                    transition_to_game,
+                    (setup, setup_audio, world::zone::setup, environment::setup).chain(),
+                    send_client_ready,
                     (
                         ui::hud::setup,
                         ui::hero::setup,
@@ -195,8 +180,8 @@ impl Plugin for GamePlugin {
                         ui::game_over::setup,
                         passive_tree::setup,
                     )
-                        .after(actor::player::spawn_player)
-                        .before(transition_to_game),
+                        .after(environment::setup)
+                        .before(send_client_ready),
                 ),
             )
             // Game
@@ -213,9 +198,6 @@ impl Plugin for GamePlugin {
                             player::input_actions,
                             unit::action,
                             skill::update_skill,
-                            // reuse for local unit::collide_units,
-                            skill::collide_skills,
-                            skill::handle_contact,
                             unit::attract_resource_items,
                             unit::pick_storable_items,
                             player::update_camera,
@@ -256,7 +238,7 @@ impl Plugin for GamePlugin {
                     ui::menu::cancel_button,
                 )
                     .chain()
-                    .run_if(in_state(AppState::Game).and_then(is_game)),
+                    .run_if(in_state(AppState::Game).and_then(is_death)),
             )
             .add_systems(
                 PostUpdate,
@@ -282,7 +264,7 @@ impl Plugin for GamePlugin {
                 PreUpdate,
                 (
                     environment::day_night_cycle,
-                    // TODO decide if this will be needed again villain::spawner,
+                    // TODO decide if this will be needed againvillain::spawner,
                     unit::remove_healthbar,
                     skill::clean_skills,
                     actions::action_tick,
@@ -290,7 +272,6 @@ impl Plugin for GamePlugin {
                     .run_if(in_state(AppState::Game).and_then(is_game)),
             )
             .add_systems(OnEnter(AppState::Game), set_playing)
-            .add_systems(OnExit(AppState::GameSpawn), send_player_ready)
             // GameOver
             .add_systems(
                 OnExit(AppState::GameOver),
@@ -322,11 +303,6 @@ impl Plugin for GamePlugin {
                 .run_if(in_state(AppState::GameCleanup)),
             );
     }
-}
-
-fn transition_to_game(mut state: ResMut<NextState<AppState>>) {
-    debug!("transition to game");
-    state.set(AppState::Game);
 }
 
 fn set_playing(mut game_state: ResMut<GameState>) {
@@ -361,8 +337,9 @@ pub(crate) fn background_audio(
     }
 }
 
-fn send_player_ready(mut net_client: ResMut<Client>) {
-    net_client.send_message::<Channel1, _>(CSPlayerReady);
+fn send_client_ready(mut net_client: ResMut<Client>) {
+    info!("sending client ready message");
+    net_client.send_message::<Channel1, _>(CSClientReady);
 }
 
 pub(crate) fn unit_audio(

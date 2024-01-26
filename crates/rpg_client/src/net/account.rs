@@ -196,9 +196,10 @@ pub(crate) fn receive_game_create_success(
     mut account_q: Query<&mut RpgAccount>,
 ) {
     for event in create_events.read() {
-        info!("game create success");
+        let create_msg = event.message();
+        info!("game create success {create_msg:?}");
 
-        state.set(AppState::GameJoin);
+        state.set(AppState::GameSpawn);
 
         create_events.clear();
         return;

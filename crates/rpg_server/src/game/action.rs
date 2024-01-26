@@ -82,8 +82,6 @@ pub(crate) fn action(
                         panic!("skill metadata not found");
                     };
 
-                    info!("attempting to use {skill_id:?}");
-
                     match unit.can_use_skill(&metadata.0, attack.skill_id, distance) {
                         SkillUseResult::Blocked
                         | SkillUseResult::OutOfRange
@@ -131,6 +129,7 @@ pub(crate) fn action(
                         &transform,
                     );
 
+                    info!("spawning skill");
                     skill::spawn_instance(&mut commands, skill_aabb, skill_transform, skill_use);
 
                     action.state = State::Completed;
