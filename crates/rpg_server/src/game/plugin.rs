@@ -23,7 +23,7 @@ use bevy::{
 use lightyear::netcode::ClientId;
 use lightyear::shared::replication::components::NetworkTarget;
 
-use rpg_account::account::AccountId;
+use rpg_account::{account::AccountId, character::CharacterSlot};
 use rpg_core::{uid::Uid, unit::HeroGameMode};
 use rpg_network_protocol::protocol::*;
 use rpg_util::{item::GroundItemDrops, skill::SkillContactEvent};
@@ -44,6 +44,7 @@ pub(crate) struct GameOptions {
 
 #[derive(Debug)]
 pub(crate) struct PlayerIdInfo {
+    pub(crate) slot: CharacterSlot,
     pub(crate) client_id: ClientId,
     pub(crate) account_id: AccountId,
     pub(crate) character_id: Uid,
@@ -99,6 +100,7 @@ impl Plugin for GamePlugin {
                     skill::update_invulnerability,
                     unit::attract_resource_items,
                     unit::remove_corpses,
+                    skill::clean_skills,
                     rpg_util::actions::action_tick,
                 )
                     .run_if(in_state(AppState::Simulation)),
@@ -107,10 +109,11 @@ impl Plugin for GamePlugin {
                 FixedUpdate,
                 (
                     unit::upkeep,
+                    action::action,
+                    skill::update_skill,
                     skill::collide_skills,
                     skill::handle_contacts,
                     villain::villain_think,
-                    action::action,
                 )
                     .chain()
                     .run_if(in_state(AppState::Simulation)),
@@ -123,19 +126,16 @@ pub(crate) fn setup_simulation(
     game_state: Res<GameState>,
     mut rng: ResMut<SharedRng>,
     metadata: Res<MetadataResources>,
+    mut aabbs: ResMut<AabbResources>,
     mut server_metadata: ResMut<ServerMetadataResource>,
     account_q: Query<&AccountInstance>,
 ) {
     info!("spawning game");
 
-    for account in &account_q {
-        for id in game_state.players.iter() {
-            if account.0.info.id == id.account_id {
-                //
-            }
-        }
-    }
-
+    aabbs.aabbs.insert(
+        Cow::Owned("direct_attack".into()),
+        Aabb::from_min_max(Vec3::new(-0.1, -0.1, -0.5), Vec3::new(0.1, 0.1, 0.5)),
+    );
     for _ in 0..50 {
         let position = Vec3::new(rng.f32() * 128.0 - 64.0, 0., rng.f32() * 128.0 - 64.0);
 
@@ -157,6 +157,8 @@ pub(crate) fn transition_to_game(mut state: ResMut<NextState<AppState>>) {
 }
 
 pub(crate) fn join_clients(mut game_state: ResMut<GameState>, mut net_params: NetworkParamsRW) {
+    info!("joining clients to game");
+
     let client_ids = game_state.client_ids();
 
     // FIXME spawn positions need to account for player intersections

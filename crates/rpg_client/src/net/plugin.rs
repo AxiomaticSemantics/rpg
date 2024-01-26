@@ -5,7 +5,7 @@ use bevy::{
     app::{App, FixedUpdate, Plugin, Startup, Update},
     ecs::{
         event::EventReader,
-        schedule::{common_conditions::*, IntoSystemConfigs},
+        schedule::{common_conditions::*, Condition, IntoSystemConfigs},
         system::{Commands, Res, ResMut, Resource},
         world::{FromWorld, World},
     },
@@ -110,7 +110,8 @@ impl Plugin for NetworkClientPlugin {
                         game::receive_player_spawn,
                         game::receive_player_join_success,
                         game::receive_player_join_error,
-                    ),
+                    )
+                        .run_if(in_state(AppState::Game).or_else(in_state(AppState::GameSpawn))),
                 ),
             )
             .add_systems(

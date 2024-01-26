@@ -234,35 +234,3 @@ pub fn update_camera(
         camera_transform.look_at(player_transform.translation, Vec3::Y);
     }
 }
-
-pub fn spawn_player(
-    mut commands: Commands,
-    mut game_state: ResMut<GameState>,
-    metadata: Res<MetadataResources>,
-    renderables: Res<RenderResources>,
-    account_q: Query<&RpgAccount>,
-) {
-    info!("spawning local player");
-
-    let account = account_q.single();
-
-    game_state.mode = account.0.characters[0].info.game_mode;
-
-    let (unit, storage, passive_tree) = {
-        (
-            account.0.characters[0].character.unit.clone(),
-            account.0.characters[0].character.storage.clone(),
-            account.0.characters[0].character.passive_tree.clone(),
-        )
-    };
-
-    actor::spawn_actor(
-        &mut commands,
-        &metadata,
-        &renderables,
-        unit,
-        Some(storage),
-        Some(passive_tree),
-        None,
-    );
-}

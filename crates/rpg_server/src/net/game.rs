@@ -21,6 +21,25 @@ use rpg_util::{
     skill::get_skill_origin,
     unit::{Hero, HeroBundle, Unit, UnitBundle},
 };
+use util::math::{Aabb, AabbComponent};
+
+pub(crate) fn receive_player_join(
+    mut commands: Commands,
+    mut join_reader: EventReader<MessageEvent<CSPlayerJoin>>,
+    mut net_params: NetworkParamsRW,
+    game_state: Res<GameState>,
+    mut account_q: Query<&AccountInstance>,
+) {
+    for event in join_reader.read() {
+        let client_id = *event.context();
+        let client = net_params.context.clients.get(&client_id).unwrap();
+        if !client.is_authenticated_player() {
+            continue;
+        };
+
+        info!("play join");
+    }
+}
 
 pub(crate) fn receive_player_leave(
     mut commands: Commands,
@@ -35,15 +54,18 @@ pub(crate) fn receive_player_leave(
         if !client.is_authenticated_player() {
             continue;
         };
+
+        info!("player leave");
     }
 }
 
-pub(crate) fn receive_player_ready(
+/// This is received when the client has completed loading the world and is ready to be spawned
+pub(crate) fn receive_player_loaded(
     mut commands: Commands,
-    mut ready_reader: EventReader<MessageEvent<CSPlayerReady>>,
+    mut ready_reader: EventReader<MessageEvent<CSClientReady>>,
     mut net_params: NetworkParamsRW,
     game_state: Res<GameState>,
-    mut account_q: Query<&AccountInstance>,
+    account_q: Query<&AccountInstance>,
 ) {
     for event in ready_reader.read() {
         let client_id = *event.context();
@@ -51,8 +73,6 @@ pub(crate) fn receive_player_ready(
         if !client.is_authenticated_player() {
             continue;
         };
-
-        info!("spawning player");
 
         let account = account_q.get(client.entity).unwrap();
 
@@ -63,9 +83,13 @@ pub(crate) fn receive_player_ready(
         let character = account
             .get_character_from_uid(id_info.character_id)
             .unwrap();
-        let unit = character.character.unit.clone();
 
+        info!("spawning player: {:?} {id_info:?}", account.0.info);
+
+        let unit = character.character.unit.clone();
+        let aabb = Aabb::from_min_max(Vec3::new(-0.3, 0.0, -0.2), Vec3::new(0.3, 1.2, 0.2));
         commands.entity(client.entity).insert((
+            AabbComponent(aabb),
             Transform::from_translation(Vec3::ZERO).looking_to(Vec3::NEG_Z, Vec3::Y),
             HeroBundle {
                 unit: UnitBundle::new(Unit(unit)),

@@ -1,6 +1,6 @@
 use crate::{
     assets::TextureAssets,
-    game::plugin::{GameState, PlayerOptions},
+    game::plugin::GameState,
     state::AppState,
     ui::menu::{
         account::{AccountListRoot, SelectedCharacter},
@@ -20,12 +20,10 @@ use bevy::{
     ecs::{
         component::Component,
         query::{Changed, With},
-        schedule::NextState,
         system::{ParamSet, Query, Res, ResMut, Resource},
     },
     hierarchy::{BuildChildren, ChildBuilder},
     log::info,
-    prelude::{Deref, DerefMut},
     text::Text,
     ui::{
         node_bundles::{ButtonBundle, ImageBundle, NodeBundle, TextBundle},

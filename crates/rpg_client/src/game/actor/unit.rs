@@ -192,7 +192,8 @@ pub(crate) fn attract_resource_items(
         } else if distance < 0.25 {
             //let item = i_item.0.take().unwrap();
             //let _leveled_up = unit.apply_rewards(&metadata.rpg, &item);
-            u_audio.push("item_pickup".into());
+            // FIXME trigger this after receiving a message
+            // u_audio.push("item_pickup".into());
             game_state.session_stats.items_looted += 1;
 
             //commands.entity(i_entity).despawn_recursive();
@@ -208,7 +209,7 @@ pub fn action(
     time: Res<Time>,
     metadata: Res<MetadataResources>,
     mut renderables: ResMut<RenderResources>,
-    mut random: ResMut<SharedRng>,
+    mut rng: ResMut<SharedRng>,
     mut state: ResMut<GameState>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut unit_q: Query<
@@ -285,11 +286,11 @@ pub fn action(
                     };
 
                     let sound_key = match skill_info.info {
-                        SkillInfo::Direct(_) => match random.usize(0..2) {
+                        SkillInfo::Direct(_) => match rng.usize(0..2) {
                             0 => "attack_proj1",
                             _ => "attack_proj2",
                         },
-                        SkillInfo::Projectile(_) => match random.usize(0..2) {
+                        SkillInfo::Projectile(_) => match rng.usize(0..2) {
                             0 => "attack_proj1",
                             _ => "attack_proj2",
                         },
@@ -327,7 +328,7 @@ pub fn action(
                             entity,
                             &attack,
                             &time,
-                            &mut random,
+                            &mut rng,
                             &mut renderables,
                             &mut meshes,
                             skill_info,

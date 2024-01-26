@@ -10,7 +10,7 @@ use crate::game::{
 use bevy::{
     animation::AnimationClip,
     asset::Handle,
-    ecs::{bundle::Bundle, component::Component, system::Commands},
+    ecs::{bundle::Bundle, component::Component, entity::Entity, system::Commands},
     log::info,
     math::Vec3,
     pbr::{MaterialMeshBundle, StandardMaterial},
@@ -96,6 +96,7 @@ pub fn get_villain_actor_key(id: VillainId) -> &'static str {
 }
 
 pub(crate) fn spawn_actor(
+    entity: Entity,
     commands: &mut Commands,
     metadata: &MetadataResources,
     renderables: &RenderResources,
@@ -138,28 +139,54 @@ pub(crate) fn spawn_actor(
 
             match actor {
                 ActorHandle::Mesh(handle) => {
-                    commands.spawn((
-                        actor_player_bundle,
-                        ActorMeshBundle {
-                            basic: actor_basic_bundle,
-                            mesh: MaterialMeshBundle {
-                                mesh: handle,
-                                ..default()
+                    if entity == Entity::PLACEHOLDER {
+                        commands.spawn((
+                            actor_player_bundle,
+                            ActorMeshBundle {
+                                basic: actor_basic_bundle,
+                                mesh: MaterialMeshBundle {
+                                    mesh: handle,
+                                    ..default()
+                                },
                             },
-                        },
-                    ));
+                        ));
+                    } else {
+                        commands.entity(entity).insert((
+                            actor_player_bundle,
+                            ActorMeshBundle {
+                                basic: actor_basic_bundle,
+                                mesh: MaterialMeshBundle {
+                                    mesh: handle,
+                                    ..default()
+                                },
+                            },
+                        ));
+                    }
                 }
                 ActorHandle::Scene(handle) => {
-                    commands.spawn((
-                        actor_player_bundle,
-                        ActorSceneBundle {
-                            basic: actor_basic_bundle,
-                            scene: SceneBundle {
-                                scene: handle,
-                                ..default()
+                    if entity == Entity::PLACEHOLDER {
+                        commands.spawn((
+                            actor_player_bundle,
+                            ActorSceneBundle {
+                                basic: actor_basic_bundle,
+                                scene: SceneBundle {
+                                    scene: handle,
+                                    ..default()
+                                },
                             },
-                        },
-                    ));
+                        ));
+                    } else {
+                        commands.entity(entity).insert((
+                            actor_player_bundle,
+                            ActorSceneBundle {
+                                basic: actor_basic_bundle,
+                                scene: SceneBundle {
+                                    scene: handle,
+                                    ..default()
+                                },
+                            },
+                        ));
+                    }
                 }
             };
         }

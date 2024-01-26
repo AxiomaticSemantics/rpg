@@ -1,6 +1,6 @@
 use crate::{
     assets::TextureAssets,
-    net::lobby::Lobby,
+    net::{account::RpgAccount, lobby::Lobby},
     ui::menu::{
         account::{AccountListRoot, SelectedCharacter},
         main::MainRoot,
@@ -334,6 +334,7 @@ pub(crate) fn game_create_button(
     selected_character: Res<SelectedCharacter>,
     lobby: Res<Lobby>,
     mut net_client: ResMut<Client>,
+    mut account_q: Query<&mut RpgAccount>,
     button_q: Query<&Interaction, (Changed<Interaction>, With<GameCreateButton>)>,
     mut menu_set: ParamSet<(
         Query<&mut Style, With<UiRoot>>,
@@ -356,6 +357,9 @@ pub(crate) fn game_create_button(
             game_mode: lobby.game_mode,
             slot: slot_character.slot,
         });
+
+        // FIXME temp hack
+        account_q.single_mut().0.info.selected_slot = Some(slot_character.slot);
 
         menu_set.p0().single_mut().display = Display::None;
         menu_set.p1().single_mut().display = Display::None;

@@ -63,48 +63,13 @@ use bevy::{
 
 use std::borrow::Cow;
 
-pub fn handle_contact(
-    mut commands: Commands,
-    time: Res<Time>,
-    metadata: Res<MetadataResources>,
-    mut game_state: ResMut<GameState>,
-    mut ground_drops: ResMut<GroundItemDrops>,
-    mut random: ResMut<SharedRng>,
-    mut skill_events: EventReader<SkillContactEvent>,
-    mut skill_q: Query<(Entity, &mut Transform, &mut Invulnerability, &mut SkillUse)>,
-    mut unit_q: Query<
-        (
-            Entity,
-            &mut Unit,
-            &mut Actions,
-            &mut AudioActions,
-            &mut AnimationState,
-            Option<&Corpse>,
-        ),
-        Without<SkillUse>,
-    >,
-) {
-    for event in skill_events.read() {
-        let Ok(
-            [(_, mut attacker, _, _, _, _), (d_entity, mut defender, mut d_actions, mut d_audio, mut d_anim_state, d_corpse)],
-        ) = unit_q.get_many_mut([event.owner_entity, event.defender_entity])
-        else {
-            panic!("Unable to query attacker and/or defender unit(s)");
-        };
+// FIXME
+// need to redo react to network messages for audio and animations
 
-        if d_corpse.is_some() {
-            continue;
-        }
-
-        let (s_entity, mut s_transform, mut invulnerability, mut instance) =
-            skill_q.get_mut(event.entity).unwrap();
-        let combat_result =
-            defender.handle_attack(&attacker, &metadata.rpg, &mut random.0, &instance.damage);
-
+/*
         match combat_result {
             CombatResult::Attack(attack) => match attack {
                 AttackResult::Blocked => {
-                    debug!("blocked");
                     if defender.kind == UnitKind::Hero {
                         game_state.session_stats.blocks += 1;
                     } else {
@@ -122,7 +87,6 @@ pub fn handle_contact(
                     }
                 }
                 AttackResult::Dodged => {
-                    debug!("dodge");
                     if defender.kind == UnitKind::Hero {
                         game_state.session_stats.dodges += 1;
                     } else {
@@ -189,26 +153,7 @@ pub fn handle_contact(
             }
             _ => {}
         }
-
-        if let Some(tickable) = &mut instance.tickable {
-            tickable.can_damage = false;
-        }
-
-        if defender.is_alive()
-            && !instance.effects.is_empty()
-            && handle_effects(
-                &time,
-                &mut random,
-                &mut instance,
-                &mut s_transform,
-                &mut d_actions,
-            )
-        {
-            // println!("Despawning skill");
-            commands.entity(event.entity).despawn_recursive();
-        }
-    }
-}
+}*/
 
 pub fn clean_skills(
     mut commands: Commands,
@@ -685,6 +630,8 @@ pub(crate) fn spawn_instance(
     }
 }
 
+// TODO determine what the client will do here..
+// perhaps some of this should move to rpg_util
 /// Returns `true` if the skill should be destroyed
 fn handle_effects(
     time: &Time,
