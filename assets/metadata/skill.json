@@ -15,10 +15,8 @@
 			},
 			"base_damage": {
 				"kind": "Physical",
-				"info": {
-					"value": {
-						"Flat": 16
-					}
+				"value": {
+					"Flat": 16
 				}
 			},
 			"base_cost": [ 
@@ -49,10 +47,8 @@
 			},
 			"base_damage": {
 				"kind": "Physical",
-				"info": {
-					"value": {
-						"Flat": 12
-					}
+				"value": {
+					"Flat": 12
 				}
 			},
 			"base_cost": [
@@ -104,10 +100,8 @@
 			},
 			"base_damage": {
 				"kind": "Physical",
-				"info": {
-					"value": {
-						"Flat": 12
-					}
+				"value": {
+					"Flat": 12
 				}
 			},
 			"base_cost": [
@@ -149,10 +143,8 @@
 			},
 			"base_damage": {
 				"kind": "Physical",
-				"info": {
-					"value": {
-						"Flat": 12
-					}
+				"value": {
+					"Flat": 12
 				}
 			},
 			"base_cost": [
@@ -190,10 +182,8 @@
 			},
 			"base_damage": {
 				"kind": "Physical",
-				"info": {
-					"value": {
-						"Flat": 3
-					}
+				"value": {
+					"Flat": 3
 				}
 			},
 			"base_cost": [
@@ -222,10 +212,8 @@
 			},
 			"base_damage": {
 				"kind": "Physical",
-				"info": {
-					"value": {
-						"Flat": 6
-					}
+				"value": {
+					"Flat": 6
 				}
 			},
 			"base_cost": [

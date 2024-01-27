@@ -165,9 +165,8 @@ pub fn input_actions(
     if let Some(target_dir) = target_dir {
         let rot_diff = transform.forward().dot(target_dir);
         if (rot_diff - 1.).abs() > 0.001 {
-            //println!("rot_diff {rot_diff}");
+            // debug!("rot_diff {rot_diff}");
             actions.request(Action::new(ActionData::LookDir(target_dir), None, true));
-            net_client.send_message::<Channel1, _>(CSRotPlayer(target_dir));
         }
     }
 

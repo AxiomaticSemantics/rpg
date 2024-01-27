@@ -11,6 +11,7 @@ use audio_manager::plugin::AudioActions;
 use rpg_core::{
     combat::{AttackResult, CombatResult},
     damage::Damage,
+    item::ItemDrops,
     skill::{
         effect::*, skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData, Origin,
         ProjectileInstance, ProjectileShape, Skill, SkillId, SkillInfo, SkillInstance,
@@ -19,7 +20,7 @@ use rpg_core::{
 };
 use rpg_util::{
     actions::{Action, ActionData, Actions, AttackData, KnockbackData as KnockbackActionData},
-    item::{GroundItemDrop, GroundItemDrops},
+    item::GroundItemDrops,
     skill::*,
     unit::{Corpse, Unit},
 };

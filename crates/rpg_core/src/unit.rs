@@ -1,7 +1,7 @@
 use crate::{
     class::Class,
     combat::{AttackResult, CombatResult, DeathResult},
-    damage::{Damage, DamageValue},
+    damage::{Damage, DamageKind, DamageValue},
     item::{Item, ItemId, ItemUid, Rarity},
     metadata::Metadata,
     passive_tree::PassiveSkillGraph,
@@ -112,6 +112,7 @@ impl UnitInfo {
 }
 
 #[derive(Ser, De, Clone, Debug)]
+// FIXME stats and skills should be passed as params
 pub struct Unit {
     pub uid: Uid,
     pub kind: UnitKind,
@@ -216,7 +217,7 @@ impl Unit {
         }
 
         // TODO split Damage into seperate structs
-        let mut damage_roll = match damage.info.value {
+        let mut damage_roll = match damage.value {
             DamageValue::Flat(flat) => flat,
             DamageValue::MinMax(min, max) => rng.u32(min..=max),
         };
@@ -235,6 +236,15 @@ impl Unit {
             damage_roll = (damage_roll as f32 * metadata.unit.villain.damage_scale).floor() as u32;
         }
 
+        let curr_hp = self.stats.vitals.stats["Hp"].value;
+
+        let new_hp = self.stats.vitals.stats["Hp"]
+            .value
+            .u32()
+            .saturating_sub(damage_roll);
+
+        let damage_dealt = curr_hp - new_hp;
+
         *self
             .stats
             .vitals
@@ -242,15 +252,17 @@ impl Unit {
             .get_mut("Hp")
             .unwrap()
             .value
-            .u32_mut() = self.stats.vitals.stats["Hp"]
-            .value
-            .u32()
-            .saturating_sub(damage_roll);
+            .u32_mut() = new_hp;
+
+        let damage = Damage {
+            kind: DamageKind::Physical,
+            value: DamageValue::Flat(*damage_dealt.u32()),
+        };
 
         let attack_result = if is_crit {
-            AttackResult::HitCrit
+            AttackResult::HitCrit(damage)
         } else {
-            AttackResult::Hit
+            AttackResult::Hit(damage)
         };
 
         if self.is_alive() {

@@ -1,6 +1,6 @@
 #![allow(clippy::too_many_arguments)]
 
-use crate::game::{assets::RenderResources, metadata::MetadataResources, plugin::GameState};
+use crate::game::{assets::RenderResources, metadata::MetadataResources};
 
 use rpg_util::unit::{Corpse, Hero, Unit, Villain};
 
@@ -13,6 +13,8 @@ use bevy::{
     transform::components::Transform,
     utils::Duration,
 };
+
+// TODO reuse or remove
 
 /*
 fn spawn_villain(
