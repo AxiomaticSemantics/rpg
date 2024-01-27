@@ -4,7 +4,6 @@ use crate::game::{
     actor::{animation::AnimationState, player::Player},
     assets::RenderResources,
     health_bar::{HealthBar, HealthBarFrame, HealthBarRect},
-    item::UnitStorage,
     metadata::MetadataResources,
     plugin::{GameCamera, GameState},
     skill,
@@ -19,7 +18,7 @@ use rpg_core::{
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions::{ActionData, Actions, State},
-    item::{GroundItem, ResourceItem, StorableItem},
+    item::{GroundItem, ResourceItem, StorableItem, UnitStorage},
     unit::{Corpse, Hero, Unit, UnitBundle, Villain},
 };
 

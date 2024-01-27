@@ -128,6 +128,8 @@ impl Plugin for NetworkClientPlugin {
                     game::receive_player_rotation,
                     game::receive_player_move,
                     game::receive_player_move_end,
+                    game::receive_combat_result,
+                    game::receive_damage,
                 )
                     .after(FixedUpdateSet::Main),
             );

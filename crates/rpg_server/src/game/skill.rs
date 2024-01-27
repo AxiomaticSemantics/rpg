@@ -436,6 +436,7 @@ pub fn handle_contacts(
             Entity,
             &mut Unit,
             &mut Actions,
+            &Transform,
             Option<&AccountInstance>,
             Option<&Corpse>,
         ),
@@ -444,7 +445,7 @@ pub fn handle_contacts(
 ) {
     for event in skill_events.read() {
         let Ok(
-            [(_, mut attacker, _, a_account, _), (d_entity, mut defender, mut d_actions, _, d_corpse)],
+            [(_, mut attacker, _, _, a_account, _), (d_entity, mut defender, mut d_actions, d_transform, _, d_corpse)],
         ) = unit_q.get_many_mut([event.owner_entity, event.defender_entity])
         else {
             panic!("Unable to query attacker and/or defender unit(s)");
@@ -461,8 +462,8 @@ pub fn handle_contacts(
 
         info!("{combat_result:?}");
 
-        match combat_result {
-            CombatResult::Attack(attack) => match attack {
+        match &combat_result {
+            CombatResult::Attack(attack) => match &attack {
                 AttackResult::Blocked => {
                     debug!("blocked");
                     /*if defender.kind == UnitKind::Hero {
@@ -487,12 +488,31 @@ pub fn handle_contacts(
                         game_state.session_stats.times_dodged += 1;
                     }*/
                 }
-                _ => {
+                AttackResult::Hit(damage) | AttackResult::HitCrit(damage) => {
                     /*if defender.kind == UnitKind::Villain {
                         game_state.session_stats.hits += 1;
                     } else {
                         game_state.session_stats.villain_hits += 1;
                     }*/
+
+                    let client = net_params
+                        .context
+                        .get_client_from_account_id(a_account.as_ref().unwrap().0.info.id)
+                        .unwrap();
+                    if defender.kind == UnitKind::Hero {
+                        net_params.server.send_message_to_target::<Channel1, _>(
+                            SCCombatResult(combat_result.clone()),
+                            NetworkTarget::Only(vec![client.id]),
+                        );
+                    } else if defender.kind == UnitKind::Villain {
+                        net_params.server.send_message_to_target::<Channel1, _>(
+                            SCDamage {
+                                uid: defender.uid,
+                                damage: damage.clone(),
+                            },
+                            NetworkTarget::Only(vec![client.id]),
+                        );
+                    }
 
                     if let SkillInstance::Projectile(_) = &instance.instance {
                         if instance
@@ -517,6 +537,11 @@ pub fn handle_contacts(
                     /*game_state.session_stats.kills += 1;
                     game_state.session_stats.hits += 1;*/
 
+                    let client = net_params
+                        .context
+                        .get_client_from_account_id(a_account.as_ref().unwrap().0.info.id)
+                        .unwrap();
+
                     if let Some(death) = defender.handle_death(
                         &mut attacker,
                         &metadata.0,
@@ -532,15 +557,16 @@ pub fn handle_contacts(
 
                         ground_drops.0.push(drops.clone());
 
-                        let client = net_params
-                            .context
-                            .get_client_from_account_id(a_account.as_ref().unwrap().0.info.id)
-                            .unwrap();
                         net_params.server.send_message_to_target::<Channel1, _>(
-                            SCVillainDeath {
-                                uid: defender.uid,
-                                drops,
+                            SCSpawnItems {
+                                position: d_transform.translation,
+                                items: drops,
                             },
+                            NetworkTarget::Only(vec![client.id]),
+                        );
+
+                        net_params.server.send_message_to_target::<Channel1, _>(
+                            SCVillainDeath(defender.uid),
                             NetworkTarget::Only(vec![client.id]),
                         );
                     }
