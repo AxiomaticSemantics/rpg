@@ -51,6 +51,12 @@ pub enum ItemInfo {
 }
 
 #[derive(Debug, Clone, PartialEq, Ser, De)]
+pub struct ItemDrops {
+    pub source: Uid,
+    pub items: Vec<Item>,
+}
+
+#[derive(Debug, Clone, PartialEq, Ser, De)]
 pub struct Item {
     pub uid: ItemUid,
     pub id: ItemId,

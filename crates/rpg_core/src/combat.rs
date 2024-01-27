@@ -1,14 +1,14 @@
-use crate::item::Item;
+use crate::{damage::Damage, item::Item};
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum AttackResult {
-    Hit,
-    HitCrit,
+    Hit(Damage),
+    HitCrit(Damage),
     Blocked,
     Dodged,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum CombatResult {
     Attack(AttackResult),
     Death(AttackResult),

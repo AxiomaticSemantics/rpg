@@ -247,6 +247,14 @@ impl VitalStats {
         Self { stats }
     }
 
+    pub fn get_stat_from_id(&self, id: StatId) -> Option<&Stat> {
+        self.stats.values().find(|s| s.id == id)
+    }
+
+    pub fn get_mut_stat_from_id(&mut self, id: StatId) -> Option<&mut Stat> {
+        self.stats.values_mut().find(|s| s.id == id)
+    }
+
     pub fn set(&mut self, id: &str, value: Value) {
         debug_assert!(self.stats.contains_key(id));
 

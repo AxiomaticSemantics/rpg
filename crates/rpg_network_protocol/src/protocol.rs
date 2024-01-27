@@ -11,7 +11,7 @@ use rpg_account::{
 use rpg_chat::chat::{ChannelId, Message as ChatMessage};
 use rpg_core::{
     class::Class,
-    item::{Item, ItemId},
+    item::{Item, ItemDrops, ItemId},
     skill::SkillId,
     stat::StatUpdate,
     uid::Uid,
@@ -275,6 +275,9 @@ pub struct SCPlayerSpawn {
 pub struct SCMovePlayer(pub Vec3);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCMovePlayerEnd(pub Vec3);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCRotPlayer(pub Vec3);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -311,7 +314,16 @@ pub struct SCSpawnVillain {
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCDespawnVillain(pub Uid);
+pub struct SCHeroDeath(pub Uid);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCVillainDeath {
+    pub uid: Uid,
+    pub drops: ItemDrops,
+}
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCDespawnCorpse(pub Uid);
 
 #[message_protocol(protocol = "RpgProtocol")]
 pub enum Messages {
@@ -359,6 +371,7 @@ pub enum Messages {
     SCPlayerJoinError(SCPlayerJoinError),
     SCPlayerSpawn(SCPlayerSpawn),
     SCMovePlayer(SCMovePlayer),
+    SCMovePlayerEnd(SCMovePlayerEnd),
     SCRotPlayer(SCRotPlayer),
     SCStatUpdate(SCStatUpdate),
     SCStatUpdates(SCStatUpdates),
@@ -368,7 +381,9 @@ pub enum Messages {
     SCSpawnItems(SCSpawnItems),
     SCDespawnItem(SCDespawnItem),
     SCSpawnVillain(SCSpawnVillain),
-    SCDespawnVillain(SCDespawnVillain),
+    SCHeroDeath(SCHeroDeath),
+    SCVillainDeath(SCVillainDeath),
+    SCDespawnCorpse(SCDespawnCorpse),
 
     // Client -> Server
 

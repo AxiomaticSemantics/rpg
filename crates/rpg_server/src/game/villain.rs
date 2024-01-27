@@ -10,7 +10,10 @@ use rpg_util::{
     unit::{Corpse, Hero, Unit, UnitBundle, Villain, VillainBundle},
 };
 
-use util::random::SharedRng;
+use util::{
+    math::{Aabb, AabbComponent},
+    random::SharedRng,
+};
 
 use lightyear::shared::replication::components::NetworkTarget;
 
@@ -76,9 +79,12 @@ pub(crate) fn spawn(
     rng: &mut SharedRng,
 ) {
     let mut unit = rpg_core::unit::generation::generate(&mut rng.0, metadata, next_uid, 1);
-
     unit.add_default_skills(metadata);
 
+    let aabb = AabbComponent(Aabb::from_min_max(
+        Vec3::new(-0.3, 0.0, -0.2),
+        Vec3::new(0.3, 1.2, 0.2),
+    ));
     let dir_roll = std::f32::consts::TAU * (0.5 - rng.f32());
 
     let mut transform = Transform::from_translation(*origin);
@@ -94,6 +100,7 @@ pub(crate) fn spawn(
 
     // spawn
     commands.spawn((
+        aabb,
         VillainBundle {
             villain: Villain,
             unit: UnitBundle::new(Unit(unit)),

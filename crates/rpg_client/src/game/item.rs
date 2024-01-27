@@ -10,12 +10,14 @@ use rpg_core::{
     storage::{StorageSlot as RpgStorageSlot, UnitStorage as RpgUnitStorage},
 };
 use rpg_util::{
-    item::{
-        GroundItem, GroundItemBundle, GroundItemDrop, GroundItemDrops, ResourceItem, StorableItem,
-    },
+    item::{GroundItem, GroundItemBundle, GroundItemDrops, ResourceItem, StorableItem},
     unit::Unit,
 };
-use util::{cleanup::CleanupStrategy, random::SharedRng};
+use util::{
+    cleanup::CleanupStrategy,
+    math::{Aabb, AabbComponent},
+    random::SharedRng,
+};
 
 use bevy::{
     ecs::{
@@ -28,7 +30,6 @@ use bevy::{
     input::{mouse::MouseButton, ButtonInput},
     math::Vec3,
     prelude::{default, Deref, DerefMut},
-    render::primitives::Aabb,
     scene::SceneBundle,
     text::Text,
     time::Time,
@@ -113,32 +114,39 @@ pub(crate) fn animate_ground_items(
     }
 }
 
+// FIXME audio should be attached to the item itself
 pub(crate) fn spawn_ground_items(
     mut commands: Commands,
     metadata: Res<MetadataResources>,
     renderables: Res<RenderResources>,
     mut rng: ResMut<SharedRng>,
     mut ground_drop_items: ResMut<GroundItemDrops>,
-    mut unit_q: Query<(&mut AudioActions, &Transform), With<Unit>>,
+    mut unit_q: Query<(Entity, &mut AudioActions, &Transform, &Unit)>,
 ) {
-    while let Some(item) = ground_drop_items.0.pop() {
-        let (mut audio, transform) = unit_q.get_mut(item.source).unwrap();
-
-        for item in item.items {
-            let item_info = &metadata.rpg.item.items[&item.id];
-            match item_info.kind {
-                ItemKind::Gem => audio.push("item_drop_gem".into()),
-                ItemKind::Resource => audio.push("item_drop_potion".into()),
+    while let Some(items) = ground_drop_items.0.pop() {
+        for (source, mut source_audio, source_transform, source_unit) in &mut unit_q {
+            if source_unit.uid != items.source {
+                continue;
             }
 
-            spawn_item(
-                &mut commands,
-                &mut rng.0,
-                &renderables,
-                &metadata.rpg,
-                transform.translation,
-                item,
-            );
+            for item in &items.items {
+                //let (mut source_audio, source_transform) = unit_q.get_mut(item.source).unwrap();
+
+                let item_info = &metadata.rpg.item.items[&item.id];
+                match item_info.kind {
+                    ItemKind::Gem => source_audio.push("item_drop_gem".into()),
+                    ItemKind::Resource => source_audio.push("item_drop_potion".into()),
+                }
+
+                spawn_item(
+                    &mut commands,
+                    &mut rng.0,
+                    &renderables,
+                    &metadata.rpg,
+                    source_transform.translation,
+                    item.clone(),
+                );
+            }
         }
     }
 }
@@ -194,7 +202,7 @@ fn spawn_item(
         panic!("bad handle");
     };
 
-    let aabb = Aabb::from_min_max(Vec3::splat(-0.2), Vec3::splat(0.2));
+    let aabb = AabbComponent(Aabb::from_min_max(Vec3::splat(-0.2), Vec3::splat(0.2)));
 
     use std::f32::consts;
 

@@ -139,6 +139,29 @@ pub(crate) fn receive_movement(
     }
 }
 
+pub(crate) fn receive_movement_end(
+    mut movement_reader: EventReader<MessageEvent<CSMovePlayerEnd>>,
+    mut net_params: NetworkParamsRW,
+    mut player_q: Query<(&mut Transform, &Unit, &mut Actions, &AccountInstance), With<Hero>>,
+) {
+    for event in movement_reader.read() {
+        let client_id = *event.context();
+        let client = net_params.context.clients.get(&client_id).unwrap();
+        if !client.is_authenticated_player() {
+            continue;
+        };
+
+        let Ok((mut transform, player, mut actions, account)) = player_q.get_mut(client.entity)
+        else {
+            info!("{client:?}");
+            continue;
+        };
+
+        actions.request(Action::new(ActionData::MoveEnd, None, true));
+        info!("end move request {}", transform.translation);
+    }
+}
+
 /// Rotate player
 pub(crate) fn receive_rotation(
     mut rotation_reader: EventReader<MessageEvent<CSRotPlayer>>,

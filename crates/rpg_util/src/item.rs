@@ -3,7 +3,10 @@ use bevy::{
     prelude::{Deref, DerefMut},
 };
 
-use rpg_core::item::Item;
+use rpg_core::{
+    item::{Item, ItemDrops},
+    uid::Uid,
+};
 
 #[derive(Component, Deref, DerefMut)]
 pub struct GroundItem(pub Option<Item>);
@@ -19,10 +22,5 @@ pub struct GroundItemBundle {
     pub item: GroundItem,
 }
 
-pub struct GroundItemDrop {
-    pub source: Entity,
-    pub items: Vec<Item>,
-}
-
 #[derive(Resource, Default, Deref, DerefMut)]
-pub struct GroundItemDrops(pub Vec<GroundItemDrop>);
+pub struct GroundItemDrops(pub Vec<ItemDrops>);

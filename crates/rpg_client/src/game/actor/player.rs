@@ -138,7 +138,7 @@ pub fn input_actions(
         }
     }
 
-    if controls.mouse_secondary.pressed || controls.gamepad_a.pressed {
+    if controls.mouse_secondary.just_pressed || controls.gamepad_a.just_pressed {
         actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
         net_client.send_message::<Channel1, _>(CSMovePlayer);
     } else if controls.mouse_secondary.just_released || controls.gamepad_a.just_released {
@@ -165,9 +165,8 @@ pub fn input_actions(
     if let Some(target_dir) = target_dir {
         let rot_diff = transform.forward().dot(target_dir);
         if (rot_diff - 1.).abs() > 0.001 {
-            //println!("rot_diff {rot_diff}");
+            // debug!("rot_diff {rot_diff}");
             actions.request(Action::new(ActionData::LookDir(target_dir), None, true));
-            net_client.send_message::<Channel1, _>(CSRotPlayer(target_dir));
         }
     }
 

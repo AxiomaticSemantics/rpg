@@ -16,6 +16,7 @@ use rpg_core::{
     storage::Storage,
     unit::UnitKind,
 };
+use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions::{ActionData, Actions, State},
     item::{GroundItem, ResourceItem, StorableItem},
@@ -206,6 +207,7 @@ pub(crate) fn attract_resource_items(
 
 pub fn action(
     mut commands: Commands,
+    mut net_client: ResMut<Client>,
     time: Res<Time>,
     metadata: Res<MetadataResources>,
     mut renderables: ResMut<RenderResources>,
@@ -373,15 +375,13 @@ pub fn action(
                 transform.rotation = lerped;
             }
 
+            net_client.send_message::<Channel1, _>(CSRotPlayer(wanted.forward()));
+
             action.state = State::Completed;
         }
 
         if let Some(action) = &mut actions.movement {
             let movespeed = unit.get_effective_movement_speed() as f32 / 100. * dt;
-            if unit.can_run() {
-                unit.stats.consume_stamina(dt);
-            }
-
             let translation = transform.forward() * movespeed;
             transform.translation += translation;
 

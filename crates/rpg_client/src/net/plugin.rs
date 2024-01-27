@@ -120,11 +120,14 @@ impl Plugin for NetworkClientPlugin {
                     game::receive_stat_updates,
                     game::receive_stat_update,
                     game::receive_spawn_villain,
-                    game::receive_despawn_villain,
+                    game::receive_hero_death,
+                    game::receive_villain_death,
+                    game::receive_despawn_corpse,
                     game::receive_spawn_item,
                     game::receive_spawn_items,
                     game::receive_player_rotation,
                     game::receive_player_move,
+                    game::receive_player_move_end,
                 )
                     .after(FixedUpdateSet::Main),
             );

@@ -188,13 +188,35 @@ pub(crate) fn action(
                     .unwrap();
             }
 
-            action.state = State::Completed;
+            //action.state = State::Completed;
         }
 
-        if let Some(action) = &mut actions.movement_end {
+        let cancel_move = if let Some(action) = &mut actions.movement_end {
             // TODO send end movement to client
 
+            let client = net_params
+                .context
+                .get_client_from_account_id(account.as_ref().unwrap().0.info.id)
+                .unwrap();
+
+            net_params
+                .server
+                .send_message_to_target::<Channel1, _>(
+                    SCMovePlayerEnd(transform.translation),
+                    NetworkTarget::Only(vec![client.id]),
+                )
+                .unwrap();
             action.state = State::Completed;
+
+            true
+        } else {
+            false
+        };
+
+        if cancel_move {
+            if let Some(action) = &mut actions.movement {
+                action.state = State::Completed;
+            }
         }
     }
 }
