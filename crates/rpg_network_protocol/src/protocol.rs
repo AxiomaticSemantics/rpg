@@ -11,6 +11,8 @@ use rpg_account::{
 use rpg_chat::chat::{ChannelId, Message as ChatMessage};
 use rpg_core::{
     class::Class,
+    combat::CombatResult,
+    damage::Damage,
     item::{Item, ItemDrops, ItemId},
     skill::SkillId,
     stat::StatUpdate,
@@ -296,10 +298,16 @@ pub struct SCSpawnSkill {
 pub struct SCDespawnSkill(pub Uid);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCSpawnItem(pub Item);
+pub struct SCSpawnItem {
+    pub position: Vec3,
+    pub items: ItemDrops,
+}
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCSpawnItems(pub Vec<Item>);
+pub struct SCSpawnItems {
+    pub position: Vec3,
+    pub items: ItemDrops,
+}
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCDespawnItem(pub Uid);
@@ -317,13 +325,19 @@ pub struct SCSpawnVillain {
 pub struct SCHeroDeath(pub Uid);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCVillainDeath {
-    pub uid: Uid,
-    pub drops: ItemDrops,
-}
+pub struct SCVillainDeath(pub Uid);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCDespawnCorpse(pub Uid);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCCombatResult(pub CombatResult);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCDamage {
+    pub uid: Uid,
+    pub damage: Damage,
+}
 
 #[message_protocol(protocol = "RpgProtocol")]
 pub enum Messages {
@@ -384,6 +398,8 @@ pub enum Messages {
     SCHeroDeath(SCHeroDeath),
     SCVillainDeath(SCVillainDeath),
     SCDespawnCorpse(SCDespawnCorpse),
+    SCCombatResult(SCCombatResult),
+    SCDamage(SCDamage),
 
     // Client -> Server
 

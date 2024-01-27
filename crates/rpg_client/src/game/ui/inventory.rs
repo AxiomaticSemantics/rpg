@@ -6,7 +6,7 @@ use crate::game::{
     actor::player::Player,
     assets::RenderResources,
     controls::Controls,
-    item::{self, CursorItem, GroundItemHover, GroundItemStats, StorageSlot, UnitStorage},
+    item::{self, CursorItem, GroundItemHover, GroundItemStats},
     metadata::MetadataResources,
     plugin::{GameSessionCleanup, GameState},
     prop::PropHandle,
@@ -21,7 +21,7 @@ use rpg_core::{
     },
 };
 use rpg_util::{
-    item::{GroundItem, GroundItemBundle, StorableItem},
+    item::{GroundItem, GroundItemBundle, StorableItem, StorageSlot, UnitStorage},
     unit::Unit,
 };
 

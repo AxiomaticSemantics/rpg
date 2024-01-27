@@ -1,6 +1,8 @@
 use crate::{damage::Damage, item::Item};
 
-#[derive(Debug, Clone, PartialEq)]
+use serde_derive::{Deserialize as De, Serialize as Ser};
+
+#[derive(Debug, Ser, De, Clone, PartialEq)]
 pub enum AttackResult {
     Hit(Damage),
     HitCrit(Damage),
@@ -8,7 +10,7 @@ pub enum AttackResult {
     Dodged,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Ser, De, Clone, PartialEq)]
 pub enum CombatResult {
     Attack(AttackResult),
     Death(AttackResult),
@@ -16,7 +18,7 @@ pub enum CombatResult {
     IsDead,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Ser, De, Clone)]
 pub struct DeathResult {
     pub items: Vec<Item>,
 }

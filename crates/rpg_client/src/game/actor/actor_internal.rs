@@ -3,7 +3,7 @@ use super::{
     player::{Player, PlayerBundle},
 };
 use crate::game::{
-    assets::RenderResources, health_bar::HealthBar, item::UnitStorage, metadata::MetadataResources,
+    assets::RenderResources, health_bar::HealthBar, metadata::MetadataResources,
     passive_tree::PassiveTree, plugin::GameSessionCleanup,
 };
 
@@ -32,6 +32,7 @@ use rpg_core::{
 };
 use rpg_util::{
     actions::Actions,
+    item::UnitStorage,
     unit::{Hero, Unit, UnitBundle, Villain, VillainBundle},
 };
 use util::cleanup::CleanupStrategy;

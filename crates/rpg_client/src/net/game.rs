@@ -26,6 +26,7 @@ use bevy::{
 
 use rpg_core::{
     class::Class,
+    damage::DamageValue,
     stat::StatChange,
     unit::{UnitInfo, UnitKind},
 };
@@ -201,24 +202,30 @@ pub(crate) fn receive_stat_updates(
 }
 
 pub(crate) fn receive_spawn_item(
+    mut ground_items: ResMut<GroundItemDrops>,
     mut spawn_reader: EventReader<MessageEvent<SCSpawnItem>>,
     mut player_q: Query<&Unit, With<Player>>,
 ) {
     for event in spawn_reader.read() {
         let spawn_msg = event.message();
 
-        info!("item drop: {:?}", spawn_msg.0);
+        info!("item drop: {:?}", spawn_msg);
+
+        ground_items.0.push(spawn_msg.items.clone());
     }
 }
 
 pub(crate) fn receive_spawn_items(
+    mut ground_items: ResMut<GroundItemDrops>,
     mut spawn_reader: EventReader<MessageEvent<SCSpawnItems>>,
     mut player_q: Query<&Unit, With<Player>>,
 ) {
     for event in spawn_reader.read() {
         let spawn_msg = event.message();
 
-        info!("item drops: {:?}", spawn_msg.0);
+        info!("item drops: {:?}", spawn_msg);
+
+        ground_items.0.push(spawn_msg.items.clone());
     }
 }
 
@@ -264,8 +271,38 @@ pub(crate) fn receive_spawn_villain(
     }
 }
 
+pub(crate) fn receive_combat_result(mut combat_reader: EventReader<MessageEvent<SCCombatResult>>) {
+    for event in combat_reader.read() {
+        let combat_msg = event.message();
+
+        info!("combat result {combat_msg:?}");
+    }
+}
+
+pub(crate) fn receive_damage(
+    mut combat_reader: EventReader<MessageEvent<SCDamage>>,
+    mut unit_q: Query<&mut Unit>,
+) {
+    for event in combat_reader.read() {
+        let combat_msg = event.message();
+
+        for mut unit in &mut unit_q {
+            if unit.uid != combat_msg.uid {
+                continue;
+            }
+
+            if let DamageValue::Flat(damage) = combat_msg.damage.value {
+                let hp = &mut unit.stats.vitals.stats.get_mut("Hp").unwrap();
+
+                let mut hp_ref = hp.value.u32_mut();
+                *hp_ref = hp_ref.saturating_sub(damage);
+            }
+        }
+        info!("combat result {combat_msg:?}");
+    }
+}
+
 pub(crate) fn receive_villain_death(
-    mut ground_items: ResMut<GroundItemDrops>,
     mut death_reader: EventReader<MessageEvent<SCVillainDeath>>,
     mut villain_q: Query<(&Unit, &mut AnimationState), With<Villain>>,
 ) {
@@ -275,7 +312,7 @@ pub(crate) fn receive_villain_death(
         info!("villain eath {death_msg:?}");
 
         for (villain, mut villain_anim) in &mut villain_q {
-            if villain.uid != death_msg.uid {
+            if villain.uid != death_msg.0 {
                 continue;
             }
 
@@ -285,8 +322,6 @@ pub(crate) fn receive_villain_death(
                 index: 1,
             };
         }
-
-        ground_items.0.push(death_msg.drops.clone());
     }
 }
 

@@ -10,7 +10,9 @@ use rpg_core::{
     storage::{StorageSlot as RpgStorageSlot, UnitStorage as RpgUnitStorage},
 };
 use rpg_util::{
-    item::{GroundItem, GroundItemBundle, GroundItemDrops, ResourceItem, StorableItem},
+    item::{
+        GroundItem, GroundItemBundle, GroundItemDrops, ResourceItem, StorableItem, StorageSlot,
+    },
     unit::Unit,
 };
 use util::{
@@ -40,18 +42,6 @@ use bevy::{
 use fastrand::Rng;
 
 use std::borrow::Cow;
-
-#[derive(Component, Copy, Clone, Deref, DerefMut, PartialEq, Eq, Debug)]
-pub struct StorageSlot(pub RpgStorageSlot);
-
-#[derive(Component, Deref, DerefMut)]
-pub struct UnitStorage(pub RpgUnitStorage);
-
-impl Default for UnitStorage {
-    fn default() -> Self {
-        Self(RpgUnitStorage::new())
-    }
-}
 
 #[derive(Default, Resource)]
 pub struct CursorItem {
