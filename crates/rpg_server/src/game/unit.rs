@@ -10,6 +10,7 @@ use bevy::{
     },
     hierarchy::DespawnRecursiveExt,
     log::info,
+    math::Vec3,
     prelude::{Deref, DerefMut},
     time::{Time, Timer},
     transform::components::Transform,
@@ -55,20 +56,41 @@ pub(crate) fn upkeep(
 
 pub(crate) fn attract_resource_items(
     mut commands: Commands,
+    mut net_params: NetworkParamsRW,
     mut game_state: ResMut<GameState>,
     time: Res<Time>,
     metadata: Res<MetadataResources>,
     mut item_q: Query<(Entity, &mut Transform, &mut GroundItem), With<ResourceItem>>,
-    mut hero_q: Query<(&Transform, &mut Unit), (With<Hero>, Without<GroundItem>, Without<Corpse>)>,
+    mut hero_q: Query<
+        (Entity, &Transform, &mut Unit, &AccountInstance),
+        (With<Hero>, Without<GroundItem>, Without<Corpse>),
+    >,
 ) {
-    // This is being reworked for multiplayer support.
-    // for each item, find the closest hero that is in range and move towards that unit at that
-    // it's item attraction speed
-    let Ok((u_transform, mut unit)) = hero_q.get_single_mut() else {
-        return;
-    };
-
+    // for each item, find the nearest hero in range and attract towards it
     for (i_entity, mut i_transform, mut i_item) in &mut item_q {
+        let mut nearest = Entity::PLACEHOLDER;
+        let max_distance = 8.;
+        let mut nearest_distance = max_distance;
+
+        for (u_entity, u_transform, unit, _) in &hero_q {
+            let distance = u_transform.translation.distance(i_transform.translation);
+
+            if distance < nearest_distance {
+                nearest_distance = distance;
+                nearest = u_entity;
+            }
+        }
+
+        if nearest == Entity::PLACEHOLDER {
+            info!("no hero nearby");
+            continue;
+        };
+
+        let Ok((_, u_transform, mut unit, account)) = hero_q.get_mut(nearest) else {
+            info!("hero query failed");
+            continue;
+        };
+
         let mut i_ground = i_transform.translation;
         i_ground.y = 0.;
 
@@ -80,11 +102,21 @@ pub(crate) fn attract_resource_items(
         } else if distance < 0.25 {
             let item = i_item.0.take().unwrap();
             let _leveled_up = unit.apply_rewards(&metadata.0, &item);
-            //u_audio.push("item_pickup".into());
-            //game_state.stats.items_looted += 1;
+            // TODO adjust unit statistics
+            // TODO send rewards to client
 
-            info!("hero would have picked up item");
-            //commands.entity(i_entity).despawn_recursive();
+            let client = net_params
+                .context
+                .get_client_from_account_id(account.0.info.id)
+                .unwrap();
+
+            net_params.server.send_message_to_target::<Channel1, _>(
+                SCDespawnItem(item.uid.0),
+                NetworkTarget::Only(vec![client.id]),
+            );
+
+            info!("hero attracted item");
+            commands.entity(i_entity).despawn_recursive();
         } else {
             let target_dir = (u_transform.translation - i_ground).normalize_or_zero();
             i_transform.translation += target_dir * time.delta_seconds() * 4.;
