@@ -51,9 +51,6 @@ pub struct PlayerBundle {
     pub hero: Hero,
 }
 
-#[derive(Component)]
-pub struct Nearest;
-
 pub fn update_debug_lines(
     mut gizmos: Gizmos,
     player_q: Query<&Transform, (With<Player>, Without<Villain>)>,

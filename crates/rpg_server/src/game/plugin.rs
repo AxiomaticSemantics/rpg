@@ -1,4 +1,4 @@
-use super::{action, skill, unit, villain};
+use super::{action, item, skill, unit, villain};
 
 use crate::{
     account::AccountInstance,
@@ -113,6 +113,7 @@ impl Plugin for GamePlugin {
                     skill::update_skill,
                     skill::collide_skills,
                     skill::handle_contacts,
+                    item::spawn_ground_items,
                     villain::villain_think,
                 )
                     .chain()

@@ -32,7 +32,7 @@ use rpg_core::{
 };
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
-    item::GroundItemDrops,
+    item::{GroundItem, GroundItemDrops},
     unit::{Corpse, Unit, UnitBundle, Villain, VillainBundle},
 };
 
@@ -226,6 +226,25 @@ pub(crate) fn receive_spawn_items(
         info!("item drops: {:?}", spawn_msg);
 
         ground_items.0.push(spawn_msg.items.clone());
+    }
+}
+
+pub(crate) fn receive_despawn_item(
+    mut commands: Commands,
+    mut despawn_reader: EventReader<MessageEvent<SCDespawnItem>>,
+    item_q: Query<(Entity, &GroundItem)>,
+) {
+    for event in despawn_reader.read() {
+        let despawn_msg = event.message();
+
+        for (entity, item) in &item_q {
+            if item.0.as_ref().unwrap().uid.0 != despawn_msg.0 {
+                continue;
+            }
+
+            commands.entity(entity).despawn_recursive();
+            info!("ground item depspawn: {despawn_msg:?}");
+        }
     }
 }
 
