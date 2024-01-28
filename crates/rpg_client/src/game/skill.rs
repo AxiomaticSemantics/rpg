@@ -3,31 +3,24 @@ use super::{
     actor::animation::AnimationState,
     assets::RenderResources,
     metadata::MetadataResources,
-    plugin::{GameOverState, GameSessionCleanup, GameState, PlayState},
+    plugin::GameSessionCleanup,
     prop::{PropHandle, PropInfo},
 };
 
 use audio_manager::plugin::AudioActions;
-use rpg_core::{
-    combat::{AttackResult, CombatResult},
-    damage::Damage,
-    item::ItemDrops,
-    skill::{
-        effect::*, skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData, Origin,
-        ProjectileInstance, ProjectileShape, Skill, SkillId, SkillInfo, SkillInstance,
-    },
-    unit::UnitKind,
+use rpg_core::skill::{
+    effect::*, skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData, Origin,
+    ProjectileInstance, ProjectileShape, Skill, SkillId, SkillInfo, SkillInstance,
 };
 use rpg_util::{
     actions::{Action, ActionData, Actions, AttackData, KnockbackData as KnockbackActionData},
-    item::GroundItemDrops,
     skill::*,
     unit::{Corpse, Unit},
 };
 
 use util::{
     cleanup::CleanupStrategy,
-    math::{intersect_aabb, Aabb as UtilAabb, AabbComponent},
+    math::{intersect_aabb, Aabb, AabbComponent},
     random::SharedRng,
 };
 
@@ -35,10 +28,8 @@ use bevy::{
     animation::RepeatAnimation,
     asset::{Assets, Handle},
     ecs::{
-        bundle::Bundle,
-        component::Component,
         entity::Entity,
-        event::{Event, EventReader, EventWriter},
+        event::EventWriter,
         query::{With, Without},
         system::{Commands, Query, Res, ResMut},
     },
@@ -47,14 +38,12 @@ use bevy::{
     log::debug,
     math::{Quat, Vec3},
     pbr::{MaterialMeshBundle, PbrBundle, StandardMaterial},
-    prelude::{Deref, DerefMut},
     render::{
         mesh::{
             shape::{Circle, Icosphere},
             Mesh,
         },
         prelude::SpatialBundle,
-        //primitives::Aabb,
     },
     scene::SceneBundle,
     time::{Time, Timer, TimerMode},
@@ -287,14 +276,14 @@ pub fn collide_skills(
                 SkillInstance::Direct(_) | SkillInstance::Projectile(_) => intersect_aabb(
                     (
                         &(s_transform.translation),
-                        &UtilAabb {
+                        &Aabb {
                             center: s_aabb.center,
                             half_extents: s_aabb.half_extents,
                         },
                     ),
                     (
                         &(u_transform.translation + unit_offset),
-                        &UtilAabb {
+                        &Aabb {
                             center: u_aabb.center,
                             half_extents: u_aabb.half_extents,
                         },
@@ -329,7 +318,7 @@ pub fn prepare_skill(
     unit: &Unit,
     unit_transform: &Transform,
 ) -> (
-    UtilAabb,
+    Aabb,
     Transform,
     SkillUse,
     Option<PropHandle>,
@@ -394,10 +383,8 @@ pub fn prepare_skill(
                 let aabb = if renderables.aabbs.contains_key("bolt_01") {
                     renderables.aabbs["bolt_01"]
                 } else {
-                    let aabb = UtilAabb::from_min_max(
-                        Vec3::new(-0.1, -0.1, -0.25),
-                        Vec3::new(0.1, 0.1, 0.25),
-                    );
+                    let aabb =
+                        Aabb::from_min_max(Vec3::new(-0.1, -0.1, -0.25), Vec3::new(0.1, 0.1, 0.25));
                     renderables.aabbs.insert("bolt_01".into(), aabb);
                     aabb
                 };
@@ -423,7 +410,7 @@ pub fn prepare_skill(
                     let aabb = mesh.compute_aabb().unwrap();
                     let handle = meshes.add(mesh);
 
-                    let aabb = UtilAabb {
+                    let aabb = Aabb {
                         center: aabb.center,
                         half_extents: aabb.half_extents,
                     };
@@ -513,7 +500,7 @@ pub fn prepare_skill(
                 //let aabb = mesh.compute_aabb().unwrap();
 
                 // 2d shapes are on the XY plane
-                let aabb = UtilAabb::from_min_max(
+                let aabb = Aabb::from_min_max(
                     Vec3::new(-radius, -radius, 0.0),
                     Vec3::new(radius, radius, 0.5),
                 );
@@ -558,7 +545,7 @@ pub fn prepare_skill(
 
 pub(crate) fn spawn_instance(
     commands: &mut Commands,
-    aabb: UtilAabb,
+    aabb: Aabb,
     transform: Transform,
     skill_use_instance: SkillUse,
     mesh: Option<PropHandle>,
