@@ -102,7 +102,6 @@ pub(crate) fn receive_player_spawn(
         actor::spawn_actor(
             entity,
             &mut commands,
-            &metadata,
             &renderables,
             unit,
             Some(storage),
@@ -280,7 +279,6 @@ pub(crate) fn receive_spawn_villain(
         spawn_actor(
             Entity::PLACEHOLDER,
             &mut commands,
-            &metadata,
             &renderables,
             unit,
             None,

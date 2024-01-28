@@ -1,12 +1,15 @@
 #![allow(clippy::too_many_arguments)]
 
-use crate::game::{
-    actor::{animation::AnimationState, player::Player},
-    assets::RenderResources,
-    health_bar::{HealthBar, HealthBarFrame, HealthBarRect},
-    metadata::MetadataResources,
-    plugin::{GameCamera, GameState},
-    skill,
+use crate::{
+    assets::AudioAssets,
+    game::{
+        actor::{animation::AnimationState, player::Player},
+        assets::RenderResources,
+        health_bar::{HealthBar, HealthBarFrame, HealthBarRect},
+        metadata::MetadataResources,
+        plugin::{GameCamera, GameState},
+        skill,
+    },
 };
 
 use audio_manager::plugin::AudioActions;
@@ -19,32 +22,45 @@ use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions::{ActionData, Actions, State},
     item::{GroundItem, ResourceItem, StorableItem, UnitStorage},
-    unit::{Corpse, Hero, Unit, UnitBundle, Villain},
+    unit::{Corpse, Hero, Unit},
 };
 
-use util::{
-    math::{intersect_aabb, Aabb as UtilAabb, AabbComponent},
-    random::SharedRng,
-};
+use util::random::SharedRng;
 
 use bevy::{
     animation::RepeatAnimation,
     asset::Assets,
+    audio::{AudioBundle, PlaybackSettings},
     ecs::{
-        bundle::Bundle,
-        component::Component,
         entity::Entity,
-        query::{With, Without},
+        query::{Changed, With, Without},
         system::{Commands, ParamSet, Query, Res, ResMut},
     },
-    hierarchy::{Children, DespawnRecursiveExt},
+    hierarchy::{BuildChildren, Children, DespawnRecursiveExt},
     input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
     math::Vec3,
-    prelude::{Deref, DerefMut},
     render::mesh::Mesh,
     time::{Time, Timer, TimerMode},
     transform::components::Transform,
 };
+
+pub(crate) fn unit_audio(
+    mut commands: Commands,
+    tracks: Res<AudioAssets>,
+    mut unit_q: Query<(Entity, &mut AudioActions), (With<Unit>, Changed<AudioActions>)>,
+) {
+    for (entity, mut audio_actions) in &mut unit_q {
+        for action in audio_actions.iter() {
+            commands
+                .spawn(AudioBundle {
+                    source: tracks.foreground_tracks[action.as_str()].clone_weak(),
+                    settings: PlaybackSettings::REMOVE,
+                })
+                .set_parent(entity);
+        }
+        audio_actions.clear();
+    }
+}
 
 pub fn update_health_bars(
     mut unit_q: Query<
@@ -170,7 +186,7 @@ pub(crate) fn attract_resource_items(
     mut game_state: ResMut<GameState>,
     time: Res<Time>,
     metadata: Res<MetadataResources>,
-    mut item_q: Query<(Entity, &mut Transform, &mut GroundItem), With<ResourceItem>>,
+    mut item_q: Query<(&mut Transform, &GroundItem), With<ResourceItem>>,
     mut hero_q: Query<
         (&Transform, &mut Unit, &mut AudioActions),
         (With<Hero>, Without<GroundItem>, Without<Corpse>),
@@ -180,7 +196,7 @@ pub(crate) fn attract_resource_items(
         return;
     };
 
-    for (i_entity, mut i_transform, mut i_item) in &mut item_q {
+    for (mut i_transform, i_item) in &mut item_q {
         let mut i_ground = i_transform.translation;
         i_ground.y = 0.;
 
@@ -190,13 +206,9 @@ pub(crate) fn attract_resource_items(
         if distance > pickup_radius {
             continue;
         } else if distance < 0.25 {
-            //let item = i_item.0.take().unwrap();
-            //let _leveled_up = unit.apply_rewards(&metadata.rpg, &item);
             // FIXME trigger this after receiving a message
-            // u_audio.push("item_pickup".into());
+            u_audio.push("item_pickup".into());
             game_state.session_stats.items_looted += 1;
-
-            //commands.entity(i_entity).despawn_recursive();
         } else {
             let target_dir = (u_transform.translation - i_ground).normalize_or_zero();
             i_transform.translation += target_dir * time.delta_seconds() * 4.;
