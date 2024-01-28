@@ -136,14 +136,14 @@ pub(crate) fn hover_storage(
                     border.0 = Color::AZURE;
                 }
 
-                if let Some(item) = cursor_item.item {
+                if let Some(item) = cursor_item.0 {
                     if storage.slot_has_item(node.0) {
                         if item.0 == node.0 {
-                            cursor_item.item = None;
+                            cursor_item.0 = None;
                         } else {
-                            let item = cursor_item.item;
+                            let item = cursor_item.0;
 
-                            cursor_item.item = Some(StorageSlot(node.0));
+                            cursor_item.0 = Some(StorageSlot(node.0));
                             storage.0.swap_slot(item.unwrap().0, node.0);
                             node.0 = item.unwrap().0;
                             border.0 = Color::DARK_GRAY;
@@ -153,12 +153,12 @@ pub(crate) fn hover_storage(
                         }
                     } else {
                         storage.0.swap_slot(item.0, node.0);
-                        cursor_item.item = None;
+                        cursor_item.0 = None;
 
                         unit.apply_item_stats(&metadata.rpg, &storage.0);
                     }
                 } else if slot.item.is_some() {
-                    cursor_item.item = Some(StorageSlot(RpgStorageSlot {
+                    cursor_item.0 = Some(StorageSlot(RpgStorageSlot {
                         storage_index: node.storage_index,
                         slot_index: node.slot_index,
                     }));
@@ -194,8 +194,8 @@ pub(crate) fn update_cursor_item(
     let player_transform = player_q.single();
     let mut storage = storage_q.single_mut();
 
-    if cursor_item.item.is_some() {
-        let item_slot = &cursor_item.item.as_ref().unwrap();
+    if cursor_item.is_some() {
+        let item_slot = &cursor_item.as_ref().unwrap();
         let mut style = cursor_ui_q.single_mut();
         if input.just_pressed(MouseButton::Right) {
             // Drop the cursor item on the ground
@@ -231,7 +231,7 @@ pub(crate) fn update_cursor_item(
             }
 
             style.display = Display::None;
-            cursor_item.item = None;
+            cursor_item.0 = None;
             return;
         }
     }
@@ -241,7 +241,7 @@ pub(crate) fn update_cursor_item(
     }
 
     let mut style = cursor_ui_q.single_mut();
-    if let Some(item) = &cursor_item.item {
+    if let Some(item) = &cursor_item.0 {
         let children = cursor_item_stats_q.single_mut();
         let mut text = text_q.get_mut(*children.first().unwrap()).unwrap();
 
