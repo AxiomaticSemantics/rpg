@@ -7,7 +7,7 @@ use audio_manager::plugin::AudioActions;
 use rpg_core::{
     item::{Item, ItemInfo, ItemKind},
     metadata::Metadata,
-    storage::{StorageSlot as RpgStorageSlot, UnitStorage as RpgUnitStorage},
+    storage::UnitStorage as RpgUnitStorage,
 };
 use rpg_util::{
     item::{
@@ -23,7 +23,6 @@ use util::{
 
 use bevy::{
     ecs::{
-        bundle::Bundle,
         component::Component,
         entity::Entity,
         query::With,
@@ -43,10 +42,8 @@ use fastrand::Rng;
 
 use std::borrow::Cow;
 
-#[derive(Default, Resource)]
-pub struct CursorItem {
-    pub item: Option<StorageSlot>,
-}
+#[derive(Default, Deref, DerefMut, Resource)]
+pub struct CursorItem(pub Option<StorageSlot>);
 
 #[derive(Component)]
 pub struct GroundItemHover;

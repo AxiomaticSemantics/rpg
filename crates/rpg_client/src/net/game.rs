@@ -57,7 +57,7 @@ pub(crate) fn receive_player_join_error(
     mut state: ResMut<NextState<AppState>>,
     mut join_events: EventReader<MessageEvent<SCPlayerJoinError>>,
 ) {
-    for event in join_events.read() {
+    for _ in join_events.read() {
         info!("join error");
         // TODO Error screen
 
@@ -71,17 +71,16 @@ pub(crate) fn receive_player_join_error(
 pub(crate) fn receive_player_spawn(
     mut commands: Commands,
     mut state: ResMut<NextState<AppState>>,
-    metadata: Res<MetadataResources>,
     renderables: Res<RenderResources>,
     mut spawn_events: EventReader<MessageEvent<SCPlayerSpawn>>,
-    mut account_q: Query<(Entity, &mut RpgAccount)>,
+    account_q: Query<(Entity, &RpgAccount)>,
 ) {
     for event in spawn_events.read() {
         info!("spawning");
 
         let spawn_msg = event.message();
 
-        let (entity, mut account) = account_q.single_mut();
+        let (entity, account) = account_q.single();
 
         let transform = Transform::from_translation(spawn_msg.position)
             .looking_to(spawn_msg.direction, Vec3::Y);
@@ -106,7 +105,7 @@ pub(crate) fn receive_player_spawn(
             unit,
             Some(storage),
             Some(passive_tree),
-            None,
+            Some(transform),
         );
 
         state.set(AppState::Game);
@@ -118,39 +117,39 @@ pub(crate) fn receive_player_spawn(
 
 pub(crate) fn receive_player_move(
     mut move_events: EventReader<MessageEvent<SCMovePlayer>>,
-    mut player_q: Query<(&mut Transform, &Unit), With<Player>>,
+    mut player_q: Query<&mut Transform, With<Player>>,
 ) {
     for event in move_events.read() {
         let move_msg = event.message();
 
         // info!("move: {move_msg:?}");
-        let (mut transform, player) = player_q.single_mut();
+        let mut transform = player_q.single_mut();
         transform.translation = move_msg.0;
     }
 }
 
 pub(crate) fn receive_player_move_end(
     mut move_events: EventReader<MessageEvent<SCMovePlayerEnd>>,
-    mut player_q: Query<(&mut Transform, &Unit), With<Player>>,
+    mut player_q: Query<&mut Transform, With<Player>>,
 ) {
     for event in move_events.read() {
         let move_msg = event.message();
 
         // info!("move: {move_msg:?}");
-        let (mut transform, player) = player_q.single_mut();
+        let mut transform = player_q.single_mut();
         transform.translation = move_msg.0;
     }
 }
 
 pub(crate) fn receive_player_rotation(
     mut rotation_events: EventReader<MessageEvent<SCRotPlayer>>,
-    mut player_q: Query<(&mut Transform, &Unit), With<Player>>,
+    mut player_q: Query<&mut Transform, With<Player>>,
 ) {
     for event in rotation_events.read() {
         let rot_msg = event.message();
 
         // info!("rot: {rot_msg:?}");
-        let (mut transform, player) = player_q.single_mut();
+        let mut transform = player_q.single_mut();
         transform.look_to(rot_msg.0, Vec3::Y);
     }
 }
@@ -184,10 +183,11 @@ pub(crate) fn receive_stat_updates(
 
         let mut player = player_q.single_mut();
         for update in &update_msg.0 {
+            /* TODO use for animation or remove
             match &update.change {
                 StatChange::Gain(v) => {}
                 StatChange::Loss(v) => {}
-            }
+            }*/
 
             player
                 .stats
@@ -203,7 +203,6 @@ pub(crate) fn receive_stat_updates(
 pub(crate) fn receive_spawn_item(
     mut ground_items: ResMut<GroundItemDrops>,
     mut spawn_reader: EventReader<MessageEvent<SCSpawnItem>>,
-    mut player_q: Query<&Unit, With<Player>>,
 ) {
     for event in spawn_reader.read() {
         let spawn_msg = event.message();
@@ -217,7 +216,6 @@ pub(crate) fn receive_spawn_item(
 pub(crate) fn receive_spawn_items(
     mut ground_items: ResMut<GroundItemDrops>,
     mut spawn_reader: EventReader<MessageEvent<SCSpawnItems>>,
-    mut player_q: Query<&Unit, With<Player>>,
 ) {
     for event in spawn_reader.read() {
         let spawn_msg = event.message();
@@ -311,7 +309,7 @@ pub(crate) fn receive_damage(
             if let DamageValue::Flat(damage) = combat_msg.damage.value {
                 let hp = &mut unit.stats.vitals.stats.get_mut("Hp").unwrap();
 
-                let mut hp_ref = hp.value.u32_mut();
+                let hp_ref = hp.value.u32_mut();
                 *hp_ref = hp_ref.saturating_sub(damage);
             }
         }
@@ -353,7 +351,7 @@ pub(crate) fn receive_hero_death(mut death_reader: EventReader<MessageEvent<SCHe
 pub(crate) fn receive_despawn_corpse(
     mut commands: Commands,
     mut despawn_reader: EventReader<MessageEvent<SCDespawnCorpse>>,
-    mut unit_q: Query<(Entity, &Unit), With<Corpse>>,
+    unit_q: Query<(Entity, &Unit), With<Corpse>>,
 ) {
     for event in despawn_reader.read() {
         let despawn_msg = event.message();
