@@ -212,7 +212,7 @@ impl Plugin for GamePlugin {
                             )
                                 .chain(),
                             background_audio,
-                            unit_audio,
+                            unit::unit_audio,
                             actor::animation::animator,
                             ui::menu::toggle_menu,
                         )
@@ -342,24 +342,6 @@ fn send_client_ready(mut net_client: ResMut<Client>) {
     net_client.send_message::<Channel1, _>(CSClientReady);
 }
 
-pub(crate) fn unit_audio(
-    mut commands: Commands,
-    tracks: Res<AudioAssets>,
-    mut unit_q: Query<(Entity, &mut AudioActions), (With<Unit>, Changed<AudioActions>)>,
-) {
-    for (entity, mut audio_actions) in &mut unit_q {
-        for action in audio_actions.iter() {
-            commands
-                .spawn(AudioBundle {
-                    source: tracks.foreground_tracks[action.as_str()].clone_weak(),
-                    settings: PlaybackSettings::REMOVE,
-                })
-                .set_parent(entity);
-        }
-        audio_actions.clear();
-    }
-}
-
 fn is_loading(game_state: Res<GameState>) -> bool {
     game_state.state.loading()
 }
@@ -370,45 +352,6 @@ fn is_game(game_state: Res<GameState>) -> bool {
 
 fn is_death(game_state: Res<GameState>) -> bool {
     game_state.state.death()
-}
-
-fn _calculate_normals(indices: &Vec<u32>, vertices: &[[f32; 3]], normals: &mut [[f32; 3]]) {
-    let vertex_count = indices.len();
-
-    for i in (0..vertex_count).step_by(3) {
-        let v1 = Vec3::from_array(vertices[indices[i + 1] as usize])
-            - Vec3::from_array(vertices[indices[i] as usize]);
-        let v2 = Vec3::from_array(vertices[indices[i + 2] as usize])
-            - Vec3::from_array(vertices[indices[i] as usize]);
-        let face_normal = v1.cross(v2).normalize();
-
-        // Add the face normal to the 3 vertex normals that are touching this face
-        normals[indices[i] as usize] =
-            (Vec3::from_array(normals[indices[i] as usize]) + face_normal).to_array();
-        normals[indices[i + 1] as usize] =
-            (Vec3::from_array(normals[indices[i + 1] as usize]) + face_normal).to_array();
-        normals[indices[i + 2] as usize] =
-            (Vec3::from_array(normals[indices[i + 2] as usize]) + face_normal).to_array();
-    }
-
-    // Now loop through each vertex vector, and avarage out all the normals stored.
-    for normal in &mut normals.iter_mut() {
-        *normal = Vec3::from_array(*normal).normalize().to_array();
-    }
-}
-
-fn _make_indices(indices: &mut Vec<u32>, size: [u32; 2]) {
-    for y in 0..size[1] - 1 {
-        for x in 0..size[0] - 1 {
-            let index = y * size[0] + x;
-            indices.push(index + size[0] + 1);
-            indices.push(index + 1);
-            indices.push(index + size[0]);
-            indices.push(index);
-            indices.push(index + size[0]);
-            indices.push(index + 1);
-        }
-    }
 }
 
 pub(crate) fn load_assets(mut commands: Commands) {

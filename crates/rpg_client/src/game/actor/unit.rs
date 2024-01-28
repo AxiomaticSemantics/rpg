@@ -1,12 +1,15 @@
 #![allow(clippy::too_many_arguments)]
 
-use crate::game::{
-    actor::{animation::AnimationState, player::Player},
-    assets::RenderResources,
-    health_bar::{HealthBar, HealthBarFrame, HealthBarRect},
-    metadata::MetadataResources,
-    plugin::{GameCamera, GameState},
-    skill,
+use crate::{
+    assets::AudioAssets,
+    game::{
+        actor::{animation::AnimationState, player::Player},
+        assets::RenderResources,
+        health_bar::{HealthBar, HealthBarFrame, HealthBarRect},
+        metadata::MetadataResources,
+        plugin::{GameCamera, GameState},
+        skill,
+    },
 };
 
 use audio_manager::plugin::AudioActions;
@@ -30,14 +33,15 @@ use util::{
 use bevy::{
     animation::RepeatAnimation,
     asset::Assets,
+    audio::{AudioBundle, PlaybackSettings},
     ecs::{
         bundle::Bundle,
         component::Component,
         entity::Entity,
-        query::{With, Without},
+        query::{Changed, With, Without},
         system::{Commands, ParamSet, Query, Res, ResMut},
     },
-    hierarchy::{Children, DespawnRecursiveExt},
+    hierarchy::{BuildChildren, Children, DespawnRecursiveExt},
     input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
     math::Vec3,
     prelude::{Deref, DerefMut},
@@ -45,6 +49,24 @@ use bevy::{
     time::{Time, Timer, TimerMode},
     transform::components::Transform,
 };
+
+pub(crate) fn unit_audio(
+    mut commands: Commands,
+    tracks: Res<AudioAssets>,
+    mut unit_q: Query<(Entity, &mut AudioActions), (With<Unit>, Changed<AudioActions>)>,
+) {
+    for (entity, mut audio_actions) in &mut unit_q {
+        for action in audio_actions.iter() {
+            commands
+                .spawn(AudioBundle {
+                    source: tracks.foreground_tracks[action.as_str()].clone_weak(),
+                    settings: PlaybackSettings::REMOVE,
+                })
+                .set_parent(entity);
+        }
+        audio_actions.clear();
+    }
+}
 
 pub fn update_health_bars(
     mut unit_q: Query<
