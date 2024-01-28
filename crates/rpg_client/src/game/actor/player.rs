@@ -1,14 +1,10 @@
-use crate::{
-    game::{
-        actor,
-        assets::RenderResources,
-        controls::{Controls, CursorPosition},
-        environment::PlayerSpotLight,
-        metadata::MetadataResources,
-        plugin::{GameCamera, GameState},
-        world::zone::Zone,
-    },
-    net::account::RpgAccount,
+use crate::game::{
+    actor,
+    controls::{Controls, CursorPosition},
+    environment::PlayerSpotLight,
+    metadata::MetadataResources,
+    plugin::{GameCamera, GameState},
+    world::zone::Zone,
 };
 
 use rpg_network_protocol::protocol::*;
@@ -23,13 +19,12 @@ use bevy::{
         bundle::Bundle,
         change_detection::DetectChanges,
         component::Component,
-        event::EventReader,
         query::{With, Without},
-        system::{Commands, Query, Res, ResMut},
+        system::{Query, Res, ResMut},
     },
     gizmos::gizmos::Gizmos,
     log::info,
-    math::{Vec2, Vec3},
+    math::Vec3,
     pbr::SpotLight,
     render::color::Color,
     time::Time,

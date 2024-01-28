@@ -3,8 +3,8 @@ use super::{
     player::{Player, PlayerBundle},
 };
 use crate::game::{
-    assets::RenderResources, health_bar::HealthBar, metadata::MetadataResources,
-    passive_tree::PassiveTree, plugin::GameSessionCleanup,
+    assets::RenderResources, health_bar::HealthBar, passive_tree::PassiveTree,
+    plugin::GameSessionCleanup,
 };
 
 use bevy::{
@@ -17,7 +17,6 @@ use bevy::{
     prelude::{Deref, DerefMut},
     render::{mesh::Mesh, primitives::Aabb},
     scene::{Scene, SceneBundle},
-    time::{Timer, TimerMode},
     transform::components::Transform,
     utils::default,
 };
@@ -31,7 +30,6 @@ use rpg_core::{
     villain::VillainId,
 };
 use rpg_util::{
-    actions::Actions,
     item::UnitStorage,
     unit::{Hero, Unit, UnitBundle, Villain, VillainBundle},
 };

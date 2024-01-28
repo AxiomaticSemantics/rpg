@@ -22,21 +22,16 @@ use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions::{ActionData, Actions, State},
     item::{GroundItem, ResourceItem, StorableItem, UnitStorage},
-    unit::{Corpse, Hero, Unit, UnitBundle, Villain},
+    unit::{Corpse, Hero, Unit},
 };
 
-use util::{
-    math::{intersect_aabb, Aabb as UtilAabb, AabbComponent},
-    random::SharedRng,
-};
+use util::random::SharedRng;
 
 use bevy::{
     animation::RepeatAnimation,
     asset::Assets,
     audio::{AudioBundle, PlaybackSettings},
     ecs::{
-        bundle::Bundle,
-        component::Component,
         entity::Entity,
         query::{Changed, With, Without},
         system::{Commands, ParamSet, Query, Res, ResMut},
@@ -44,7 +39,6 @@ use bevy::{
     hierarchy::{BuildChildren, Children, DespawnRecursiveExt},
     input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
     math::Vec3,
-    prelude::{Deref, DerefMut},
     render::mesh::Mesh,
     time::{Time, Timer, TimerMode},
     transform::components::Transform,

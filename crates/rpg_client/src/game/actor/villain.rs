@@ -11,7 +11,6 @@ use bevy::{
     },
     math::Vec3,
     transform::components::Transform,
-    utils::Duration,
 };
 
 // TODO reuse or remove
