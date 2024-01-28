@@ -99,7 +99,6 @@ pub fn get_villain_actor_key(id: VillainId) -> &'static str {
 pub(crate) fn spawn_actor(
     entity: Entity,
     commands: &mut Commands,
-    metadata: &MetadataResources,
     renderables: &RenderResources,
     unit: RpgUnit,
     storage: Option<RpgUnitStorage>,
@@ -192,9 +191,6 @@ pub(crate) fn spawn_actor(
             };
         }
         UnitKind::Villain => {
-            let unit_info = unit.info.villain();
-            let villain_info = &metadata.rpg.unit.villains[&unit_info.id];
-
             let actor = renderables.actors[actor_key].actor.clone();
 
             let actor_villain_bundle = (

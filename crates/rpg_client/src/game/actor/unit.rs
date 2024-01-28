@@ -192,7 +192,7 @@ pub(crate) fn attract_resource_items(
     mut game_state: ResMut<GameState>,
     time: Res<Time>,
     metadata: Res<MetadataResources>,
-    mut item_q: Query<(Entity, &mut Transform, &mut GroundItem), With<ResourceItem>>,
+    mut item_q: Query<(&mut Transform, &GroundItem), With<ResourceItem>>,
     mut hero_q: Query<
         (&Transform, &mut Unit, &mut AudioActions),
         (With<Hero>, Without<GroundItem>, Without<Corpse>),
@@ -202,7 +202,7 @@ pub(crate) fn attract_resource_items(
         return;
     };
 
-    for (i_entity, mut i_transform, mut i_item) in &mut item_q {
+    for (mut i_transform, i_item) in &mut item_q {
         let mut i_ground = i_transform.translation;
         i_ground.y = 0.;
 
@@ -212,13 +212,9 @@ pub(crate) fn attract_resource_items(
         if distance > pickup_radius {
             continue;
         } else if distance < 0.25 {
-            //let item = i_item.0.take().unwrap();
-            //let _leveled_up = unit.apply_rewards(&metadata.rpg, &item);
             // FIXME trigger this after receiving a message
-            // u_audio.push("item_pickup".into());
+            u_audio.push("item_pickup".into());
             game_state.session_stats.items_looted += 1;
-
-            //commands.entity(i_entity).despawn_recursive();
         } else {
             let target_dir = (u_transform.translation - i_ground).normalize_or_zero();
             i_transform.translation += target_dir * time.delta_seconds() * 4.;
