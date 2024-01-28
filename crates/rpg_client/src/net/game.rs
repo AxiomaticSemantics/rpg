@@ -11,7 +11,6 @@ use crate::{
 use bevy::{
     animation::RepeatAnimation,
     ecs::{
-        component::Component,
         entity::Entity,
         event::EventReader,
         query::With,
@@ -33,7 +32,7 @@ use rpg_core::{
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     item::{GroundItem, GroundItemDrops},
-    unit::{Corpse, Unit, UnitBundle, Villain, VillainBundle},
+    unit::{Corpse, Unit, Villain},
 };
 
 use lightyear::client::events::MessageEvent;

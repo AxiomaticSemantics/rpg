@@ -1,8 +1,7 @@
 use bevy::{
     ecs::{
-        component::Component,
         event::EventReader,
-        system::{Query, Res, ResMut, Resource},
+        system::{Res, ResMut, Resource},
     },
     log::info,
 };
@@ -31,7 +30,7 @@ pub(crate) fn receive_join_success(
     mut join_events: EventReader<MessageEvent<SCLobbyJoinSuccess>>,
 ) {
     for event in join_events.read() {
-        if let Some(lobby) = &mut lobby.0 {
+        if let Some(_) = &mut lobby.0 {
             info!("received join lobby while already in lobby?");
             join_events.clear();
             return;
@@ -54,7 +53,7 @@ pub(crate) fn receive_join_success(
 }
 
 pub(crate) fn receive_join_error(mut join_events: EventReader<MessageEvent<SCLobbyJoinError>>) {
-    for event in join_events.read() {
+    for _ in join_events.read() {
         info!("lobby join error");
     }
 }
@@ -64,7 +63,7 @@ pub(crate) fn receive_create_success(
     mut create_events: EventReader<MessageEvent<SCLobbyCreateSuccess>>,
 ) {
     for event in create_events.read() {
-        if let Some(lobby) = &mut lobby.0 {
+        if let Some(_) = &mut lobby.0 {
             info!("received create lobby while already in lobby?");
 
             create_events.clear();
@@ -91,7 +90,7 @@ pub(crate) fn receive_create_success(
 pub(crate) fn receive_create_error(
     mut create_events: EventReader<MessageEvent<SCLobbyCreateError>>,
 ) {
-    for event in create_events.read() {
+    for _ in create_events.read() {
         info!("lobby create error");
     }
 }
@@ -100,7 +99,7 @@ pub(crate) fn receive_leave_success(
     mut lobby: ResMut<Lobby>,
     mut leave_events: EventReader<MessageEvent<SCLobbyLeaveSuccess>>,
 ) {
-    for event in leave_events.read() {
+    for _ in leave_events.read() {
         info!("lobby leave");
 
         lobby.0 = None;
@@ -113,7 +112,7 @@ pub(crate) fn receive_leave_error(
     mut lobby: ResMut<Lobby>,
     mut leave_events: EventReader<MessageEvent<SCLobbyLeaveError>>,
 ) {
-    for event in leave_events.read() {
+    for _ in leave_events.read() {
         info!("lobby leave");
     }
 }

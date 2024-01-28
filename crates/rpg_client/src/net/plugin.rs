@@ -23,8 +23,6 @@ use lightyear::{
         resource::Authentication,
         sync::SyncConfig,
     },
-    netcode::ClientId,
-    packet::message::Message,
     shared::{ping::manager::PingConfig, sets::FixedUpdateSet},
     transport::io::*,
 };
