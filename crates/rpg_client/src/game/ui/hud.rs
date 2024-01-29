@@ -2,11 +2,7 @@
 
 use crate::assets::TextureAssets;
 
-use crate::game::{
-    actor::player::Player,
-    metadata::MetadataResources,
-    plugin::{GameSessionCleanup, GameState},
-};
+use crate::game::{actor::player::Player, metadata::MetadataResources, plugin::GameSessionCleanup};
 use rpg_util::unit::Unit;
 use ui_util::style::UiTheme;
 use util::cleanup::CleanupStrategy;
@@ -43,9 +39,6 @@ pub struct Stamina;
 pub struct Xp;
 
 #[derive(Component)]
-pub(crate) struct ElapsedText;
-
-#[derive(Component)]
 pub(crate) struct HealthText;
 
 #[derive(Component)]
@@ -74,7 +67,6 @@ pub(crate) fn update(
         Query<&mut Text, With<StaminaText>>,
         Query<&mut Text, With<ManaText>>,
         Query<&mut Text, With<XpText>>,
-        Query<&mut Text, With<ElapsedText>>,
     )>,
 ) {
     let unit = player_q.single();
@@ -134,47 +126,11 @@ pub(crate) fn update(
         hero_info.xp_curr.value.u64(),
         level_info.xp_end,
     );
-
-    /*
-    let diff_secs = stopwatch.watch.elapsed_secs() as u64;
-
-    let hours = diff_secs / 3600;
-    let mins = (diff_secs / 60) % 60;
-    let secs = diff_secs % 60;
-
-    text_set.p4().single_mut().sections[0].value = format!("{:02}:{:02}:{:02}", hours, mins, secs);
-    */
 }
 
-pub(crate) fn setup(
-    mut commands: Commands,
-    game_state: Res<GameState>,
-    ui_theme: Res<UiTheme>,
-    _textures: Res<TextureAssets>,
-) {
-    println!("setup_hud");
-
+pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, _textures: Res<TextureAssets>) {
     let mut container_hidden_style = ui_theme.container_absolute_max.clone();
     container_hidden_style.display = Display::None;
-
-    /*
-    let vertical_spacing = NodeBundle {
-        style: ui_theme.vertical_spacer.clone(),
-        ..default()
-    };
-
-    let frame_col_node = NodeBundle {
-        style: ui_theme.frame_col_style.clone(),
-        border_color: ui_theme.border_color,
-        background_color: ui_theme.frame_background_color.0.with_a(0.98).into(),
-        ..default()
-    };
-
-    let frame_row_node = NodeBundle {
-        style: ui_theme.frame_row_style.clone(),
-        background_color: ui_theme.menu_background_color,
-        ..default()
-    };*/
 
     /*
     let mut slider_style = Style { ..default() };
@@ -203,8 +159,6 @@ pub(crate) fn setup(
             p.spawn(NodeBundle {
                 style: Style {
                     flex_direction: FlexDirection::Column,
-                    //align_items: AlignItems::Center,
-                    //justify_content: JustifyContent::Center,
                     ..default()
                 },
                 ..default()
@@ -232,7 +186,7 @@ pub(crate) fn setup(
                         padding: UiRect::all(ui_theme.padding),
                         margin: UiRect::all(ui_theme.margin),
 
-                        //min_width: Val::Px(720.),
+                        min_width: Val::Px(720.),
                         ..default()
                     },
                     border_color: ui_theme.border_color,

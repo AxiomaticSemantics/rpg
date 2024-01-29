@@ -5,7 +5,7 @@ use crate::{account::AccountInstance, assets::MetadataResources, net::server::Ne
 use rpg_core::{metadata::Metadata, uid::NextUid};
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
-    actions::{Action, ActionData, Actions, AttackData},
+    actions::{Action, ActionData, Actions, AttackData, State},
     skill::get_skill_origin,
     unit::{Corpse, Hero, Unit, UnitBundle, Villain, VillainBundle},
 };
@@ -292,20 +292,18 @@ pub(crate) fn villain_think(
         let wanted_range = (skill_info.use_range as f32 * 0.5) as u32;
         let wanted_range = wanted_range.clamp(150, wanted_range.max(150));
         let in_range = skill_info.use_range > 0 && distance < wanted_range;
+        if in_range && actions.movement.is_some() {
+            actions.movement.as_mut().unwrap().state = State::Finalize;
+        }
+
         if rot_diff.abs() < 0.1 {
-            if !in_range {
+            if !in_range && villain.has_target() && actions.movement.is_none() {
                 info!("villain move request");
                 actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
                 villain.state = VillainState::Tracking;
                 continue;
             }
 
-            /*if actions.movement.is_none() && villain.state != VillainState::Idle {
-                villain.state = VillainState::Idle;
-                actions.set(Action::new(ActionData::MoveEnd, None, false));
-            }*/
-
-            /*
             if think_timer.finished()
                 && actions.attack.is_none()
                 && villain.state == VillainState::Tracking
@@ -327,7 +325,7 @@ pub(crate) fn villain_think(
                     true,
                 ));
                 think_timer.reset();
-            }*/
+            }
         }
     }
 }

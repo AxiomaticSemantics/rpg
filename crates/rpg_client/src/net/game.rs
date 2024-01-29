@@ -3,6 +3,7 @@ use crate::{
         actor::{self, animation::AnimationState, player::Player, spawn_actor},
         assets::RenderResources,
         metadata::MetadataResources,
+        plugin::{GameOverState, GameState, PlayState},
     },
     net::account::RpgAccount,
     state::AppState,
@@ -25,7 +26,6 @@ use bevy::{
 
 use rpg_core::{
     damage::DamageValue,
-    stat::StatChange,
     unit::{UnitInfo, UnitKind},
 };
 use rpg_network_protocol::protocol::*;
@@ -235,12 +235,6 @@ pub(crate) fn receive_stat_updates(
 
         let mut player = player_q.single_mut();
         for update in &update_msg.0 {
-            /* TODO use for animation or remove
-            match &update.change {
-                StatChange::Gain(v) => {}
-                StatChange::Loss(v) => {}
-            }*/
-
             player
                 .stats
                 .vitals
@@ -370,18 +364,21 @@ pub(crate) fn receive_damage(
 }
 
 pub(crate) fn receive_villain_death(
+    mut commands: Commands,
     mut death_reader: EventReader<MessageEvent<SCVillainDeath>>,
-    mut villain_q: Query<(&Unit, &mut AnimationState), With<Villain>>,
+    mut villain_q: Query<(Entity, &Unit, &mut AnimationState), With<Villain>>,
 ) {
     for event in death_reader.read() {
         let death_msg = event.message();
 
         info!("villain eath {death_msg:?}");
 
-        for (villain, mut villain_anim) in &mut villain_q {
+        for (entity, villain, mut villain_anim) in &mut villain_q {
             if villain.uid != death_msg.0 {
                 continue;
             }
+
+            commands.entity(entity).insert(Corpse);
 
             *villain_anim = AnimationState {
                 repeat: RepeatAnimation::Never,
@@ -392,11 +389,21 @@ pub(crate) fn receive_villain_death(
     }
 }
 
-pub(crate) fn receive_hero_death(mut death_reader: EventReader<MessageEvent<SCHeroDeath>>) {
+pub(crate) fn receive_hero_death(
+    mut commands: Commands,
+    mut game_state: ResMut<GameState>,
+    mut death_reader: EventReader<MessageEvent<SCHeroDeath>>,
+    player_q: Query<(Entity, &Unit), With<Player>>,
+) {
     for event in death_reader.read() {
         let death_msg = event.message();
 
         info!("hero death {death_msg:?}");
+        let (entity, unit) = player_q.single();
+        if unit.uid == death_msg.0 {
+            game_state.state = PlayState::Death(GameOverState::Pending);
+        }
+        commands.entity(entity).insert(Corpse);
     }
 }
 
