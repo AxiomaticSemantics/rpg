@@ -23,7 +23,7 @@
       "drop_chances": 10,
       "drop_chance": 0.5,
       "move_speed": 90,
-      "max_vision": 12
+      "max_vision": 10
     },
     "Swordsman": {
       "name": "Swordsman",
@@ -34,7 +34,7 @@
       "drop_chances": 12,
       "drop_chance": 0.5,
       "move_speed": 100,
-      "max_vision": 12
+      "max_vision": 9
     },
     "Archer": {
       "name": "Archer",
@@ -45,7 +45,7 @@
       "drop_chances": 12,
       "drop_chance": 0.5,
       "move_speed": 110,
-      "max_vision": 12
+      "max_vision": 11
     },
     "Cleric": {
       "name": "Cleric",
@@ -56,7 +56,7 @@
       "drop_chances": 12,
       "drop_chance": 0.5,
       "move_speed": 95,
-      "max_vision": 12
+      "max_vision": 10
     }
   }
 }

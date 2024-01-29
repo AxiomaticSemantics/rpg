@@ -182,7 +182,7 @@ pub(crate) struct NetworkContext {
 }
 
 impl NetworkContext {
-    pub(crate) fn get_client_from_client_id(&self, id: ClientId) -> Option<&Client> {
+    pub(crate) fn get_client_from_id(&self, id: ClientId) -> Option<&Client> {
         self.clients.get(&id)
     }
 

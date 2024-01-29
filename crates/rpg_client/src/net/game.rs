@@ -3,6 +3,7 @@ use crate::{
         actor::{self, animation::AnimationState, player::Player, spawn_actor},
         assets::RenderResources,
         metadata::MetadataResources,
+        plugin::{GameOverState, GameState, PlayState},
     },
     net::account::RpgAccount,
     state::AppState,
@@ -24,9 +25,7 @@ use bevy::{
 };
 
 use rpg_core::{
-    class::Class,
     damage::DamageValue,
-    stat::StatChange,
     unit::{UnitInfo, UnitKind},
 };
 use rpg_network_protocol::protocol::*;
@@ -121,7 +120,7 @@ pub(crate) fn receive_player_move(
     for event in move_events.read() {
         let move_msg = event.message();
 
-        // info!("move: {move_msg:?}");
+        info!("move start {move_msg:?}");
         let mut transform = player_q.single_mut();
         transform.translation = move_msg.0;
     }
@@ -134,7 +133,7 @@ pub(crate) fn receive_player_move_end(
     for event in move_events.read() {
         let move_msg = event.message();
 
-        // info!("move: {move_msg:?}");
+        info!("move end {move_msg:?}");
         let mut transform = player_q.single_mut();
         transform.translation = move_msg.0;
     }
@@ -150,6 +149,60 @@ pub(crate) fn receive_player_rotation(
         // info!("rot: {rot_msg:?}");
         let mut transform = player_q.single_mut();
         transform.look_to(rot_msg.0, Vec3::Y);
+    }
+}
+
+pub(crate) fn receive_unit_move(
+    mut move_events: EventReader<MessageEvent<SCMoveUnit>>,
+    mut unit_q: Query<(&mut Transform, &Unit)>,
+) {
+    for event in move_events.read() {
+        let move_msg = event.message();
+        // info!("move: {move_msg:?}");
+
+        for (mut transform, unit) in &mut unit_q {
+            if unit.uid != move_msg.uid {
+                continue;
+            }
+
+            transform.translation = move_msg.position;
+        }
+    }
+}
+
+pub(crate) fn receive_unit_move_end(
+    mut move_events: EventReader<MessageEvent<SCMoveUnitEnd>>,
+    mut unit_q: Query<(&mut Transform, &Unit)>,
+) {
+    for event in move_events.read() {
+        let move_msg = event.message();
+        // info!("move: {move_msg:?}");
+
+        for (mut transform, unit) in &mut unit_q {
+            if unit.uid != move_msg.uid {
+                continue;
+            }
+
+            transform.translation = move_msg.position;
+        }
+    }
+}
+
+pub(crate) fn receive_unit_rotation(
+    mut rotation_events: EventReader<MessageEvent<SCRotUnit>>,
+    mut unit_q: Query<(&mut Transform, &Unit)>,
+) {
+    for event in rotation_events.read() {
+        let rot_msg = event.message();
+        // info!("rot: {rot_msg:?}");
+
+        for (mut transform, unit) in &mut unit_q {
+            if unit.uid != rot_msg.uid {
+                continue;
+            }
+
+            transform.look_to(rot_msg.direction, Vec3::Y);
+        }
     }
 }
 
@@ -182,12 +235,6 @@ pub(crate) fn receive_stat_updates(
 
         let mut player = player_q.single_mut();
         for update in &update_msg.0 {
-            /* TODO use for animation or remove
-            match &update.change {
-                StatChange::Gain(v) => {}
-                StatChange::Loss(v) => {}
-            }*/
-
             player
                 .stats
                 .vitals
@@ -317,18 +364,21 @@ pub(crate) fn receive_damage(
 }
 
 pub(crate) fn receive_villain_death(
+    mut commands: Commands,
     mut death_reader: EventReader<MessageEvent<SCVillainDeath>>,
-    mut villain_q: Query<(&Unit, &mut AnimationState), With<Villain>>,
+    mut villain_q: Query<(Entity, &Unit, &mut AnimationState), With<Villain>>,
 ) {
     for event in death_reader.read() {
         let death_msg = event.message();
 
         info!("villain eath {death_msg:?}");
 
-        for (villain, mut villain_anim) in &mut villain_q {
+        for (entity, villain, mut villain_anim) in &mut villain_q {
             if villain.uid != death_msg.0 {
                 continue;
             }
+
+            commands.entity(entity).insert(Corpse);
 
             *villain_anim = AnimationState {
                 repeat: RepeatAnimation::Never,
@@ -339,11 +389,21 @@ pub(crate) fn receive_villain_death(
     }
 }
 
-pub(crate) fn receive_hero_death(mut death_reader: EventReader<MessageEvent<SCHeroDeath>>) {
+pub(crate) fn receive_hero_death(
+    mut commands: Commands,
+    mut game_state: ResMut<GameState>,
+    mut death_reader: EventReader<MessageEvent<SCHeroDeath>>,
+    player_q: Query<(Entity, &Unit), With<Player>>,
+) {
     for event in death_reader.read() {
         let death_msg = event.message();
 
         info!("hero death {death_msg:?}");
+        let (entity, unit) = player_q.single();
+        if unit.uid == death_msg.0 {
+            game_state.state = PlayState::Death(GameOverState::Pending);
+        }
+        commands.entity(entity).insert(Corpse);
     }
 }
 

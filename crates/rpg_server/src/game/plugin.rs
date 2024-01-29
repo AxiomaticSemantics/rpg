@@ -1,12 +1,8 @@
 use super::{action, item, skill, unit, villain};
 
 use crate::{
-    account::AccountInstance,
-    assets::MetadataResources,
-    net::server::NetworkParamsRW,
-    server_state::ServerMetadataResource,
-    state::AppState,
-    world::{RpgWorld, WorldPlugin},
+    assets::MetadataResources, net::server::NetworkParamsRW, server_state::ServerMetadataResource,
+    state::AppState, world::WorldPlugin,
 };
 
 use bevy::{
@@ -14,7 +10,7 @@ use bevy::{
     ecs::{
         component::Component,
         schedule::{common_conditions::in_state, IntoSystemConfigs, NextState, OnEnter},
-        system::{Commands, Query, Res, ResMut, Resource},
+        system::{Commands, Res, ResMut, Resource},
     },
     log::info,
     math::Vec3,
@@ -114,6 +110,7 @@ impl Plugin for GamePlugin {
                     skill::collide_skills,
                     skill::handle_contacts,
                     item::spawn_ground_items,
+                    villain::find_target,
                     villain::villain_think,
                 )
                     .chain()
@@ -124,12 +121,10 @@ impl Plugin for GamePlugin {
 
 pub(crate) fn setup_simulation(
     mut commands: Commands,
-    game_state: Res<GameState>,
     mut rng: ResMut<SharedRng>,
     metadata: Res<MetadataResources>,
     mut aabbs: ResMut<AabbResources>,
     mut server_metadata: ResMut<ServerMetadataResource>,
-    account_q: Query<&AccountInstance>,
 ) {
     info!("spawning game");
 
@@ -157,7 +152,7 @@ pub(crate) fn transition_to_game(mut state: ResMut<NextState<AppState>>) {
     state.set(AppState::Simulation);
 }
 
-pub(crate) fn join_clients(mut game_state: ResMut<GameState>, mut net_params: NetworkParamsRW) {
+pub(crate) fn join_clients(game_state: ResMut<GameState>, mut net_params: NetworkParamsRW) {
     info!("joining clients to game");
 
     let client_ids = game_state.client_ids();

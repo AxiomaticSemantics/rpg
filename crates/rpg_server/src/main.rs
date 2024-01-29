@@ -1,6 +1,6 @@
 //! Run with
-//! - `cargo run`
-//! - `cargo run -- --port 4269 --addr 127.0.0.1`
+//! - `cargo run -p rpg_server`
+//! - `cargo run -p rpg_server -- --port 4269 --addr 127.0.0.1`
 
 mod assets;
 mod server_state;
@@ -100,26 +100,23 @@ fn main() -> Result<(), Error> {
     });
 
     'outer: loop {
-        let mut caught = false;
         for signal in signals.pending() {
             match signal {
                 SIGINT => {
-                    caught = true;
                     eprintln!("\nCaught: SIGINT; joining app thread");
                     break 'outer;
                 }
                 SIGTERM => {
-                    caught = true;
                     eprintln!("\nCaught: SIGTERM; joining app thread");
                     break 'outer;
                 }
                 term_sig => {
-                    caught = true;
                     eprintln!("\nCaught: {:?}; joining app thread", term_sig);
                     break 'outer;
                 }
             }
         }
+
         thread::sleep(time::Duration::from_millis(1));
     }
 

@@ -17,7 +17,7 @@ use lightyear::prelude::*;
 
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
-    actions::{Action, ActionData, Actions, AttackData},
+    actions::{Action, ActionData, Actions, AttackData, State},
     skill::get_skill_origin,
     unit::{Hero, HeroBundle, Unit, UnitBundle},
 };
@@ -126,10 +126,7 @@ pub(crate) fn receive_movement(
             continue;
         };
 
-        let Ok(mut actions) = player_q.get_mut(client.entity) else {
-            info!("{client:?}");
-            continue;
-        };
+        let mut actions = player_q.get_mut(client.entity).unwrap();
 
         actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
         info!("move request");
@@ -148,13 +145,11 @@ pub(crate) fn receive_movement_end(
             continue;
         };
 
-        let Ok(mut actions) = player_q.get_mut(client.entity) else {
-            info!("{client:?}");
-            continue;
-        };
-
-        actions.request(Action::new(ActionData::MoveEnd, None, true));
-        info!("end move request");
+        let mut actions = player_q.get_mut(client.entity).unwrap();
+        if let Some(action) = &mut actions.movement {
+            action.state = State::Finalize;
+            info!("end move request");
+        }
     }
 }
 
@@ -162,7 +157,7 @@ pub(crate) fn receive_movement_end(
 pub(crate) fn receive_rotation(
     mut rotation_reader: EventReader<MessageEvent<CSRotPlayer>>,
     mut net_params: NetworkParamsRW,
-    mut player_q: Query<(&mut Transform, &Unit, &AccountInstance), With<Hero>>,
+    mut player_q: Query<(&mut Transform, &Unit), With<Hero>>,
 ) {
     for event in rotation_reader.read() {
         let client_id = *event.context();
@@ -171,22 +166,18 @@ pub(crate) fn receive_rotation(
             continue;
         };
 
-        for (mut transform, player, account) in &mut player_q {
-            if client.account_id.unwrap() != account.info.id {
-                continue;
-            }
+        let (mut transform, player) = player_q.get_mut(client.entity).unwrap();
 
-            let rot_msg = event.message();
-            transform.look_to(rot_msg.0, Vec3::Y);
+        let rot_msg = event.message();
+        transform.look_to(rot_msg.0, Vec3::Y);
 
-            net_params
-                .server
-                .send_message_to_target::<Channel1, SCRotPlayer>(
-                    SCRotPlayer(rot_msg.0),
-                    NetworkTarget::Only(vec![client_id]),
-                )
-                .unwrap();
-        }
+        net_params
+            .server
+            .send_message_to_target::<Channel1, SCRotPlayer>(
+                SCRotPlayer(rot_msg.0),
+                NetworkTarget::Only(vec![client_id]),
+            )
+            .unwrap();
     }
 }
 
@@ -194,7 +185,7 @@ pub(crate) fn receive_skill_use_direct(
     mut skill_use_reader: EventReader<MessageEvent<CSSkillUseDirect>>,
     net_params: NetworkParamsRO,
     metadata: Res<MetadataResources>,
-    mut player_q: Query<(&mut Transform, &Unit, &mut Actions, &AccountInstance), With<Hero>>,
+    mut player_q: Query<(&Transform, &mut Actions), With<Hero>>,
 ) {
     for event in skill_use_reader.read() {
         let client_id = *event.context();
@@ -203,63 +194,30 @@ pub(crate) fn receive_skill_use_direct(
             continue;
         };
 
-        for (mut transform, player, mut actions, account) in &mut player_q {
-            if client.account_id.unwrap() != account.info.id {
-                continue;
-            }
+        let (transform, mut actions) = player_q.get_mut(client.entity).unwrap();
+        let skill_use_msg = event.message();
+        info!("{skill_use_msg:?}");
 
-            let skill_use_msg = event.message();
-            info!("{skill_use_msg:?}");
+        let (origin, target) = get_skill_origin(
+            &metadata.0,
+            &transform,
+            transform.translation, // FIXMEcursor_position.ground,
+            skill_use_msg.0,
+        );
 
-            let (origin, target) = get_skill_origin(
-                &metadata.0,
-                &transform,
-                transform.translation, // FIXMEcursor_position.ground,
-                skill_use_msg.0,
-            );
-
-            if actions.attack.is_none() && actions.knockback.is_none() {
-                actions.request(Action::new(
-                    ActionData::Attack(AttackData {
-                        skill_id: skill_use_msg.0,
-                        user: transform.translation,
-                        origin,
-                        target,
-                    }),
-                    None,
-                    true,
-                ));
-                //
-            }
+        if actions.attack.is_none() && actions.knockback.is_none() {
+            actions.request(Action::new(
+                ActionData::Attack(AttackData {
+                    skill_id: skill_use_msg.0,
+                    user: transform.translation,
+                    origin,
+                    target,
+                }),
+                None,
+                true,
+            ));
+            //
         }
-    }
-}
-
-pub(crate) fn receive_item_drop(
-    mut drop_reader: EventReader<MessageEvent<CSItemDrop>>,
-    mut net_params: NetworkParamsRW,
-    mut player_q: Query<(&mut Transform, &Unit, &AccountInstance), With<Hero>>,
-) {
-    for event in drop_reader.read() {
-        let client_id = *event.context();
-        let client = net_params.context.clients.get(&client_id).unwrap();
-        if !client.is_authenticated_player() {
-            continue;
-        };
-    }
-}
-
-pub(crate) fn receive_item_pickup(
-    mut pickup_reader: EventReader<MessageEvent<CSItemPickup>>,
-    mut net_params: NetworkParamsRW,
-    mut player_q: Query<(&mut Transform, &Unit, &AccountInstance), With<Hero>>,
-) {
-    for event in pickup_reader.read() {
-        let client_id = *event.context();
-        let client = net_params.context.clients.get(&client_id).unwrap();
-        if !client.is_authenticated_player() {
-            continue;
-        };
     }
 }
 
@@ -275,14 +233,38 @@ pub(crate) fn receive_skill_use_targeted(
             continue;
         };
 
-        for (mut transform, player, account) in &mut player_q {
-            if client.account_id.unwrap() != account.info.id {
-                continue;
-            }
-            let skill_use_msg = event.message();
-            info!("{skill_use_msg:?}");
+        let (mut transform, player, account) = player_q.get(client.entity).unwrap();
+        let skill_use_msg = event.message();
+        info!("{skill_use_msg:?}");
 
-            //
-        }
+        //
+    }
+}
+
+pub(crate) fn receive_item_drop(
+    mut drop_reader: EventReader<MessageEvent<CSItemDrop>>,
+    mut net_params: NetworkParamsRW,
+    mut player_q: Query<(&Transform, &Unit), With<Hero>>,
+) {
+    for event in drop_reader.read() {
+        let client_id = *event.context();
+        let client = net_params.context.clients.get(&client_id).unwrap();
+        if !client.is_authenticated_player() {
+            continue;
+        };
+    }
+}
+
+pub(crate) fn receive_item_pickup(
+    mut pickup_reader: EventReader<MessageEvent<CSItemPickup>>,
+    mut net_params: NetworkParamsRW,
+    mut player_q: Query<(&Transform, &Unit), With<Hero>>,
+) {
+    for event in pickup_reader.read() {
+        let client_id = *event.context();
+        let client = net_params.context.clients.get(&client_id).unwrap();
+        if !client.is_authenticated_player() {
+            continue;
+        };
     }
 }

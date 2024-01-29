@@ -1,7 +1,7 @@
 use crate::{
     state::AppState,
     ui::menu::{
-        account::{self, AccountCharacter, AccountCreateRoot, AccountListRoot, AccountLoginRoot},
+        account::{AccountCreateRoot, AccountListRoot, AccountLoginRoot},
         create::CreateRoot,
     },
 };
@@ -9,15 +9,12 @@ use crate::{
 use bevy::{
     ecs::{
         component::Component,
-        entity::Entity,
         event::EventReader,
         query::With,
         schedule::NextState,
-        system::{Commands, ParamSet, Query, Res, ResMut},
+        system::{ParamSet, Query, Res, ResMut},
     },
-    hierarchy::Children,
     log::info,
-    text::Text,
     ui::{Display, Style},
 };
 

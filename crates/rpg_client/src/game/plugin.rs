@@ -3,7 +3,7 @@
 use crate::{assets::AudioAssets, loader::plugin::OutOfGameCamera, state::AppState};
 
 use super::{
-    actor::{self, player, unit, villain},
+    actor::{self, player, unit},
     assets::RenderResources,
     controls::{self, Controls, CursorPosition},
     environment,
@@ -98,6 +98,24 @@ pub struct SessionStats {
     pub patk_damage_received: u64,
     pub matk_damage_received: u64,
     pub tatk_damage_received: u64,
+}
+
+pub(crate) fn build_stats_string(stats: &SessionStats) -> String {
+    format!(
+        "Villain Stats:\nSpawned: {} Killed: {} Attacks: {} Hits: {}\n\nPlayer Stats:\nAttacks: {} Hits: {}\nBlocks: {} Dodges: {} Times Blocked: {} Times Dodged: {}\n\nItems Stats:\nSpawned: {} Looted: {}",
+        stats.spawned,
+        stats.kills,
+        stats.villain_attacks,
+        stats.villain_hits,
+        stats.attacks,
+        stats.hits,
+        stats.blocks,
+        stats.dodges,
+        stats.times_blocked,
+        stats.times_dodged,
+        stats.items_spawned,
+        stats.items_looted,
+    )
 }
 
 #[derive(Component)]
@@ -253,7 +271,12 @@ impl Plugin for GamePlugin {
             // This system is special and transitions from Game to GameOver when the player dies
             .add_systems(
                 PostUpdate,
-                (ui::hud::update, ui::game_over::game_over_transition)
+                (
+                    ui::hud::update,
+                    ui::game_over::exit_button,
+                    ui::game_over::restart_button,
+                    ui::game_over::game_over_transition,
+                )
                     .chain()
                     .run_if(in_state(AppState::Game).and_then(is_death)),
             )
@@ -280,7 +303,11 @@ impl Plugin for GamePlugin {
             )
             .add_systems(
                 Update,
-                (actor::animation::animator, ui::game_over::game_over)
+                (
+                    actor::animation::animator,
+                    ui::game_over::exit_button,
+                    ui::game_over::restart_button,
+                )
                     .run_if(in_state(AppState::GameOver)),
             )
             // GameCleanup

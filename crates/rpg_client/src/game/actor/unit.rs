@@ -391,6 +391,7 @@ pub fn action(
             action.state = State::Completed;
         }
 
+        /*
         if let Some(action) = &mut actions.movement {
             let movespeed = unit.get_effective_movement_speed() as f32 / 100. * dt;
             let translation = transform.forward() * movespeed;
@@ -413,7 +414,7 @@ pub fn action(
             };
 
             action.state = State::Completed;
-        }
+        }*/
     }
 }
 

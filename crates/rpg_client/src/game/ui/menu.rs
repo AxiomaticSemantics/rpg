@@ -2,7 +2,7 @@
 
 use crate::assets::TextureAssets;
 
-use crate::game::plugin::{GameSessionCleanup, GameState, PlayState, SessionStats};
+use crate::game::plugin::{build_stats_string, GameSessionCleanup, GameState};
 
 use ui_util::style::UiTheme;
 use util::cleanup::CleanupStrategy;
@@ -10,7 +10,6 @@ use util::cleanup::CleanupStrategy;
 use bevy::{
     ecs::{
         component::Component,
-        event::EventWriter,
         query::{Changed, With},
         system::{Commands, Query, Res, ResMut},
     },
@@ -37,27 +36,9 @@ pub struct SaveButton;
 #[derive(Component)]
 pub struct CancelButton;
 
-fn build_stats_string(stats: &SessionStats) -> String {
-    format!(
-        "Villain Stats:\nSpawned: {} Killed: {} Attacks: {} Hits: {}\n\nPlayer Stats:\nAttacks: {} Hits: {}\nBlocks: {} Dodges: {} Times Blocked: {} Times Dodged: {}\n\nItems Stats:\nSpawned: {} Looted: {}",
-        stats.spawned,
-        stats.kills,
-        stats.villain_attacks,
-        stats.villain_hits,
-        stats.attacks,
-        stats.hits,
-        stats.blocks,
-        stats.dodges,
-        stats.times_blocked,
-        stats.times_dodged,
-        stats.items_spawned,
-        stats.items_looted,
-    )
-}
-
 // FIXME pausing no longer exists, this is temporary
 pub(crate) fn toggle_menu(
-    mut game_state: ResMut<GameState>,
+    game_state: ResMut<GameState>,
     input: Res<ButtonInput<KeyCode>>,
     mut menu_q: Query<&mut Style, With<MenuView>>,
     mut stats_q: Query<&mut Text, With<GameStats>>,
@@ -103,14 +84,7 @@ pub(crate) fn cancel_button(
     }
 }
 
-pub(crate) fn setup(
-    mut commands: Commands,
-    game_state: Res<GameState>,
-    ui_theme: Res<UiTheme>,
-    _textures: Res<TextureAssets>,
-) {
-    println!("setup game::ui::pause");
-
+pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, _textures: Res<TextureAssets>) {
     let mut container_hidden_style = ui_theme.container_absolute_max.clone();
     container_hidden_style.display = Display::None;
 

@@ -1,17 +1,9 @@
 use crate::{
     assets::TextureAssets,
-    game::plugin::GameState,
-    state::AppState,
-    ui::menu::{
-        account::{AccountListRoot, SelectedCharacter},
-        main::MainRoot,
-    },
+    ui::menu::account::{AccountListRoot, SelectedCharacter},
 };
 
-use ui_util::{
-    style::{UiRoot, UiTheme},
-    widgets::EditText,
-};
+use ui_util::{style::UiTheme, widgets::EditText};
 
 use rpg_core::{class::Class, unit::HeroGameMode};
 use rpg_network_protocol::protocol::*;
@@ -20,7 +12,6 @@ use bevy::{
     ecs::{
         component::Component,
         query::{Changed, With},
-        schedule::NextState,
         system::{ParamSet, Query, Res, ResMut, Resource},
     },
     hierarchy::{BuildChildren, ChildBuilder},
@@ -309,19 +300,17 @@ pub fn select_class(
 
 pub fn create_button(
     mut net_client: ResMut<Client>,
-    mut game_state: ResMut<GameState>,
     selected_class: Res<SelectedClass>,
     selected_character: Res<SelectedCharacter>,
-    interaction_q: Query<(&Interaction, &CreateButton), (Changed<Interaction>, With<CreateButton>)>,
+    interaction_q: Query<&Interaction, (Changed<Interaction>, With<CreateButton>)>,
     game_mode_q: Query<&CreateMode>,
-    mut menu_root_q: Query<&mut Style, With<UiRoot>>,
     mut player_name_text_q: Query<&mut Text, With<CreatePlayerName>>,
 ) {
     if !net_client.is_connected() {
         return;
     }
 
-    if let Ok((Interaction::Pressed, create_class)) = interaction_q.get_single() {
+    if let Ok(Interaction::Pressed) = interaction_q.get_single() {
         let mut player_name_text = player_name_text_q.single_mut();
         if player_name_text.sections[0].value.is_empty() {
             info!("no player name provided");

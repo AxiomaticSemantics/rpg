@@ -32,8 +32,7 @@ pub struct KnockbackData {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Kind {
     Move = 0x0000_0001,
-    MoveEnd = 0x0000_0002,
-    Look = 0x0000_0004,
+    Look = 0x0000_0002,
     Knockback = 0x0000_0008,
     Attack = 0x0000_00010,
 }
@@ -41,7 +40,6 @@ pub enum Kind {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ActionData {
     Move(Vec3),
-    MoveEnd,
     LookDir(Vec3),
     LookPoint(Vec3),
     Knockback(KnockbackData),
@@ -54,6 +52,7 @@ pub enum State {
     Pending,
     Timer,
     Active,
+    Finalize,
     Completed,
 }
 
@@ -70,7 +69,6 @@ impl Action {
     pub fn new(data: ActionData, timer: Option<Timer>, interruptible: bool) -> Self {
         let kind = match data {
             ActionData::Move(_) => Kind::Move,
-            ActionData::MoveEnd => Kind::MoveEnd,
             ActionData::LookDir(_) | ActionData::LookPoint(_) => Kind::Look,
             ActionData::Attack(_) => Kind::Attack,
             ActionData::Knockback(_) => Kind::Knockback,
@@ -114,7 +112,6 @@ impl Action {
 #[derive(Default, Debug, Component)]
 pub struct Actions {
     pub movement: Option<Action>,
-    pub movement_end: Option<Action>,
     pub look: Option<Action>,
     pub knockback: Option<Action>,
     pub attack: Option<Action>,
@@ -125,7 +122,6 @@ impl Actions {
         match kind {
             Kind::Look => self.look.is_some(),
             Kind::Move => self.movement.is_some(),
-            Kind::MoveEnd => self.movement_end.is_some(),
             Kind::Knockback => self.knockback.is_some(),
             Kind::Attack => self.attack.is_some(),
         }
@@ -135,7 +131,6 @@ impl Actions {
         match action.kind {
             Kind::Look => self.look = Some(action),
             Kind::Move => self.movement = Some(action),
-            Kind::MoveEnd => self.movement_end = Some(action),
             Kind::Knockback => self.knockback = Some(action),
             Kind::Attack => self.attack = Some(action),
         }
@@ -150,7 +145,6 @@ impl Actions {
         match action.kind {
             Kind::Look => self.look = Some(action),
             Kind::Move => self.movement = Some(action),
-            Kind::MoveEnd => self.movement_end = Some(action),
             Kind::Knockback => self.knockback = Some(action),
             Kind::Attack => {
                 if self.attack.is_none() {
@@ -164,7 +158,6 @@ impl Actions {
 
     pub fn is_inactive(&self) -> bool {
         self.movement.is_none()
-            && self.movement_end.is_none()
             && self.look.is_none()
             && self.attack.is_none()
             && self.knockback.is_none()
@@ -180,12 +173,6 @@ impl Actions {
         if let Some(action) = &mut self.movement {
             if action.is_completed() {
                 self.movement = None;
-            }
-        }
-
-        if let Some(action) = &mut self.movement_end {
-            if action.is_completed() {
-                self.movement_end = None;
             }
         }
 
@@ -207,7 +194,6 @@ impl Actions {
 
         self.look = None;
         self.movement = None;
-        self.movement_end = None;
         self.knockback = None;
         self.attack = None;
     }
