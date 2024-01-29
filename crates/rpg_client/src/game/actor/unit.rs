@@ -182,21 +182,19 @@ pub fn pick_storable_items(
 
 // NOTE some desync is acceptible here
 pub(crate) fn attract_resource_items(
-    mut commands: Commands,
     mut game_state: ResMut<GameState>,
     time: Res<Time>,
-    metadata: Res<MetadataResources>,
-    mut item_q: Query<(&mut Transform, &GroundItem), With<ResourceItem>>,
+    mut item_q: Query<&mut Transform, (With<GroundItem>, With<ResourceItem>)>,
     mut hero_q: Query<
-        (&Transform, &mut Unit, &mut AudioActions),
+        (&Transform, &Unit, &mut AudioActions),
         (With<Hero>, Without<GroundItem>, Without<Corpse>),
     >,
 ) {
-    let Ok((u_transform, mut unit, mut u_audio)) = hero_q.get_single_mut() else {
+    let Ok((u_transform, unit, mut u_audio)) = hero_q.get_single_mut() else {
         return;
     };
 
-    for (mut i_transform, i_item) in &mut item_q {
+    for mut i_transform in &mut item_q {
         let mut i_ground = i_transform.translation;
         i_ground.y = 0.;
 
@@ -420,10 +418,9 @@ pub fn action(
 
 pub fn remove_healthbar(
     mut commands: Commands,
-    time: Res<Time>,
-    mut unit_q: Query<(Entity, &mut Corpse, &mut HealthBar), With<Unit>>,
+    mut unit_q: Query<&mut HealthBar, (With<Corpse>, With<Unit>)>,
 ) {
-    for (entity, mut timer, mut health_bar) in &mut unit_q {
+    for mut health_bar in &mut unit_q {
         if health_bar.bar_entity != Entity::PLACEHOLDER {
             commands.entity(health_bar.bar_entity).despawn_recursive();
             health_bar.bar_entity = Entity::PLACEHOLDER;

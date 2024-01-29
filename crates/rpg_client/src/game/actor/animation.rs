@@ -36,6 +36,7 @@ pub fn animator(
     child_q: Query<&Children>,
     mut anim_q: Query<&mut AnimationPlayer>,
 ) {
+    // TODO optimize by caching the correct child's entity to avoid iteration
     for (entity, anim, actor_key) in &actor_q {
         let clip_handles = &renderables.actors[actor_key.0].animations;
 

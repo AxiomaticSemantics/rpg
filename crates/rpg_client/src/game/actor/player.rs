@@ -6,6 +6,7 @@ use crate::game::{
     world::zone::Zone,
 };
 
+use rpg_core::skill::SkillInfo;
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions::{Action, ActionData, Actions, AttackData},
@@ -102,7 +103,23 @@ pub fn input_actions(
     if controls.mouse_primary.pressed || controls.gamepad_b.pressed {
         let skill_id = unit.active_skills.primary.skill.unwrap();
 
-        net_client.send_message::<Channel1, _>(CSSkillUseDirect(skill_id));
+        let skill_meta = &metadata.rpg.skill.skills[&skill_id];
+
+        let _ = match &skill_meta.info {
+            SkillInfo::Direct(_) => {
+                net_client.send_message::<Channel1, _>(CSSkillUseDirect(skill_id))
+            }
+            SkillInfo::Projectile(info) => {
+                net_client.send_message::<Channel1, _>(CSSkillUseTargeted {
+                    skill_id,
+                    target: cursor_position.ground,
+                })
+            }
+            SkillInfo::Area(info) => net_client.send_message::<Channel1, _>(CSSkillUseTargeted {
+                skill_id,
+                target: cursor_position.ground,
+            }),
+        };
 
         let (origin, target) =
             get_skill_origin(&metadata.rpg, transform, cursor_position.ground, skill_id);
