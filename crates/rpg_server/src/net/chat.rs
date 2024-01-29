@@ -13,7 +13,7 @@ use bevy::{
     log::info,
 };
 
-use lightyear::{server::events::MessageEvent, shared::replication::components::NetworkTarget};
+use lightyear::{server::events::MessageEvent, shared::NetworkTarget};
 
 pub(crate) fn receive_chat_join(
     mut chat: ResMut<ChatManager>,

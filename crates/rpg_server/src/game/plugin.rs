@@ -21,7 +21,7 @@ use bevy::{
 };
 
 use lightyear::netcode::ClientId;
-use lightyear::shared::replication::components::NetworkTarget;
+use lightyear::shared::NetworkTarget;
 
 use rpg_account::{account::AccountId, character::CharacterSlot};
 use rpg_core::{uid::Uid, unit::HeroGameMode};

@@ -19,7 +19,6 @@ use lightyear::{
         events::MessageEvent,
         interpolation::plugin::{InterpolationConfig, InterpolationDelay},
         plugin::{ClientPlugin, PluginConfig},
-        prediction::plugin::PredictionConfig,
         resource::Authentication,
         sync::SyncConfig,
     },
@@ -63,7 +62,6 @@ impl Plugin for NetworkClientPlugin {
             netcode: Default::default(),
             ping: PingConfig::default(),
             sync: SyncConfig::default(),
-            prediction: PredictionConfig::default(),
             interpolation: InterpolationConfig::default()
                 .with_delay(InterpolationDelay::default().with_send_interval_ratio(2.0)),
         };

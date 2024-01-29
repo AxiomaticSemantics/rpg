@@ -1,4 +1,4 @@
-use bevy::{ecs::entity::Entity, math::Vec3};
+use bevy::math::Vec3;
 
 use lightyear::prelude::*;
 use serde_derive::{Deserialize, Serialize};
@@ -21,10 +21,6 @@ use rpg_core::{
 };
 use rpg_lobby::lobby::{Lobby, LobbyId, LobbyMessage};
 use rpg_world::zone::ZoneId;
-
-// Components (Unused, everything is manually managed)
-#[component_protocol(protocol = "RpgProtocol")]
-pub enum Components {}
 
 // Channels
 
@@ -444,7 +440,6 @@ pub enum Messages {
 protocolize! {
     Self = RpgProtocol,
     Message = Messages,
-    Component = Components,
 }
 
 pub fn protocol() -> RpgProtocol {
