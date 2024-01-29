@@ -3,7 +3,6 @@ use crate::state::AppState;
 use bevy::{
     asset::{AssetServer, Assets, Handle},
     ecs::{
-        event::Event,
         schedule::NextState,
         system::{Commands, Res, ResMut, Resource},
         world::{FromWorld, World},
@@ -15,9 +14,6 @@ use rpg_core::metadata::Metadata;
 use util::assets::json::JsonSource;
 
 use serde_json::from_slice;
-
-#[derive(Event)]
-struct LoadMetadata;
 
 // FIXME dedup
 #[derive(Resource)]

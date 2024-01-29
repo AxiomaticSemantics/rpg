@@ -8,7 +8,7 @@ use rpg_network_protocol::protocol::*;
 use bevy::{
     ecs::{
         event::EventReader,
-        system::{Commands, Query, Res, ResMut},
+        system::{Query, Res, ResMut},
     },
     log::info,
 };
@@ -57,7 +57,6 @@ pub(crate) fn receive_lobby_create(
 }
 
 pub(crate) fn receive_lobby_join(
-    mut commands: Commands,
     mut lobby_manager: ResMut<LobbyManager>,
     mut join_reader: EventReader<MessageEvent<CSLobbyJoin>>,
     mut net_params: NetworkParamsRW,
@@ -114,6 +113,11 @@ pub(crate) fn receive_lobby_leave(
             SCLobbyLeaveSuccess,
             NetworkTarget::Only(vec![*client_id]),
         );
+
+        if lobby.accounts.is_empty() {
+            lobby.clear();
+            return;
+        }
     }
 }
 

@@ -1,12 +1,8 @@
 use super::{action, item, skill, unit, villain};
 
 use crate::{
-    account::AccountInstance,
-    assets::MetadataResources,
-    net::server::NetworkParamsRW,
-    server_state::ServerMetadataResource,
-    state::AppState,
-    world::{RpgWorld, WorldPlugin},
+    assets::MetadataResources, net::server::NetworkParamsRW, server_state::ServerMetadataResource,
+    state::AppState, world::WorldPlugin,
 };
 
 use bevy::{
@@ -14,7 +10,7 @@ use bevy::{
     ecs::{
         component::Component,
         schedule::{common_conditions::in_state, IntoSystemConfigs, NextState, OnEnter},
-        system::{Commands, Query, Res, ResMut, Resource},
+        system::{Commands, Res, ResMut, Resource},
     },
     log::info,
     math::Vec3,
