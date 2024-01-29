@@ -1,9 +1,8 @@
 use crate::game::{
-    actor,
     controls::{Controls, CursorPosition},
     environment::PlayerSpotLight,
     metadata::MetadataResources,
-    plugin::{GameCamera, GameState},
+    plugin::GameCamera,
     world::zone::Zone,
 };
 
@@ -126,10 +125,10 @@ pub fn input_actions(
     }
 
     if controls.mouse_secondary.just_pressed || controls.gamepad_a.just_pressed {
-        actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
+        //actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
         net_client.send_message::<Channel1, _>(CSMovePlayer);
     } else if controls.mouse_secondary.just_released || controls.gamepad_a.just_released {
-        actions.request(Action::new(ActionData::MoveEnd, None, true));
+        //actions.request(Action::new(ActionData::MoveEnd, None, true));
         net_client.send_message::<Channel1, _>(CSMovePlayerEnd);
     }
 
