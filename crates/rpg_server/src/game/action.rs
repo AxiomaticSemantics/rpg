@@ -13,7 +13,7 @@ use rpg_util::{
 
 use util::random::SharedRng;
 
-use lightyear::shared::replication::components::NetworkTarget;
+use lightyear::shared::NetworkTarget;
 
 use bevy::{
     ecs::{

@@ -1,4 +1,4 @@
-use super::server::{ClientType, NetworkContext, NetworkParamsRW};
+use super::server::{NetworkParamsRO, NetworkParamsRW};
 use crate::{account::AccountInstance, assets::MetadataResources, game::plugin::GameState};
 
 use bevy::{
@@ -24,7 +24,6 @@ use rpg_util::{
 use util::math::{Aabb, AabbComponent};
 
 pub(crate) fn receive_player_join(
-    mut commands: Commands,
     mut join_reader: EventReader<MessageEvent<CSPlayerJoin>>,
     mut net_params: NetworkParamsRW,
     game_state: Res<GameState>,
@@ -42,7 +41,6 @@ pub(crate) fn receive_player_join(
 }
 
 pub(crate) fn receive_player_leave(
-    mut commands: Commands,
     mut leave_reader: EventReader<MessageEvent<CSPlayerLeave>>,
     mut net_params: NetworkParamsRW,
     game_state: Res<GameState>,
@@ -118,8 +116,8 @@ pub(crate) fn receive_player_loaded(
 // - FIXME add action request, move message send to action handler
 pub(crate) fn receive_movement(
     mut movement_reader: EventReader<MessageEvent<CSMovePlayer>>,
-    mut net_params: NetworkParamsRW,
-    mut player_q: Query<(&mut Transform, &Unit, &mut Actions, &AccountInstance), With<Hero>>,
+    net_params: NetworkParamsRO,
+    mut player_q: Query<&mut Actions, With<Hero>>,
 ) {
     for event in movement_reader.read() {
         let client_id = *event.context();
@@ -128,21 +126,20 @@ pub(crate) fn receive_movement(
             continue;
         };
 
-        let Ok((mut transform, player, mut actions, account)) = player_q.get_mut(client.entity)
-        else {
+        let Ok(mut actions) = player_q.get_mut(client.entity) else {
             info!("{client:?}");
             continue;
         };
 
         actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
-        info!("move request {}", transform.translation);
+        info!("move request");
     }
 }
 
 pub(crate) fn receive_movement_end(
     mut movement_reader: EventReader<MessageEvent<CSMovePlayerEnd>>,
-    mut net_params: NetworkParamsRW,
-    mut player_q: Query<(&mut Transform, &Unit, &mut Actions, &AccountInstance), With<Hero>>,
+    net_params: NetworkParamsRO,
+    mut player_q: Query<&mut Actions, With<Hero>>,
 ) {
     for event in movement_reader.read() {
         let client_id = *event.context();
@@ -151,14 +148,13 @@ pub(crate) fn receive_movement_end(
             continue;
         };
 
-        let Ok((mut transform, player, mut actions, account)) = player_q.get_mut(client.entity)
-        else {
+        let Ok(mut actions) = player_q.get_mut(client.entity) else {
             info!("{client:?}");
             continue;
         };
 
         actions.request(Action::new(ActionData::MoveEnd, None, true));
-        info!("end move request {}", transform.translation);
+        info!("end move request");
     }
 }
 
@@ -196,7 +192,7 @@ pub(crate) fn receive_rotation(
 
 pub(crate) fn receive_skill_use_direct(
     mut skill_use_reader: EventReader<MessageEvent<CSSkillUseDirect>>,
-    mut net_params: NetworkParamsRW,
+    net_params: NetworkParamsRO,
     metadata: Res<MetadataResources>,
     mut player_q: Query<(&mut Transform, &Unit, &mut Actions, &AccountInstance), With<Hero>>,
 ) {

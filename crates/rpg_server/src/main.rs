@@ -1,6 +1,6 @@
 //! Run with
 //! - `cargo run`
-//! - `cargo run -- --port 42069 --addr 127.0.0.1`
+//! - `cargo run -- --port 4269 --addr 127.0.0.1`
 
 mod assets;
 mod server_state;

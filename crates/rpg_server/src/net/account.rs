@@ -12,7 +12,6 @@ use super::server::{ClientType, NetworkParamsRW};
 
 use bevy::{
     ecs::{
-        bundle::Bundle,
         event::EventReader,
         schedule::NextState,
         system::{Commands, Query, Res, ResMut},
@@ -127,7 +126,6 @@ pub(crate) fn receive_account_create(
 
 pub(crate) fn receive_admin_login(
     mut commands: Commands,
-    mut server_metadata: ResMut<ServerMetadataResource>,
     mut login_reader: EventReader<MessageEvent<CSLoadAdminAccount>>,
     mut net_params: NetworkParamsRW,
 ) {

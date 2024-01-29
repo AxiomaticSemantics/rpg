@@ -16,7 +16,7 @@ use bevy::{
     transform::components::Transform,
 };
 
-use lightyear::shared::replication::components::NetworkTarget;
+use lightyear::shared::NetworkTarget;
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     item::{GroundItem, ResourceItem},

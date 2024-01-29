@@ -25,6 +25,5 @@ git = "https://github.com/AxiomaticSemantics/lightyear"
 
 [dependencies.bevy]
 git = "https://github.com/AxiomaticSemantics/bevy"
-features = [ "multi-threaded" ]
 optional = false
 default-features = false

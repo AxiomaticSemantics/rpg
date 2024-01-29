@@ -44,7 +44,7 @@ use bevy::{
     transform::{components::Transform, TransformBundle},
 };
 
-use lightyear::shared::replication::components::NetworkTarget;
+use lightyear::shared::NetworkTarget;
 
 use std::borrow::Cow;
 
