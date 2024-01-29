@@ -24,7 +24,6 @@ use bevy::{
 };
 
 use rpg_core::{
-    class::Class,
     damage::DamageValue,
     stat::StatChange,
     unit::{UnitInfo, UnitKind},
@@ -121,7 +120,7 @@ pub(crate) fn receive_player_move(
     for event in move_events.read() {
         let move_msg = event.message();
 
-        // info!("move: {move_msg:?}");
+        info!("move start {move_msg:?}");
         let mut transform = player_q.single_mut();
         transform.translation = move_msg.0;
     }
@@ -134,7 +133,7 @@ pub(crate) fn receive_player_move_end(
     for event in move_events.read() {
         let move_msg = event.message();
 
-        // info!("move: {move_msg:?}");
+        info!("move end {move_msg:?}");
         let mut transform = player_q.single_mut();
         transform.translation = move_msg.0;
     }
@@ -150,6 +149,60 @@ pub(crate) fn receive_player_rotation(
         // info!("rot: {rot_msg:?}");
         let mut transform = player_q.single_mut();
         transform.look_to(rot_msg.0, Vec3::Y);
+    }
+}
+
+pub(crate) fn receive_unit_move(
+    mut move_events: EventReader<MessageEvent<SCMoveUnit>>,
+    mut unit_q: Query<(&mut Transform, &Unit)>,
+) {
+    for event in move_events.read() {
+        let move_msg = event.message();
+        // info!("move: {move_msg:?}");
+
+        for (mut transform, unit) in &mut unit_q {
+            if unit.uid != move_msg.uid {
+                continue;
+            }
+
+            transform.translation = move_msg.position;
+        }
+    }
+}
+
+pub(crate) fn receive_unit_move_end(
+    mut move_events: EventReader<MessageEvent<SCMoveUnitEnd>>,
+    mut unit_q: Query<(&mut Transform, &Unit)>,
+) {
+    for event in move_events.read() {
+        let move_msg = event.message();
+        // info!("move: {move_msg:?}");
+
+        for (mut transform, unit) in &mut unit_q {
+            if unit.uid != move_msg.uid {
+                continue;
+            }
+
+            transform.translation = move_msg.position;
+        }
+    }
+}
+
+pub(crate) fn receive_unit_rotation(
+    mut rotation_events: EventReader<MessageEvent<SCRotUnit>>,
+    mut unit_q: Query<(&mut Transform, &Unit)>,
+) {
+    for event in rotation_events.read() {
+        let rot_msg = event.message();
+        // info!("rot: {rot_msg:?}");
+
+        for (mut transform, unit) in &mut unit_q {
+            if unit.uid != rot_msg.uid {
+                continue;
+            }
+
+            transform.look_to(rot_msg.direction, Vec3::Y);
+        }
     }
 }
 

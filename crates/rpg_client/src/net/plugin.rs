@@ -125,6 +125,9 @@ impl Plugin for NetworkClientPlugin {
                     game::receive_player_rotation,
                     game::receive_player_move,
                     game::receive_player_move_end,
+                    game::receive_unit_rotation,
+                    game::receive_unit_move,
+                    game::receive_unit_move_end,
                     game::receive_combat_result,
                     game::receive_damage,
                 )
@@ -166,7 +169,10 @@ fn setup(mut commands: Commands) {
 }
 
 fn receive_server_hello(
-    net_client: Res<Client>,
+    _net_client: Res<Client>,
     mut hello_events: EventReader<MessageEvent<SCHello>>,
 ) {
+    // TODO use this to disallow login/creation?
+
+    hello_events.clear();
 }

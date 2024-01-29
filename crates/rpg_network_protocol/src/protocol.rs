@@ -279,6 +279,24 @@ pub struct SCMovePlayerEnd(pub Vec3);
 pub struct SCRotPlayer(pub Vec3);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCMoveUnit{ 
+    pub uid: Uid,
+    pub position: Vec3
+}
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCMoveUnitEnd {
+    pub uid: Uid,
+    pub position: Vec3
+}
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCRotUnit {
+    pub uid: Uid,
+    pub direction: Vec3
+}
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCStatUpdate(pub StatUpdate);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -383,6 +401,9 @@ pub enum Messages {
     SCMovePlayer(SCMovePlayer),
     SCMovePlayerEnd(SCMovePlayerEnd),
     SCRotPlayer(SCRotPlayer),
+    SCMoveUnit(SCMoveUnit),
+    SCMoveUnitEnd(SCMoveUnitEnd),
+    SCRotUnit(SCRotUnit),
     SCStatUpdate(SCStatUpdate),
     SCStatUpdates(SCStatUpdates),
     SCSpawnSkill(SCSpawnSkill),

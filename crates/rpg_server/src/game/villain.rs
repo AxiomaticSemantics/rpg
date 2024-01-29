@@ -43,15 +43,38 @@ pub(crate) enum VillainState {
     Tracking,
 }
 
-#[derive(Debug, Default, Component)]
+#[derive(Debug, Component)]
 pub(crate) struct VillainController {
     pub(crate) state: VillainState,
     pub(crate) spawned_on: Vec<Entity>,
+    target: Entity,
+}
+
+impl Default for VillainController {
+    fn default() -> Self {
+        Self {
+            state: VillainState::default(),
+            spawned_on: vec![],
+            target: Entity::PLACEHOLDER,
+        }
+    }
 }
 
 impl VillainController {
+    fn new(state: VillainState) -> Self {
+        Self {
+            state,
+            spawned_on: vec![],
+            target: Entity::PLACEHOLDER,
+        }
+    }
+
+    fn has_target(&self) -> bool {
+        self.target != Entity::PLACEHOLDER
+    }
+
     fn think(&self, actions: &mut Actions, position: &Vec3, target: &Vec3) {
-        if self.state == VillainState::Deactivated {
+        if !self.is_activated() {
             return;
         }
     }
@@ -105,7 +128,8 @@ pub(crate) fn spawn(
             villain: Villain,
             unit: UnitBundle::new(Unit(unit)),
         },
-        VillainController::default(),
+        ThinkTimer::default(),
+        VillainController::new(VillainState::Idle),
         TransformBundle::from(transform),
     ));
 
@@ -116,15 +140,19 @@ pub(crate) fn spawn(
 // TODO optimize
 pub(crate) fn remote_spawn(
     mut net_params: NetworkParamsRW,
-    game_state: Res<GameState>,
     hero_q: Query<(Entity, &Transform, &AccountInstance), (With<Hero>, Without<Corpse>)>,
     mut villain_q: Query<
-        (&Transform, &Unit, &mut Actions, &mut VillainController),
+        (&Transform, &Unit, &mut VillainController),
         (With<Villain>, Without<Corpse>),
     >,
 ) {
-    for (transform, unit, actions, mut controller) in &mut villain_q {
+    for (transform, unit, mut controller) in &mut villain_q {
         for (hero_entity, hero_transform, account) in &hero_q {
+            let distance = transform.translation.distance(hero_transform.translation);
+            if distance > 16.0 {
+                continue;
+            }
+
             // Check that the hero is not already spawned on this client
             if controller.spawned_on.contains(&hero_entity) {
                 continue;
@@ -155,11 +183,53 @@ pub(crate) fn remote_spawn(
     }
 }
 
+pub(crate) fn find_target(
+    metadata: Res<MetadataResources>,
+    hero_q: Query<(Entity, &Transform), (With<Hero>, Without<Villain>, Without<Corpse>)>,
+    mut villain_q: Query<
+        (&Transform, &Unit, &mut VillainController, &mut Actions),
+        (With<Villain>, Without<Corpse>),
+    >,
+) {
+    for (transform, unit, mut villain, actions) in &mut villain_q {
+        if !villain.is_activated() {
+            info!("not activated");
+            continue;
+        }
+
+        if actions.attack.is_some() || actions.knockback.is_some() {
+            continue;
+        }
+
+        if villain.has_target() {
+            continue;
+        }
+
+        let max_distance =
+            (metadata.0.unit.villains[&unit.info.villain().id].max_vision * 100.).round() as u32;
+        let mut nearest = Entity::PLACEHOLDER;
+        let mut nearest_distance = max_distance;
+
+        for (hero_entity, hero_transform) in &hero_q {
+            let distance =
+                (transform.translation.distance(hero_transform.translation) * 100.).round() as u32;
+            if distance < nearest_distance {
+                nearest_distance = distance;
+                nearest = hero_entity;
+            }
+        }
+
+        if nearest != Entity::PLACEHOLDER {
+            villain.target = nearest;
+        }
+    }
+}
+
 pub(crate) fn villain_think(
     time: Res<Time>,
     mut rng: ResMut<SharedRng>,
     metadata: Res<MetadataResources>,
-    hero_q: Query<(&Transform, &Unit), (With<Hero>, Without<Villain>, Without<Corpse>)>,
+    hero_q: Query<&Transform, (With<Hero>, Without<Villain>, Without<Corpse>)>,
     mut villain_q: Query<
         (
             &Transform,
@@ -174,99 +244,90 @@ pub(crate) fn villain_think(
     // TODO each villian needs advance in it's current target or select a new target at most once
     // per turn
     for (transform, unit, mut villain, mut actions, mut think_timer) in &mut villain_q {
-        if villain.state == VillainState::Deactivated {
+        if !villain.is_activated() {
             continue;
         }
 
         think_timer.tick(time.delta());
 
-        let mut found_hero = false;
-        for (hero_transform, hero_unit) in &hero_q {
-            if !hero_unit.is_alive() {
+        if !villain.has_target() {
+            continue;
+        }
+
+        let Ok(hero_transform) = &hero_q.get(villain.target) else {
+            villain.target = Entity::PLACEHOLDER;
+            continue;
+        };
+
+        // TODO
+        // - ensure unit is in the same zone
+        // - ensure the zone is a combat zone
+
+        villain.think(
+            &mut actions,
+            &transform.translation,
+            &hero_transform.translation,
+        );
+
+        let distance =
+            (transform.translation.distance(hero_transform.translation) * 100.).round() as u32;
+        let target_dir = (hero_transform.translation - transform.translation).normalize_or_zero();
+        let rot_diff = transform.forward().dot(target_dir) - 1.;
+        let want_look = rot_diff.abs() > 0.001;
+        if want_look {
+            actions.request(Action::new(
+                ActionData::LookPoint(hero_transform.translation),
+                None,
+                true,
+            ));
+        }
+
+        if actions.movement.is_none() && villain.state != VillainState::Idle {
+            villain.state = VillainState::Idle;
+        }
+
+        let skill_id = unit.active_skills.primary.skill.unwrap();
+        let skill_info = &metadata.0.skill.skills[&skill_id];
+
+        let wanted_range = (skill_info.use_range as f32 * 0.5) as u32;
+        let wanted_range = wanted_range.clamp(150, wanted_range.max(150));
+        let in_range = skill_info.use_range > 0 && distance < wanted_range;
+        if rot_diff.abs() < 0.1 {
+            if !in_range {
+                info!("villain move request");
+                actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
+                villain.state = VillainState::Tracking;
                 continue;
             }
 
-            // TODO
-            // - ensure unit is in the same zone
-            // - ensure the zone is a combat zone
-
-            let distance =
-                (transform.translation.distance(hero_transform.translation) * 100.).round() as u32;
-
-            let max_distance = (metadata.0.unit.villains[&unit.info.villain().id].max_vision * 100.)
-                .round() as u32;
-            if distance > max_distance {
+            /*if actions.movement.is_none() && villain.state != VillainState::Idle {
                 villain.state = VillainState::Idle;
-                continue;
-            }
+                actions.set(Action::new(ActionData::MoveEnd, None, false));
+            }*/
 
-            villain.think(
-                &mut actions,
-                &transform.translation,
-                &hero_transform.translation,
-            );
+            /*
+            if think_timer.finished()
+                && actions.attack.is_none()
+                && villain.state == VillainState::Tracking
+            {
+                //println!("distance {distance} use range {}", skill_info.use_range);
 
-            let target_dir =
-                (hero_transform.translation - transform.translation).normalize_or_zero();
-            let rot_diff = transform.forward().dot(target_dir) - 1.;
-            let want_look = rot_diff.abs() > 0.001;
-            if want_look {
+                info!("villain skill request");
+                let (origin, target) =
+                    get_skill_origin(&metadata.0, transform, hero_transform.translation, skill_id);
+
                 actions.request(Action::new(
-                    ActionData::LookPoint(hero_transform.translation),
+                    ActionData::Attack(AttackData {
+                        skill_id,
+                        user: transform.translation,
+                        origin,
+                        target,
+                    }),
                     None,
                     true,
                 ));
-            }
-
-            if actions.movement.is_none() && villain.state != VillainState::Idle {
-                villain.state = VillainState::Idle;
-                actions.set(Action::new(ActionData::MoveEnd, None, false));
-            }
-
-            let skill_id = unit.active_skills.primary.skill.unwrap();
-            let skill_info = &metadata.0.skill.skills[&skill_id];
-
-            let wanted_range = (skill_info.use_range as f32 * 0.5) as u32;
-            let wanted_range = wanted_range.clamp(150, wanted_range.max(150));
-            let in_range = skill_info.use_range > 0 && distance < wanted_range;
-            if rot_diff.abs() < 0.1 {
-                if !in_range {
-                    actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
-                    villain.state = VillainState::Tracking;
-                    continue;
-                }
-
-                /*if actions.movement.is_none() && villain.state != VillainState::Idle {
-                    villain.state = VillainState::Idle;
-                    actions.set(Action::new(ActionData::MoveEnd, None, false));
-                }*/
-
-                if think_timer.finished()
-                    && actions.attack.is_none()
-                    && villain.state == VillainState::Tracking
-                {
-                    //println!("distance {distance} use range {}", skill_info.use_range);
-
-                    let (origin, target) = get_skill_origin(
-                        &metadata.0,
-                        transform,
-                        hero_transform.translation,
-                        skill_id,
-                    );
-
-                    actions.request(Action::new(
-                        ActionData::Attack(AttackData {
-                            skill_id,
-                            user: transform.translation,
-                            origin,
-                            target,
-                        }),
-                        None,
-                        true,
-                    ));
-                    think_timer.reset();
-                }
-            }
+                think_timer.reset();
+            }*/
         }
     }
 }

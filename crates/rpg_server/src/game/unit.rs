@@ -1,4 +1,3 @@
-use super::plugin::GameState;
 use crate::{account::AccountInstance, assets::MetadataResources, net::server::NetworkParamsRW};
 
 use bevy::{
@@ -6,11 +5,10 @@ use bevy::{
         component::Component,
         entity::Entity,
         query::{With, Without},
-        system::{Commands, Query, Res, ResMut},
+        system::{Commands, Query, Res},
     },
     hierarchy::DespawnRecursiveExt,
     log::info,
-    math::Vec3,
     prelude::{Deref, DerefMut},
     time::{Time, Timer},
     transform::components::Transform,
@@ -57,7 +55,6 @@ pub(crate) fn upkeep(
 pub(crate) fn attract_resource_items(
     mut commands: Commands,
     mut net_params: NetworkParamsRW,
-    mut game_state: ResMut<GameState>,
     time: Res<Time>,
     metadata: Res<MetadataResources>,
     mut item_q: Query<(Entity, &mut Transform, &mut GroundItem), With<ResourceItem>>,
@@ -72,7 +69,7 @@ pub(crate) fn attract_resource_items(
         let max_distance = 8.;
         let mut nearest_distance = max_distance;
 
-        for (u_entity, u_transform, unit, _) in &hero_q {
+        for (u_entity, u_transform, _, _) in &hero_q {
             let distance = u_transform.translation.distance(i_transform.translation);
 
             if distance < nearest_distance {

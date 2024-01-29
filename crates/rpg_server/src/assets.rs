@@ -1,13 +1,14 @@
 use crate::state::AppState;
 
 use bevy::{
-    asset::{AssetEvent, AssetServer, Assets, Handle},
+    asset::{AssetServer, Assets, Handle},
     ecs::{
-        event::{Event, EventReader, EventWriter},
+        event::Event,
         schedule::NextState,
         system::{Commands, Res, ResMut, Resource},
         world::{FromWorld, World},
     },
+    log::info,
 };
 
 use rpg_core::metadata::Metadata;
@@ -49,36 +50,9 @@ impl FromWorld for JsonAssets {
 #[derive(Resource)]
 pub(crate) struct MetadataResources(pub(crate) Metadata);
 
-impl FromWorld for MetadataResources {
-    fn from_world(world: &mut World) -> Self {
-        let json_sources = world.resource::<Assets<JsonSource>>();
-        let json = world.resource::<JsonAssets>();
-
-        let item = from_slice(json_sources.get(&json.item).unwrap().0.as_slice()).unwrap();
-        let unit = from_slice(json_sources.get(&json.unit).unwrap().0.as_slice()).unwrap();
-        let skill = from_slice(json_sources.get(&json.skill).unwrap().0.as_slice()).unwrap();
-        let level = from_slice(json_sources.get(&json.level).unwrap().0.as_slice()).unwrap();
-        let stat = from_slice(json_sources.get(&json.stat).unwrap().0.as_slice()).unwrap();
-        let modifier = from_slice(json_sources.get(&json.modifier).unwrap().0.as_slice()).unwrap();
-
-        // Passive tree metadata
-        let passive_tree =
-            from_slice(json_sources.get(&json.passive_tree).unwrap().0.as_slice()).unwrap();
-
-        Self(Metadata {
-            item,
-            unit,
-            skill,
-            level,
-            stat,
-            modifier,
-            passive_tree,
-        })
-    }
-}
-
 pub(crate) fn load_metadata(
     mut commands: Commands,
+    mut json_sources: ResMut<Assets<JsonSource>>,
     json_assets: Res<JsonAssets>,
     asset_server: Res<AssetServer>,
     mut next_state: ResMut<NextState<AppState>>,
@@ -89,13 +63,44 @@ pub(crate) fn load_metadata(
         && asset_server.is_loaded_with_dependencies(json_assets.stat.id())
         && asset_server.is_loaded_with_dependencies(json_assets.modifier.id())
         && asset_server.is_loaded_with_dependencies(json_assets.level.id())
-        && asset_server.is_loaded_with_dependencies(json_assets.level.id())
         && asset_server.is_loaded_with_dependencies(json_assets.passive_tree.id())
     {
-        commands.init_resource::<MetadataResources>();
+        commands.insert_resource(MetadataResources(Metadata {
+            item: from_slice(json_sources.get(&json_assets.item).unwrap().0.as_slice()).unwrap(),
+            unit: from_slice(json_sources.get(&json_assets.unit).unwrap().0.as_slice()).unwrap(),
+            skill: from_slice(json_sources.get(&json_assets.skill).unwrap().0.as_slice()).unwrap(),
+            level: from_slice(json_sources.get(&json_assets.level).unwrap().0.as_slice()).unwrap(),
+            stat: from_slice(json_sources.get(&json_assets.stat).unwrap().0.as_slice()).unwrap(),
+            modifier: from_slice(
+                json_sources
+                    .get(&json_assets.modifier)
+                    .unwrap()
+                    .0
+                    .as_slice(),
+            )
+            .unwrap(),
+            passive_tree: from_slice(
+                json_sources
+                    .get(&json_assets.passive_tree)
+                    .unwrap()
+                    .0
+                    .as_slice(),
+            )
+            .unwrap(),
+        }));
+
+        json_sources.remove(json_assets.item.id());
+        json_sources.remove(json_assets.unit.id());
+        json_sources.remove(json_assets.skill.id());
+        json_sources.remove(json_assets.stat.id());
+        json_sources.remove(json_assets.modifier.id());
+        json_sources.remove(json_assets.level.id());
+        json_sources.remove(json_assets.passive_tree.id());
+
+        commands.remove_resource::<JsonAssets>();
+
+        info!("metadata initialized");
 
         next_state.set(AppState::Lobby);
-
-        println!("json loaded, initializing metadata");
     }
 }

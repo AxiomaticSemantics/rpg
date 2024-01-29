@@ -426,7 +426,6 @@ pub fn handle_contacts(
     metadata: Res<MetadataResources>,
     mut server_metadata: ResMut<ServerMetadataResource>,
     mut net_params: NetworkParamsRW,
-    mut game_state: ResMut<GameState>,
     mut ground_drops: ResMut<GroundItemDrops>,
     mut rng: ResMut<SharedRng>,
     mut skill_events: EventReader<SkillContactEvent>,
@@ -445,7 +444,7 @@ pub fn handle_contacts(
 ) {
     for event in skill_events.read() {
         let Ok(
-            [(_, mut attacker, _, _, a_account, _), (d_entity, mut defender, mut d_actions, d_transform, _, d_corpse)],
+            [(_, mut attacker, _, _, a_account, _), (d_entity, mut defender, mut d_actions, d_transform, d_account, d_corpse)],
         ) = unit_q.get_many_mut([event.owner_entity, event.defender_entity])
         else {
             panic!("Unable to query attacker and/or defender unit(s)");
@@ -495,16 +494,20 @@ pub fn handle_contacts(
                         game_state.session_stats.villain_hits += 1;
                     }*/
 
-                    let client = net_params
-                        .context
-                        .get_client_from_account_id(a_account.as_ref().unwrap().0.info.id)
-                        .unwrap();
                     if defender.kind == UnitKind::Hero {
+                        let client = net_params
+                            .context
+                            .get_client_from_account_id(d_account.as_ref().unwrap().0.info.id)
+                            .unwrap();
                         net_params.server.send_message_to_target::<Channel1, _>(
                             SCCombatResult(combat_result.clone()),
                             NetworkTarget::Only(vec![client.id]),
                         );
                     } else if defender.kind == UnitKind::Villain {
+                        let client = net_params
+                            .context
+                            .get_client_from_account_id(a_account.as_ref().unwrap().0.info.id)
+                            .unwrap();
                         net_params.server.send_message_to_target::<Channel1, _>(
                             SCDamage {
                                 uid: defender.uid,
@@ -574,7 +577,7 @@ pub fn handle_contacts(
                     // game_state.session_stats.villain_hits += 1;
                     let client = net_params
                         .context
-                        .get_client_from_account_id(a_account.as_ref().unwrap().0.info.id)
+                        .get_client_from_account_id(d_account.as_ref().unwrap().0.info.id)
                         .unwrap();
                     net_params.server.send_message_to_target::<Channel1, _>(
                         SCHeroDeath(defender.uid),

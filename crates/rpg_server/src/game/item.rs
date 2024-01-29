@@ -15,32 +15,25 @@ use util::{
 };
 
 use bevy::{
-    ecs::{
-        entity::Entity,
-        query::{With, Without},
-        system::{Commands, Query, Res, ResMut},
-    },
+    ecs::system::{Commands, Query, Res, ResMut},
     math::Vec3,
     transform::components::Transform,
 };
 
-// FIXME audio should be attached to the item itself
 pub(crate) fn spawn_ground_items(
     mut commands: Commands,
     metadata: Res<MetadataResources>,
     mut rng: ResMut<SharedRng>,
     mut ground_drop_items: ResMut<GroundItemDrops>,
-    mut unit_q: Query<(Entity, &Transform, &Unit)>,
+    mut unit_q: Query<(&Transform, &Unit)>,
 ) {
     while let Some(items) = ground_drop_items.0.pop() {
-        for (source, source_transform, source_unit) in &mut unit_q {
+        for (source_transform, source_unit) in &mut unit_q {
             if source_unit.uid != items.source {
                 continue;
             }
 
             for item in &items.items {
-                let item_info = &metadata.0.item.items[&item.id];
-
                 spawn_item(
                     &mut commands,
                     &mut rng.0,
