@@ -1,79 +1,102 @@
 {
-	"gem_ids": {
-		"begin": 0,
-		"end": 1
-	},
-	"resource_ids": {
-		"begin": 32768,
-		"end": 32771
-	},
-	"drop_info": {
-		"base": {
-			"gem": 0.5,
-			"resource": 1.0
-		},
-		"resource": {
-			"hp": 0.25,
-			"ep": 0.5,
-			"mp": 0.75,
-			"xp": 1.0
-		},
-		"rarity": {
-			"normal": { "chance": 0.75, "max_affixes": 1 },
-			"magic": { "chance": 0.95, "max_affixes": 2 },
-			"rare": { "chance": 0.995, "max_affixes": 4 },
-			"legendary": { "chance": 0.9995, "max_affixes": 6 },
-			"unique": { "chance": 1.0, "max_affixes": 8 }
-		}
-	},
-	"items": {
-	       "0": {
-			"name": "Gem",
-		      	"kind": "Gem",
-		       	"info": {
-				"Gem": {
-				       "class": "Attack",
-				       "max_modifiers": 4
-		       		}
-		       }
-	       },
-	       "1": {
-			"name": "Gem",
-			"kind": "Gem",
-			"info": {
-				"Gem": {
-			       		"class": "Defense",
-					"max_modifiers": 4
-		       		}
-		       }
-	       },	       
-		"32768": { 
-			"name": "Experience", 
-			"kind": "Resource", 
-			"info": { 
-				"Resource": { "id": 23 }
-			}
-		},
-		"32769": { 
-			"name": "Health", 
-			"kind": "Resource", 
-			"info": { 
-				"Resource": { "id": 4 } 
-			} 
-		},
-		"32770": {
-			"name": "Stamina",
-			"kind": "Resource",
-			"info": {
-				"Resource": { "id": 8 }
-			}
-		},
-		"32771": {
-			"name": "Mana",
-			"kind": "Resource",
-			"info": {
-				"Resource": { "id": 12 }
-			}
-		}
-	}
+  "gem_ids": {
+    "begin": 0,
+    "end": 1
+  },
+  "resource_ids": {
+    "begin": 32768,
+    "end": 32771
+  },
+  "drop_info": {
+    "base": {
+      "gem": 0.5,
+      "resource": 1
+    },
+    "resource": {
+      "hp": 0.25,
+      "ep": 0.5,
+      "mp": 0.75,
+      "xp": 1
+    },
+    "rarity": {
+      "normal": {
+        "chance": 0.75,
+        "max_affixes": 1
+      },
+      "magic": {
+        "chance": 0.95,
+        "max_affixes": 2
+      },
+      "rare": {
+        "chance": 0.995,
+        "max_affixes": 4
+      },
+      "legendary": {
+        "chance": 0.9995,
+        "max_affixes": 6
+      },
+      "unique": {
+        "chance": 1,
+        "max_affixes": 8
+      }
+    }
+  },
+  "items": {
+    "0": {
+      "name": "Gem",
+      "kind": "Gem",
+      "info": {
+        "Gem": {
+          "class": "Attack",
+          "max_modifiers": 4
+        }
+      }
+    },
+    "1": {
+      "name": "Gem",
+      "kind": "Gem",
+      "info": {
+        "Gem": {
+          "class": "Defense",
+          "max_modifiers": 4
+        }
+      }
+    },
+    "32768": {
+      "name": "Experience",
+      "kind": "Resource",
+      "info": {
+        "Resource": {
+          "id": 23
+        }
+      }
+    },
+    "32769": {
+      "name": "Health",
+      "kind": "Resource",
+      "info": {
+        "Resource": {
+          "id": 4
+        }
+      }
+    },
+    "32770": {
+      "name": "Stamina",
+      "kind": "Resource",
+      "info": {
+        "Resource": {
+          "id": 8
+        }
+      }
+    },
+    "32771": {
+      "name": "Mana",
+      "kind": "Resource",
+      "info": {
+        "Resource": {
+          "id": 12
+        }
+      }
+    }
+  }
 }
