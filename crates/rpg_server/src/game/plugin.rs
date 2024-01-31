@@ -22,7 +22,10 @@ use lightyear::shared::NetworkTarget;
 use rpg_account::{account::AccountId, character::CharacterSlot};
 use rpg_core::{uid::Uid, unit::HeroGameMode, villain::VillainId};
 use rpg_network_protocol::protocol::*;
-use rpg_util::{item::GroundItemDrops, skill::SkillContactEvent};
+use rpg_util::{
+    item::GroundItemDrops,
+    skill::{update_skill, SkillContactEvent},
+};
 
 use util::{
     math::Aabb,
@@ -94,24 +97,23 @@ impl Plugin for GamePlugin {
                 (
                     villain::remote_spawn,
                     skill::update_invulnerability,
-                    unit::attract_resource_items,
                     unit::remove_corpses,
                     skill::clean_skills,
                     rpg_util::actions::action_tick,
+                    unit::upkeep,
                 )
                     .run_if(in_state(AppState::Simulation)),
             )
             .add_systems(
                 FixedUpdate,
                 (
-                    unit::upkeep,
-                    skill::update_skill,
-                    skill::collide_skills,
-                    skill::handle_contacts,
                     villain::find_target,
                     villain::villain_think,
                     action::action,
-                    item::spawn_ground_items,
+                    update_skill,
+                    skill::collide_skills,
+                    skill::handle_contacts,
+                    (item::spawn_ground_items, unit::attract_resource_items),
                 )
                     .chain()
                     .run_if(in_state(AppState::Simulation)),
