@@ -138,8 +138,8 @@ pub(crate) fn action(
                         SCSpawnSkill {
                             id: skill.id,
                             uid: unit.uid,
-                            origin,
-                            target,
+                            origin: attack.origin,
+                            target: attack.target,
                         },
                         NetworkTarget::All,
                     );
