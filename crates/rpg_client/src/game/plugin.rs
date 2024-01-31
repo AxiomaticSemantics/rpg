@@ -14,7 +14,7 @@ use super::{
 
 use rpg_core::unit::HeroGameMode;
 use rpg_network_protocol::protocol::*;
-use rpg_util::{actions, item::GroundItemDrops};
+use rpg_util::{actions, item::GroundItemDrops, skill::update_skill};
 
 use util::{
     cleanup::CleanupStrategy,
@@ -212,7 +212,7 @@ impl Plugin for GamePlugin {
                             controls::update_controls,
                             player::input_actions,
                             unit::action,
-                            skill::update_skill,
+                            update_skill,
                             unit::attract_resource_items,
                             unit::pick_storable_items,
                             player::update_camera,
