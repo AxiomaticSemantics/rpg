@@ -131,7 +131,7 @@ pub(crate) fn receive_player_move(
     for event in move_events.read() {
         let move_msg = event.message();
 
-        info!("move player {move_msg:?}");
+        // info!("move player {move_msg:?}");
         let (mut transform, mut anim) = player_q.single_mut();
         transform.translation = move_msg.0;
 
@@ -233,10 +233,9 @@ pub(crate) fn receive_stat_update(
     for event in update_events.read() {
         let update_msg = event.message();
 
-        info!("stat update: {:?}", update_msg.0);
+        // info!("player stat update: {:?}", update_msg.0);
 
         let mut player = player_q.single_mut();
-
         player
             .stats
             .vitals
@@ -253,12 +252,7 @@ pub(crate) fn receive_stat_updates(
 
         let mut player = player_q.single_mut();
         for update in &update_msg.0 {
-            player
-                .stats
-                .vitals
-                .get_mut_stat_from_id(update.id)
-                .unwrap()
-                .value = update.total;
+            player.stats.vitals.set_from_id(update.id, update.total);
             info!("stat update: {update:?}");
         }
     }

@@ -43,7 +43,7 @@ use bevy::{
     },
     hierarchy::DespawnRecursiveExt,
     log::{debug, info},
-    math::{Quat, Vec3},
+    math::Vec3,
     time::{Time, Timer, TimerMode},
     transform::{components::Transform, TransformBundle},
 };
@@ -69,7 +69,6 @@ pub fn update_invulnerability(
 }
 
 pub(crate) fn prepare_skill(
-    owner: Entity,
     attack_data: &AttackData,
     time: &Time,
     random: &mut SharedRng,
@@ -367,13 +366,7 @@ pub fn handle_contacts(
     mut ground_drops: ResMut<GroundItemDrops>,
     mut rng: ResMut<SharedRng>,
     mut skill_events: EventReader<SkillContactEvent>,
-    mut skill_q: Query<(
-        Entity,
-        &mut Transform,
-        &mut Invulnerability,
-        &SkillOwner,
-        &mut SkillUse,
-    )>,
+    mut skill_q: Query<(Entity, &mut Transform, &mut Invulnerability, &mut SkillUse)>,
     mut unit_q: Query<
         (
             Entity,
@@ -398,7 +391,7 @@ pub fn handle_contacts(
             continue;
         }
 
-        let (s_entity, mut s_transform, mut invulnerability, s_owner, mut instance) =
+        let (s_entity, mut s_transform, mut invulnerability, mut instance) =
             skill_q.get_mut(event.entity).unwrap();
         let combat_result =
             defender.handle_attack(&attacker, &metadata.0, &mut rng.0, &instance.damage);
@@ -551,7 +544,7 @@ pub fn handle_contacts(
                 &mut d_actions,
             )
         {
-            // println!("Despawning skill");
+            // debug!("Despawning skill");
             commands.entity(event.entity).despawn_recursive();
         }
     }

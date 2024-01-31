@@ -42,7 +42,7 @@ pub(crate) fn upkeep(
             .apply_regeneration(&metadata.0, time.delta_seconds());
 
         if !updates.is_empty() {
-            info!("{updates:?}");
+            // debug!("{updates:?}");
 
             net_params.server.send_message_to_target::<Channel1, _>(
                 SCStatUpdates(updates),
@@ -79,7 +79,6 @@ pub(crate) fn attract_resource_items(
         }
 
         if nearest == Entity::PLACEHOLDER {
-            info!("no hero nearby");
             continue;
         };
 
@@ -112,7 +111,7 @@ pub(crate) fn attract_resource_items(
                 NetworkTarget::Only(vec![client.id]),
             );
 
-            info!("hero attracted item");
+            //info!("hero attracted item");
             commands.entity(i_entity).despawn_recursive();
         } else {
             let target_dir = (u_transform.translation - i_ground).normalize_or_zero();

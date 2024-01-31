@@ -125,8 +125,7 @@ pub(crate) fn action(
                     }*/
 
                     let (skill_aabb, skill_transform, skill_use) = skill::prepare_skill(
-                        entity, &attack, &time, &mut rng, &mut aabbs, skill_info, skill, &unit,
-                        &transform,
+                        &attack, &time, &mut rng, &mut aabbs, skill_info, skill, &unit, &transform,
                     );
 
                     info!("spawning skill");
