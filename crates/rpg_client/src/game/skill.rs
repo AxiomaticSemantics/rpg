@@ -30,7 +30,6 @@ use bevy::{
     asset::{Assets, Handle},
     ecs::{
         entity::Entity,
-        event::EventWriter,
         query::{With, Without},
         system::{Commands, Query, Res, ResMut},
     },
@@ -149,16 +148,9 @@ use std::borrow::Cow;
 pub fn clean_skills(
     mut commands: Commands,
     time: Res<Time>,
-    mut skill_q: Query<(Entity, &Transform, &mut SkillTimer, &SkillUse)>,
+    mut skill_q: Query<(Entity, &Transform, &SkillUse)>,
 ) {
-    for (entity, transform, mut timer, skill_use) in &mut skill_q {
-        if let Some(timer) = &mut timer.0 {
-            if timer.tick(time.delta()).finished() {
-                commands.entity(entity).despawn_recursive();
-                continue;
-            }
-        }
-
+    for (entity, transform, skill_use) in &mut skill_q {
         let despawn = match &skill_use.instance {
             SkillInstance::Projectile(info) => match info.info.duration {
                 Some(d) => time.elapsed_seconds() - info.start_time >= d,
@@ -345,7 +337,6 @@ pub fn prepare_skill(
             };
 
             let time = time.elapsed_seconds();
-            //let forward = originorm.forward();
 
             let spawn_transform = if info.orbit.is_some() {
                 Transform::from_translation(*origin + Vec3::new(0., 1.2, 0.))
@@ -394,12 +385,15 @@ pub fn prepare_skill(
             let radius = info.radius as f32 / 100.;
             let key = format!("area_radius_{}", info.radius);
 
+            // If the required resources are cached use the
             let (mesh_handle, aabb) = if renderables.meshes.contains_key(key.as_str()) {
+                // The required resources are cached, return them
                 (
                     renderables.meshes[key.as_str()].clone_weak(),
                     renderables.aabbs[key.as_str()],
                 )
             } else {
+                // The required resource are not cached, add them into the cache
                 let mut mesh: Mesh = Circle::new(radius).into();
                 let _ = mesh.generate_tangents();
                 //let aabb = mesh.compute_aabb().unwrap();
@@ -452,10 +446,11 @@ pub(crate) fn spawn_instance(
     aabb: Aabb,
     transform: Transform,
     skill_use_instance: SkillUse,
-    mesh: Option<PropHandle>,
+    prop: Option<PropHandle>,
     material: Option<Handle<StandardMaterial>>,
 ) {
-    let skill_use = SkillUseBundle::new(skill_use_instance, SkillTimer(None));
+    // FIXME skill timer needs to be passed in here
+    let skill_use = SkillUseBundle::new(skill_use_instance);
 
     let common_bundle = (
         GameSessionCleanup,
@@ -477,7 +472,7 @@ pub(crate) fn spawn_instance(
         SkillInstance::Projectile(_) => {
             // debug!("spawning projectile skill");
 
-            let handle = mesh.unwrap();
+            let handle = prop.unwrap();
             if let PropHandle::Scene(handle) = handle {
                 commands.spawn((
                     common_bundle,
@@ -504,8 +499,18 @@ pub(crate) fn spawn_instance(
         SkillInstance::Area(_) => {
             //println!("spawning area skill");
 
-            let handle = mesh.unwrap();
-            if let PropHandle::Mesh(handle) = handle {
+            let handle = prop.unwrap();
+            if let PropHandle::Scene(handle) = handle {
+                commands.spawn((
+                    common_bundle,
+                    SceneBundle {
+                        scene: handle,
+                        transform,
+                        ..default()
+                    },
+                    ShowAabbGizmo::default(),
+                ));
+            } else if let PropHandle::Mesh(handle) = handle {
                 commands.spawn((
                     common_bundle,
                     MaterialMeshBundle {

@@ -195,20 +195,20 @@ pub(crate) fn receive_skill_use_direct(
         };
 
         let (transform, mut actions) = player_q.get_mut(client.entity).unwrap();
-        let skill_use_msg = event.message();
-        info!("{skill_use_msg:?}");
+        let skill_msg = event.message();
+        info!("skill use direct: {skill_msg:?}");
 
         let (origin, target) = get_skill_origin(
             &metadata.0,
             &transform,
             transform.translation, // FIXMEcursor_position.ground,
-            skill_use_msg.0,
+            skill_msg.0,
         );
 
         if actions.attack.is_none() && actions.knockback.is_none() {
             actions.request(Action::new(
                 ActionData::Attack(AttackData {
-                    skill_id: skill_use_msg.0,
+                    skill_id: skill_msg.0,
                     user: transform.translation,
                     origin,
                     target,
@@ -223,8 +223,9 @@ pub(crate) fn receive_skill_use_direct(
 
 pub(crate) fn receive_skill_use_targeted(
     mut skill_use_reader: EventReader<MessageEvent<CSSkillUseTargeted>>,
-    mut net_params: NetworkParamsRW,
-    mut player_q: Query<(&mut Transform, &Unit, &AccountInstance), With<Hero>>,
+    net_params: NetworkParamsRO,
+    metadata: Res<MetadataResources>,
+    mut player_q: Query<(&Transform, &Unit, &mut Actions, &AccountInstance), With<Hero>>,
 ) {
     for event in skill_use_reader.read() {
         let client_id = *event.context();
@@ -233,10 +234,30 @@ pub(crate) fn receive_skill_use_targeted(
             continue;
         };
 
-        let (mut transform, player, account) = player_q.get(client.entity).unwrap();
-        let skill_use_msg = event.message();
-        info!("{skill_use_msg:?}");
+        let (transform, player, mut actions, account) = player_q.get_mut(client.entity).unwrap();
+        let skill_msg = event.message();
+        info!("skill use targeted: {skill_msg:?}");
 
+        let (origin, target) = get_skill_origin(
+            &metadata.0,
+            &transform,
+            transform.translation, // FIXMEcursor_position.ground,
+            skill_msg.skill_id,
+        );
+
+        if actions.attack.is_none() && actions.knockback.is_none() {
+            actions.request(Action::new(
+                ActionData::Attack(AttackData {
+                    skill_id: skill_msg.skill_id,
+                    user: transform.translation,
+                    origin,
+                    target,
+                }),
+                None,
+                true,
+            ));
+            //
+        }
         //
     }
 }

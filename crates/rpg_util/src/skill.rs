@@ -20,9 +20,6 @@ pub struct SkillContactEvent {
     pub defender: Entity,
 }
 
-#[derive(Default, Debug, Component, Deref, DerefMut)]
-pub struct SkillTimer(pub Option<Timer>);
-
 #[derive(Default, Debug)]
 pub struct Tickable {
     pub timer: Timer,
@@ -71,12 +68,11 @@ impl SkillUse {
 #[derive(Bundle)]
 pub struct SkillUseBundle {
     pub skill: SkillUse,
-    pub timer: SkillTimer,
 }
 
 impl SkillUseBundle {
-    pub fn new(skill: SkillUse, timer: SkillTimer) -> Self {
-        Self { skill, timer }
+    pub fn new(skill: SkillUse) -> Self {
+        Self { skill }
     }
 }
 

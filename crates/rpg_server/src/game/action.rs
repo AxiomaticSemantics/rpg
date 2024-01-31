@@ -47,6 +47,9 @@ pub(crate) fn action(
     let dt = time.delta_seconds();
 
     for (entity, mut unit, mut transform, mut actions, account) in &mut unit_q {
+        // All of the following action handlers are in a strict order
+
+        // First react to any knockback events, this blocks all other actions
         if let Some(action) = &mut actions.knockback {
             let ActionData::Knockback(knockback) = action.data else {
                 panic!("expected knockback data");
@@ -63,6 +66,7 @@ pub(crate) fn action(
             continue;
         }
 
+        // Next if the user is able to initiate an attack do so
         if let Some(action) = &mut actions.attack {
             let ActionData::Attack(attack) = action.data else {
                 panic!("expected attack data");
@@ -144,11 +148,13 @@ pub(crate) fn action(
                         NetworkTarget::All,
                     );
 
-                    action.state = State::Finalize;
+                    // The action is completed at this point
+                    action.state = State::Completed;
                     action.timer = None;
                 }
                 _ => {}
             }
+            continue;
         }
 
         if let Some(action) = &mut actions.look {

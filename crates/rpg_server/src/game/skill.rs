@@ -21,8 +21,8 @@ use rpg_util::{
     actions::{Action, ActionData, Actions, AttackData, KnockbackData as KnockbackActionData},
     item::GroundItemDrops,
     skill::{
-        Invulnerability, InvulnerabilityTimer, SkillContactEvent, SkillTimer, SkillUse,
-        SkillUseBundle, Tickable,
+        Invulnerability, InvulnerabilityTimer, SkillContactEvent, SkillUse, SkillUseBundle,
+        Tickable,
     },
     unit::{Corpse, Unit},
 };
@@ -252,7 +252,7 @@ pub(crate) fn spawn_instance(
     skill_use_instance: SkillUse,
     owner: Entity,
 ) {
-    let skill_use = SkillUseBundle::new(skill_use_instance, SkillTimer(None));
+    let skill_use = SkillUseBundle::new(skill_use_instance);
 
     commands.spawn((
         GameSessionCleanup,
@@ -320,18 +320,9 @@ pub(crate) fn update_skill(time: Res<Time>, mut skill_q: Query<(&mut Transform, 
 pub(crate) fn clean_skills(
     mut commands: Commands,
     time: Res<Time>,
-    mut skill_q: Query<(Entity, &Transform, &mut SkillTimer, &SkillUse)>,
+    mut skill_q: Query<(Entity, &Transform, &SkillUse)>,
 ) {
-    for (entity, transform, mut timer, skill_use) in &mut skill_q {
-        if let Some(timer) = &mut timer.0 {
-            if timer.tick(time.delta()).finished() {
-                // TODO send message to all clients that have spawned this skill
-                // or rely on the client to auto-despawn?
-                commands.entity(entity).despawn_recursive();
-                continue;
-            }
-        }
-
+    for (entity, transform, skill_use) in &mut skill_q {
         let despawn = match &skill_use.instance {
             SkillInstance::Projectile(info) => match info.info.duration {
                 Some(d) => time.elapsed_seconds() - info.start_time >= d,

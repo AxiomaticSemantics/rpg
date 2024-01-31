@@ -322,6 +322,8 @@ pub(crate) fn receive_spawn_skill(
         let skill_id = spawn_msg.id;
         //let owner = owner_q.get();
 
+        info!("spawning skill: {spawn_msg:?}");
+
         let skill_meta = &metadata.rpg.skill.skills[&skill_id];
 
         let (aabb, transform, instance, mesh, material) = skill::prepare_skill(
