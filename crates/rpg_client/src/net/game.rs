@@ -1,26 +1,36 @@
 use crate::{
     game::{
-        actor::{self, animation::AnimationState, player::Player, spawn_actor},
+        actor::{
+            self,
+            animation::{
+                AnimationState, ANIM_ATTACK, ANIM_DEATH, ANIM_DEFEND, ANIM_IDLE, ANIM_WALK,
+            },
+            player::Player,
+            spawn_actor,
+        },
         assets::RenderResources,
         metadata::MetadataResources,
         plugin::{GameOverState, GameState, PlayState},
+        skill,
     },
     net::account::RpgAccount,
     state::AppState,
 };
 
 use bevy::{
-    animation::RepeatAnimation,
+    asset::Assets,
     ecs::{
         entity::Entity,
         event::EventReader,
-        query::With,
+        query::{With, Without},
         schedule::NextState,
         system::{Commands, Query, Res, ResMut},
     },
     hierarchy::DespawnRecursiveExt,
     log::{debug, info},
     math::Vec3,
+    render::mesh::Mesh,
+    time::Time,
     transform::components::Transform,
 };
 
@@ -30,6 +40,7 @@ use rpg_core::{
 };
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
+    actions::AttackData,
     item::{GroundItem, GroundItemDrops},
     unit::{Corpse, Unit, Villain},
 };
@@ -115,27 +126,33 @@ pub(crate) fn receive_player_spawn(
 
 pub(crate) fn receive_player_move(
     mut move_events: EventReader<MessageEvent<SCMovePlayer>>,
-    mut player_q: Query<&mut Transform, With<Player>>,
+    mut player_q: Query<(&mut Transform, &mut AnimationState), With<Player>>,
 ) {
     for event in move_events.read() {
         let move_msg = event.message();
 
-        info!("move start {move_msg:?}");
-        let mut transform = player_q.single_mut();
+        info!("move player {move_msg:?}");
+        let (mut transform, mut anim) = player_q.single_mut();
         transform.translation = move_msg.0;
+
+        if *anim != ANIM_WALK {
+            *anim = ANIM_WALK;
+        }
     }
 }
 
 pub(crate) fn receive_player_move_end(
     mut move_events: EventReader<MessageEvent<SCMovePlayerEnd>>,
-    mut player_q: Query<&mut Transform, With<Player>>,
+    mut player_q: Query<(&mut Transform, &mut AnimationState), With<Player>>,
 ) {
     for event in move_events.read() {
         let move_msg = event.message();
 
-        info!("move end {move_msg:?}");
-        let mut transform = player_q.single_mut();
+        info!("move player end {move_msg:?}");
+        let (mut transform, mut anim) = player_q.single_mut();
         transform.translation = move_msg.0;
+
+        *anim = ANIM_IDLE;
     }
 }
 
@@ -154,16 +171,17 @@ pub(crate) fn receive_player_rotation(
 
 pub(crate) fn receive_unit_move(
     mut move_events: EventReader<MessageEvent<SCMoveUnit>>,
-    mut unit_q: Query<(&mut Transform, &Unit)>,
+    mut unit_q: Query<(&mut Transform, &Unit, &mut AnimationState)>,
 ) {
     for event in move_events.read() {
         let move_msg = event.message();
-        // info!("move: {move_msg:?}");
-
-        for (mut transform, unit) in &mut unit_q {
+        for (mut transform, unit, mut anim) in &mut unit_q {
             if unit.uid != move_msg.uid {
                 continue;
             }
+
+            info!("move: {move_msg:?}");
+            *anim = ANIM_WALK;
 
             transform.translation = move_msg.position;
         }
@@ -172,20 +190,23 @@ pub(crate) fn receive_unit_move(
 
 pub(crate) fn receive_unit_move_end(
     mut move_events: EventReader<MessageEvent<SCMoveUnitEnd>>,
-    mut unit_q: Query<(&mut Transform, &Unit)>,
+    mut unit_q: Query<(&mut Transform, &Unit, &mut AnimationState)>,
 ) {
     for event in move_events.read() {
         let move_msg = event.message();
-        // info!("move: {move_msg:?}");
-
-        for (mut transform, unit) in &mut unit_q {
+        for (mut transform, unit, mut anim) in &mut unit_q {
             if unit.uid != move_msg.uid {
                 continue;
             }
 
+            info!("move unit end: {move_msg:?}");
+            *anim = ANIM_IDLE;
+
             transform.translation = move_msg.position;
         }
     }
+
+    move_events.clear();
 }
 
 pub(crate) fn receive_unit_rotation(
@@ -194,13 +215,12 @@ pub(crate) fn receive_unit_rotation(
 ) {
     for event in rotation_events.read() {
         let rot_msg = event.message();
-        // info!("rot: {rot_msg:?}");
-
         for (mut transform, unit) in &mut unit_q {
             if unit.uid != rot_msg.uid {
                 continue;
             }
 
+            info!("rot unit: {rot_msg:?}");
             transform.look_to(rot_msg.direction, Vec3::Y);
         }
     }
@@ -220,9 +240,7 @@ pub(crate) fn receive_stat_update(
         player
             .stats
             .vitals
-            .get_mut_stat_from_id(update_msg.0.id)
-            .unwrap()
-            .value = update_msg.0.total;
+            .set_from_id(update_msg.0.id, update_msg.0.total);
     }
 }
 
@@ -253,7 +271,7 @@ pub(crate) fn receive_spawn_item(
     for event in spawn_reader.read() {
         let spawn_msg = event.message();
 
-        info!("item drop: {:?}", spawn_msg);
+        info!("spawning item: {:?}", spawn_msg);
 
         ground_items.0.push(spawn_msg.items.clone());
     }
@@ -266,7 +284,7 @@ pub(crate) fn receive_spawn_items(
     for event in spawn_reader.read() {
         let spawn_msg = event.message();
 
-        info!("item drops: {:?}", spawn_msg);
+        info!("spawning items: {:?}", spawn_msg);
 
         ground_items.0.push(spawn_msg.items.clone());
     }
@@ -288,6 +306,48 @@ pub(crate) fn receive_despawn_item(
             commands.entity(entity).despawn_recursive();
             info!("ground item depspawn: {despawn_msg:?}");
         }
+    }
+}
+
+pub(crate) fn receive_spawn_skill(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut renderables: ResMut<RenderResources>,
+    metadata: Res<MetadataResources>,
+    mut spawn_reader: EventReader<MessageEvent<SCSpawnSkill>>,
+) {
+    for event in spawn_reader.read() {
+        let spawn_msg = event.message();
+        let skill_id = spawn_msg.id;
+        //let owner = owner_q.get();
+
+        info!("spawning skill: {spawn_msg:?}");
+
+        let skill_meta = &metadata.rpg.skill.skills[&skill_id];
+
+        let (aabb, transform, instance, mesh, material) = skill::prepare_skill(
+            spawn_msg.uid,
+            &spawn_msg.origin,
+            &spawn_msg.target,
+            &time,
+            &mut renderables,
+            &mut meshes,
+            skill_meta,
+            spawn_msg.id,
+        );
+
+        skill::spawn_instance(&mut commands, aabb, transform, instance, mesh, material);
+    }
+}
+
+pub(crate) fn receive_despawn_skill(
+    mut commands: Commands,
+    mut despawn_reader: EventReader<MessageEvent<SCDespawnSkill>>,
+) {
+    for event in despawn_reader.read() {
+        let despawn_msg = event.message();
+        //
     }
 }
 
@@ -371,7 +431,7 @@ pub(crate) fn receive_villain_death(
     for event in death_reader.read() {
         let death_msg = event.message();
 
-        info!("villain eath {death_msg:?}");
+        info!("villain death {death_msg:?}");
 
         for (entity, villain, mut villain_anim) in &mut villain_q {
             if villain.uid != death_msg.0 {
@@ -380,11 +440,7 @@ pub(crate) fn receive_villain_death(
 
             commands.entity(entity).insert(Corpse);
 
-            *villain_anim = AnimationState {
-                repeat: RepeatAnimation::Never,
-                paused: false,
-                index: 1,
-            };
+            *villain_anim = ANIM_DEATH;
         }
     }
 }
@@ -424,4 +480,10 @@ pub(crate) fn receive_despawn_corpse(
             commands.entity(entity).despawn_recursive();
         }
     }
+}
+
+pub(crate) fn recieve_item_pickup(
+    mut pickup_reader: EventReader<MessageEvent<SCDespawnCorpse>>,
+    unit_q: Query<(Entity, &Unit), Without<Corpse>>,
+) {
 }

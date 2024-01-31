@@ -6,6 +6,7 @@ use crate::game::{
     world::zone::Zone,
 };
 
+use rpg_core::skill::SkillInfo;
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions::{Action, ActionData, Actions, AttackData},
@@ -99,12 +100,28 @@ pub fn input_actions(
 
     let (transform, mut actions, unit) = player_q.single_mut();
 
-    if controls.mouse_primary.pressed || controls.gamepad_b.pressed {
+    if controls.mouse_primary.just_pressed || controls.gamepad_b.just_pressed {
         let skill_id = unit.active_skills.primary.skill.unwrap();
 
-        net_client.send_message::<Channel1, _>(CSSkillUseDirect(skill_id));
+        let skill_meta = &metadata.rpg.skill.skills[&skill_id];
 
-        let (origin, target) =
+        let _ = match &skill_meta.info {
+            SkillInfo::Direct(_) => {
+                net_client.send_message::<Channel1, _>(CSSkillUseDirect(skill_id))
+            }
+            SkillInfo::Projectile(info) => {
+                net_client.send_message::<Channel1, _>(CSSkillUseTargeted {
+                    skill_id,
+                    target: cursor_position.ground,
+                })
+            }
+            SkillInfo::Area(info) => net_client.send_message::<Channel1, _>(CSSkillUseTargeted {
+                skill_id,
+                target: cursor_position.ground,
+            }),
+        };
+
+        /*let (origin, target) =
             get_skill_origin(&metadata.rpg, transform, cursor_position.ground, skill_id);
 
         if actions.attack.is_none() && actions.knockback.is_none() {
@@ -121,7 +138,7 @@ pub fn input_actions(
 
             // No other user actions can happen while attacking
             return;
-        }
+        }*/
     }
 
     if controls.mouse_secondary.just_pressed || controls.gamepad_a.just_pressed {

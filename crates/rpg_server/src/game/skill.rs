@@ -1,4 +1,7 @@
-use super::plugin::{AabbResources, GameSessionCleanup, GameState};
+use super::{
+    plugin::{AabbResources, GameSessionCleanup},
+    unit::CorpseTimer,
+};
 use crate::{
     account::AccountInstance, assets::MetadataResources, net::server::NetworkParamsRW,
     server_state::ServerMetadataResource,
@@ -18,8 +21,8 @@ use rpg_util::{
     actions::{Action, ActionData, Actions, AttackData, KnockbackData as KnockbackActionData},
     item::GroundItemDrops,
     skill::{
-        Invulnerability, InvulnerabilityTimer, SkillContactEvent, SkillTimer, SkillUse,
-        SkillUseBundle, Tickable,
+        Invulnerability, InvulnerabilityTimer, SkillContactEvent, SkillUse, SkillUseBundle,
+        Tickable,
     },
     unit::{Corpse, Unit},
 };
@@ -32,6 +35,7 @@ use util::{
 
 use bevy::{
     ecs::{
+        component::Component,
         entity::Entity,
         event::{EventReader, EventWriter},
         query::{With, Without},
@@ -47,6 +51,9 @@ use bevy::{
 use lightyear::shared::NetworkTarget;
 
 use std::borrow::Cow;
+
+#[derive(Debug, Component)]
+pub(crate) struct SkillOwner(pub(crate) Entity);
 
 pub fn update_invulnerability(
     time: Res<Time>,
@@ -83,6 +90,7 @@ pub(crate) fn prepare_skill(
 
     // debug!("{:?}", &skill_info.origin);
 
+    /* FIXME
     let effects = skill
         .effects
         .iter()
@@ -97,7 +105,7 @@ pub(crate) fn prepare_skill(
 
             EffectInstance::new(e.clone(), data)
         })
-        .collect();
+        .collect(); */
 
     let (aabb, skill_use, transform, tickable) = match &skill_info.info {
         SkillInfo::Direct(_) => {
@@ -226,12 +234,11 @@ pub(crate) fn prepare_skill(
     };
 
     let instance = SkillUse::new(
-        owner,
-        unit.kind,
+        unit.uid,
         skill.id,
         skill.damage.clone(),
         skill_use,
-        effects,
+        vec![], // FIXME effects,
         tickable,
     );
 
@@ -243,8 +250,9 @@ pub(crate) fn spawn_instance(
     aabb: Aabb,
     transform: Transform,
     skill_use_instance: SkillUse,
+    owner: Entity,
 ) {
-    let skill_use = SkillUseBundle::new(skill_use_instance, SkillTimer(None));
+    let skill_use = SkillUseBundle::new(skill_use_instance);
 
     commands.spawn((
         GameSessionCleanup,
@@ -312,18 +320,9 @@ pub(crate) fn update_skill(time: Res<Time>, mut skill_q: Query<(&mut Transform, 
 pub(crate) fn clean_skills(
     mut commands: Commands,
     time: Res<Time>,
-    mut skill_q: Query<(Entity, &Transform, &mut SkillTimer, &SkillUse)>,
+    mut skill_q: Query<(Entity, &Transform, &SkillUse)>,
 ) {
-    for (entity, transform, mut timer, skill_use) in &mut skill_q {
-        if let Some(timer) = &mut timer.0 {
-            if timer.tick(time.delta()).finished() {
-                // TODO send message to all clients that have spawned this skill
-                // or rely on the client to auto-despawn?
-                commands.entity(entity).despawn_recursive();
-                continue;
-            }
-        }
-
+    for (entity, transform, skill_use) in &mut skill_q {
         let despawn = match &skill_use.instance {
             SkillInstance::Projectile(info) => match info.info.duration {
                 Some(d) => time.elapsed_seconds() - info.start_time >= d,
@@ -359,10 +358,11 @@ pub(crate) fn collide_skills(
         &AabbComponent,
         &Invulnerability,
         &SkillUse,
+        &SkillOwner,
     )>,
     unit_q: Query<(Entity, &Transform, &AabbComponent, &Unit), Without<Corpse>>,
 ) {
-    for (s_entity, s_transform, s_aabb, invulnerability, instance) in &skill_q {
+    for (s_entity, s_transform, s_aabb, invulnerability, instance, owner) in &skill_q {
         if let Some(tickable) = &instance.tickable {
             if !tickable.can_damage {
                 continue;
@@ -371,8 +371,7 @@ pub(crate) fn collide_skills(
 
         for (u_entity, u_transform, u_aabb, unit) in &unit_q {
             if !unit.is_alive()
-                || unit.kind == instance.owner_kind
-                || u_entity == instance.owner
+                || unit.uid == instance.owner
                 || invulnerability.iter().any(|i| i.entity == u_entity)
             {
                 continue;
@@ -412,8 +411,8 @@ pub(crate) fn collide_skills(
                 info!("collide {instance:?}");
                 skill_events.send(SkillContactEvent {
                     entity: s_entity,
-                    owner_entity: instance.owner,
-                    defender_entity: u_entity,
+                    owner: owner.0,
+                    defender: u_entity,
                 });
             }
         }
@@ -445,7 +444,7 @@ pub fn handle_contacts(
     for event in skill_events.read() {
         let Ok(
             [(_, mut attacker, _, _, a_account, _), (d_entity, mut defender, mut d_actions, d_transform, d_account, d_corpse)],
-        ) = unit_q.get_many_mut([event.owner_entity, event.defender_entity])
+        ) = unit_q.get_many_mut([event.owner, event.defender])
         else {
             panic!("Unable to query attacker and/or defender unit(s)");
         };
@@ -585,10 +584,10 @@ pub fn handle_contacts(
                     );
                 }
 
-                commands.entity(event.defender_entity).insert(Corpse);
-                /*commands
-                .entity(event.defender_entity)
-                .insert(CorpseTimer(Timer::from_seconds(60., TimerMode::Once)));*/
+                commands.entity(event.defender).insert((
+                    Corpse,
+                    CorpseTimer(Timer::from_seconds(60., TimerMode::Once)),
+                ));
             }
             _ => {}
         }

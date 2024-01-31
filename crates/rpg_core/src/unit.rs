@@ -2,7 +2,7 @@ use crate::{
     class::Class,
     combat::{AttackResult, CombatResult, DeathResult},
     damage::{Damage, DamageKind, DamageValue},
-    item::{Item, ItemId, ItemUid, Rarity},
+    item::{self, Item, ItemId, ItemUid, Rarity},
     metadata::Metadata,
     passive_tree::PassiveSkillGraph,
     skill::{ActiveSkills, Skill, SkillId, SkillSlotId, SkillUseResult},
@@ -14,7 +14,6 @@ use crate::{
     },
     storage::{StorageIndex, UnitStorage, STORAGE_INVENTORY, STORAGE_STASH},
     uid::{NextUid, Uid},
-    unit_tables::VillainsTableEntry,
     villain::VillainId,
 };
 
@@ -495,7 +494,8 @@ impl Unit {
                     false,
                     false,
                 );
-                let mut items = self.roll_item_drops(metadata, villain_info, rng, next_uid);
+                let mut items =
+                    item::generation::roll_item_drops(metadata, villain_info, rng, next_uid);
                 items.push(xp_item);
 
                 println!("generated {} item(s)", items.len());
@@ -504,31 +504,6 @@ impl Unit {
             }
             _ => None,
         }
-    }
-
-    fn roll_item_drops(
-        &self,
-        metadata: &Metadata,
-        villain_info: &VillainsTableEntry,
-        rng: &mut Rng,
-        next_uid: &mut NextUid,
-    ) -> Vec<Item> {
-        let mut drops = Vec::new();
-        for i in 0..villain_info.drop_chances {
-            let drop_roll = rng.f32();
-            println!(
-                "Rolling {} of {} drop chances: {drop_roll} {}",
-                i + 1,
-                villain_info.drop_chances,
-                villain_info.drop_chance
-            );
-            if drop_roll < villain_info.drop_chance {
-                let item = crate::item::generation::generate(rng, metadata, 1, next_uid);
-                drops.push(item);
-            }
-        }
-
-        drops
     }
 
     fn block_attack(&self, _attacker: &Self, rng: &mut Rng) -> bool {

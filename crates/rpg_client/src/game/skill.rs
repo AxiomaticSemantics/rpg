@@ -8,20 +8,21 @@ use super::{
 };
 
 use audio_manager::plugin::AudioActions;
-use rpg_core::skill::{
-    effect::*, skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData, Origin,
-    ProjectileInstance, ProjectileShape, Skill, SkillId, SkillInfo, SkillInstance,
+use rpg_core::{
+    skill::{
+        effect::*, skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData, Origin,
+        ProjectileInstance, ProjectileShape, Skill, SkillId, SkillInfo, SkillInstance,
+    },
+    uid::Uid,
 };
 use rpg_util::{
     actions::{Action, ActionData, Actions, AttackData, KnockbackData as KnockbackActionData},
     skill::*,
-    unit::{Corpse, Unit},
 };
 
 use util::{
     cleanup::CleanupStrategy,
-    math::{intersect_aabb, Aabb, AabbComponent},
-    random::SharedRng,
+    math::{Aabb, AabbComponent},
 };
 
 use bevy::{
@@ -29,7 +30,6 @@ use bevy::{
     asset::{Assets, Handle},
     ecs::{
         entity::Entity,
-        event::EventWriter,
         query::{With, Without},
         system::{Commands, Query, Res, ResMut},
     },
@@ -148,16 +148,9 @@ use std::borrow::Cow;
 pub fn clean_skills(
     mut commands: Commands,
     time: Res<Time>,
-    mut skill_q: Query<(Entity, &Transform, &mut SkillTimer, &SkillUse)>,
+    mut skill_q: Query<(Entity, &Transform, &SkillUse)>,
 ) {
-    for (entity, transform, mut timer, skill_use) in &mut skill_q {
-        if let Some(timer) = &mut timer.0 {
-            if timer.tick(time.delta()).finished() {
-                commands.entity(entity).despawn_recursive();
-                continue;
-            }
-        }
-
+    for (entity, transform, skill_use) in &mut skill_q {
         let despawn = match &skill_use.instance {
             SkillInstance::Projectile(info) => match info.info.duration {
                 Some(d) => time.elapsed_seconds() - info.start_time >= d,
@@ -238,85 +231,15 @@ pub fn update_skill(time: Res<Time>, mut skill_q: Query<(&mut Transform, &mut Sk
     }
 }
 
-pub fn collide_skills(
-    mut skill_events: EventWriter<SkillContactEvent>,
-    mut skill_q: Query<(
-        Entity,
-        &Transform,
-        &AabbComponent,
-        &Invulnerability,
-        &SkillUse,
-    )>,
-    unit_q: Query<(Entity, &Transform, &AabbComponent, &Unit), Without<Corpse>>,
-) {
-    for (s_entity, s_transform, s_aabb, invulnerability, instance) in &mut skill_q {
-        if let Some(tickable) = &instance.tickable {
-            if !tickable.can_damage {
-                continue;
-            }
-        }
-
-        for (u_entity, u_transform, u_aabb, unit) in &unit_q {
-            if !unit.is_alive()
-                || unit.kind == instance.owner_kind
-                || u_entity == instance.owner
-                || invulnerability.iter().any(|i| i.entity == u_entity)
-            {
-                continue;
-            }
-
-            /*println!(
-                "unit {} skill {}",
-                u_transform.translation, s_transform.translation
-            );*/
-
-            let unit_offset = Vec3::new(0.0, 1.2, 0.0);
-
-            let collision = match &instance.instance {
-                SkillInstance::Direct(_) | SkillInstance::Projectile(_) => intersect_aabb(
-                    (
-                        &(s_transform.translation),
-                        &Aabb {
-                            center: s_aabb.center,
-                            half_extents: s_aabb.half_extents,
-                        },
-                    ),
-                    (
-                        &(u_transform.translation + unit_offset),
-                        &Aabb {
-                            center: u_aabb.center,
-                            half_extents: u_aabb.half_extents,
-                        },
-                    ),
-                ),
-                SkillInstance::Area(info) => {
-                    s_transform.translation.distance(u_transform.translation)
-                        <= info.info.radius as f32 / 100.
-                }
-            };
-
-            if collision {
-                skill_events.send(SkillContactEvent {
-                    entity: s_entity,
-                    owner_entity: instance.owner,
-                    defender_entity: u_entity,
-                });
-            }
-        }
-    }
-}
-
 pub fn prepare_skill(
-    owner: Entity,
-    attack_data: &AttackData,
+    owner: Uid,
+    origin: &Vec3,
+    target: &Vec3,
     time: &Time,
-    random: &mut SharedRng,
     renderables: &mut RenderResources,
     meshes: &mut Assets<Mesh>,
     skill_info: &SkillTableEntry,
-    skill: &Skill,
-    unit: &Unit,
-    unit_transform: &Transform,
+    skill_id: SkillId,
 ) -> (
     Aabb,
     Transform,
@@ -324,17 +247,9 @@ pub fn prepare_skill(
     Option<PropHandle>,
     Option<Handle<StandardMaterial>>,
 ) {
-    let mut origin = match &skill_info.origin {
-        Origin::Direct(_) => {
-            unit_transform.translation
-                + unit_transform.forward() * (skill_info.use_range as f32 / 100. / 2.)
-        }
-        Origin::Remote(data) => data.offset + attack_data.target,
-        Origin::Locked(_) => unit_transform.translation,
-    };
+    // debug!("{:?}", &skill_info.origin);
 
-    //println!("{:?}", &skill_info.origin);
-
+    /* FIXME
     let effects = skill
         .effects
         .iter()
@@ -350,13 +265,12 @@ pub fn prepare_skill(
             EffectInstance::new(e.clone(), data)
         })
         .collect();
+    */
 
     let (aabb, skill_use, transform, mesh, material, tickable) = match &skill_info.info {
         SkillInfo::Direct(_) => {
-            origin.y = 1.2;
-
             let aabb = renderables.aabbs["direct_attack"];
-            let SkillInfo::Direct(info) = &skill.info else {
+            let SkillInfo::Direct(info) = &skill_info.info else {
                 panic!("Expected direct attack")
             };
 
@@ -365,8 +279,7 @@ pub fn prepare_skill(
                 frame: 0,
             });
 
-            let skill_transform =
-                Transform::from_translation(origin).looking_to(unit_transform.forward(), Vec3::Y);
+            let skill_transform = Transform::from_translation(*origin).looking_at(*target, Vec3::Y);
 
             (aabb, instance, skill_transform, None, None, None)
         }
@@ -380,14 +293,7 @@ pub fn prepare_skill(
 
             let (mesh_handle, aabb) = if info.shape == ProjectileShape::Box {
                 let handle = renderables.props["bolt_01"].handle.clone();
-                let aabb = if renderables.aabbs.contains_key("bolt_01") {
-                    renderables.aabbs["bolt_01"]
-                } else {
-                    let aabb =
-                        Aabb::from_min_max(Vec3::new(-0.1, -0.1, -0.25), Vec3::new(0.1, 0.1, 0.25));
-                    renderables.aabbs.insert("bolt_01".into(), aabb);
-                    aabb
-                };
+                let aabb = renderables.aabbs["bolt_01"];
 
                 (handle, aabb)
             } else {
@@ -431,24 +337,14 @@ pub fn prepare_skill(
             };
 
             let time = time.elapsed_seconds();
-            let forward = unit_transform.forward();
 
             let spawn_transform = if info.orbit.is_some() {
-                let mut rot_transform = *unit_transform;
-                rot_transform.translation += Vec3::new(0., 1.2, 0.);
-                rot_transform.rotate_local_y(std::f32::consts::TAU * (0.5 - random.f32()));
-
-                Transform::from_translation(
-                    rot_transform.translation + rot_transform.forward() * 2.,
-                )
+                Transform::from_translation(*origin + Vec3::new(0., 1.2, 0.))
             } else if info.aerial.is_some() {
                 //println!("prepare aerial {attack_data:?}");
-                Transform::from_translation(origin).looking_at(attack_data.target, Vec3::Y)
+                Transform::from_translation(*origin).looking_at(*target, Vec3::Y)
             } else {
-                Transform::from_translation(
-                    unit_transform.translation + Vec3::new(0., 1.2, 0.) + forward * 0.25,
-                )
-                .looking_to(forward, Vec3::Y)
+                Transform::from_translation(*origin).looking_at(*target, Vec3::Y)
             };
 
             let instance_info = SkillInstance::Projectile(ProjectileInstance {
@@ -483,18 +379,21 @@ pub fn prepare_skill(
                 can_damage: true,
             });
 
-            let transform = Transform::from_translation(origin + Vec3::new(0.0, 0.01, 0.0))
+            let transform = Transform::from_translation(*origin + Vec3::new(0.0, 0.01, 0.0))
                 .looking_to(Vec3::NEG_Y, Vec3::Y);
 
             let radius = info.radius as f32 / 100.;
             let key = format!("area_radius_{}", info.radius);
 
+            // If the required resources are cached use the
             let (mesh_handle, aabb) = if renderables.meshes.contains_key(key.as_str()) {
+                // The required resources are cached, return them
                 (
                     renderables.meshes[key.as_str()].clone_weak(),
                     renderables.aabbs[key.as_str()],
                 )
             } else {
+                // The required resource are not cached, add them into the cache
                 let mut mesh: Mesh = Circle::new(radius).into();
                 let _ = mesh.generate_tangents();
                 //let aabb = mesh.compute_aabb().unwrap();
@@ -532,11 +431,10 @@ pub fn prepare_skill(
 
     let instance = SkillUse::new(
         owner,
-        unit.kind,
-        skill.id,
-        skill.damage.clone(),
+        skill_id,
+        skill_info.base_damage.clone(),
         skill_use,
-        effects,
+        vec![], // FIXME effects,
         tickable,
     );
 
@@ -548,22 +446,22 @@ pub(crate) fn spawn_instance(
     aabb: Aabb,
     transform: Transform,
     skill_use_instance: SkillUse,
-    mesh: Option<PropHandle>,
+    prop: Option<PropHandle>,
     material: Option<Handle<StandardMaterial>>,
 ) {
-    let skill_use = SkillUseBundle::new(skill_use_instance, SkillTimer(None));
+    // FIXME skill timer needs to be passed in here
+    let skill_use = SkillUseBundle::new(skill_use_instance);
 
     let common_bundle = (
         GameSessionCleanup,
         CleanupStrategy::DespawnRecursive,
         AabbComponent(aabb),
-        Invulnerability::default(),
         skill_use,
     );
 
-    match &common_bundle.4.skill.instance {
+    match &common_bundle.3.skill.instance {
         SkillInstance::Direct(_) => {
-            //println!("spawning direct skill {}", transform.translation);
+            // debug!("spawning direct skill {}", transform.translation);
 
             commands.spawn((
                 common_bundle,
@@ -572,9 +470,9 @@ pub(crate) fn spawn_instance(
             ));
         }
         SkillInstance::Projectile(_) => {
-            //println!("spawning projectile skill");
+            // debug!("spawning projectile skill");
 
-            let handle = mesh.unwrap();
+            let handle = prop.unwrap();
             if let PropHandle::Scene(handle) = handle {
                 commands.spawn((
                     common_bundle,
@@ -594,15 +492,25 @@ pub(crate) fn spawn_instance(
                         material: material.unwrap(),
                         ..default()
                     },
-                    //AabbGizmo::default(),
+                    ShowAabbGizmo::default(),
                 ));
             }
         }
         SkillInstance::Area(_) => {
             //println!("spawning area skill");
 
-            let handle = mesh.unwrap();
-            if let PropHandle::Mesh(handle) = handle {
+            let handle = prop.unwrap();
+            if let PropHandle::Scene(handle) = handle {
+                commands.spawn((
+                    common_bundle,
+                    SceneBundle {
+                        scene: handle,
+                        transform,
+                        ..default()
+                    },
+                    ShowAabbGizmo::default(),
+                ));
+            } else if let PropHandle::Mesh(handle) = handle {
                 commands.spawn((
                     common_bundle,
                     MaterialMeshBundle {
@@ -611,7 +519,7 @@ pub(crate) fn spawn_instance(
                         material: material.unwrap(),
                         ..default()
                     },
-                    //AabbGizmo::default(),
+                    ShowAabbGizmo::default(),
                 ));
             }
         }
@@ -620,10 +528,11 @@ pub(crate) fn spawn_instance(
 
 // TODO determine what the client will do here..
 // perhaps some of this should move to rpg_util
+/*
 /// Returns `true` if the skill should be destroyed
 fn handle_effects(
     time: &Time,
-    random: &mut SharedRng,
+    //random: &mut SharedRng,
     skill_use: &mut SkillUse,
     skill_transform: &mut Transform,
     defender_actions: &mut Actions,
@@ -696,4 +605,4 @@ fn handle_effects(
         };
 
     despawn
-}
+}*/

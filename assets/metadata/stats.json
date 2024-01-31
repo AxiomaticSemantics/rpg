@@ -1,105 +1,353 @@
 {
-	"stats": {
-		"Str": { "name": "Strength", "id": 0, "value_kind": "U32" },
-		"Dex": { "name": "Dexterity", "id": 1, "value_kind": "U32" },
-		"Int": { "name": "Intelligence", "id": 2, "value_kind": "U32" },
-		"Hp": { "name": "Health", "id": 4, "value_kind": "U32" },
-		"HpMax": { "name": "Maximum Health", "id": 5, "value_kind": "U32" },
-		"HpRegen": { "name": "Health Regeneration", "id": 6, "value_kind": "F32" },
-		"HpDrain": { "name": "Health Drain", "id": 7, "value_kind": "F32" },
-		"Ep": { "name": "Energy", "id": 8, "value_kind": "U32" },
-		"EpMax": { "name": "Maximum Energy", "id": 9, "value_kind": "U32" },
-		"EpRegen": { "name": "Energy Regeneration", "id": 10, "value_kind": "F32" },
-		"EpDrain": { "name": "Energy Drain", "id": 11, "value_kind": "F32" },
-		"Mp": { "name": "Mana", "id": 12, "value_kind": "U32" },
-		"MpMax": { "name": "Maximum Mana", "id": 13, "value_kind": "U32" },
-		"MpRegen": { "name": "Mana Regeneration", "id": 14, "value_kind": "F32" },
-		"MpDrain": { "name": "Mana Drain", "id": 15, "value_kind": "F32" },
-		"Movement": { "name": "Movement", "id": 16, "value_kind": "U32" },
-		"IncMovement": { "name": "Increased Movement", "id": 17, "value_kind": "F32" },
-		"RunCost": { "name": "Run Cost", "id": 18, "value_kind": "U32" },
-		"PickupRadius": { "name": "Pickup Radius", "id": 19, "value_kind": "U32" },
-		"LightRadius": { "name": "Light Radius", "id": 20, "value_kind": "U32" },
-		"IncAttackSpeed": { "name": "Increased Attack Speed", "id": 21, "value_kind": "F32" },
-		"IncCastSpeed": { "name": "Increased Cast Speed", "id": 22, "value_kind": "F32" },
-		"Xp": { "name": "Experience", "id": 23, "value_kind": "U64" },
-		"Cooldown": { "name": "Cooldown Recovery", "id": 24, "value_kind": "F32" },
-		"BlockChance": { "name": "Block Chance", "id": 25, "value_kind": "F32" },
-		"DodgeChance": { "name": "Dodge Chance", "id": 26, "value_kind": "F32" },
-		"IncPAtk": { "name": "Increased Physical Damage", "id": 27, "value_kind": "F32" },
-		"IncTAtk": { "name": "Increased Toxic Damage", "id": 28, "value_kind": "F32" },
-		"IncMAtk": { "name": "Increased Magic Damage", "id": 29, "value_kind": "F32" },
-		"CritChance": { "name": "Critical Strike Chance", "id": 48, "value_kind": "F32" },
-		"CritMulti": { "name": "Critical Strike Multiplier", "id": 49, "value_kind": "F32" },
-		"IncProjSpeed": { "name": "Increased projectile speed", "id": 128, "value_kind": "F32" },
-		"DecProjSpeed": { "name": "Decreased projectile speed", "id": 129, "value_kind": "F32" },
-		"IncProjSize": { "name": "Increased projectile size", "id": 130, "value_kind": "F32" },
-		"DecProjSize": { "name": "Decreased projectile size", "id": 131, "value_kind": "F32" }
-
-	},
-	"base_stats": [
-		"Str", "Dex", "Int", "PickupRadius", "LightRadius", "Movement", "RunCost", 
-		"HpRegen", "HpDrain", "EpRegen", "EpDrain", "MpRegen", "MpDrain", 
-		"Cooldown", "CritChance", "CritMulti"
-	],
-	"vital_stats": [
-		"Hp", "HpMax", "HpRegen", "HpDrain",
-		"Ep", "EpMax", "EpRegen", "EpDrain",
-		"Mp", "MpMax", "MpRegen", "MpDrain",
-		"Movement", "IncMovement", "IncAttackSpeed", "IncCastSpeed", "BlockChance", "DodgeChance",
-		"LightRadius", "PickupRadius", "CritChance", "CritMulti", "Cooldown", "IncProjSize", "DecProjSize", "IncProjSize", "DecProjSize"
-	],
-	"base_stat_defaults": {
-		"Str": { "U32": 36 },
-		"Dex": { "U32": 36 },
-		"Int": { "U32": 36 },
-		"HpRegen": { "F32": 0.0 },
-		"EpRegen": { "F32": 0.01 },
-		"MpRegen": { "F32": 0.01 },
-		"HpDrain": { "F32": 0.0 },
-		"EpDrain": { "F32": 0.0 },
-		"MpDrain": { "F32": 0.0 },
-		"CritChance": { "F32": 0.0 },
-		"CritMulti": { "F32": 1.5 },
-		"Movement": { "U32": 120 },
-		"RunCost": { "U32": 4 },
-		"Cooldown": { "F32": 1.0 },
-		"PickupRadius": { "U32": 150 },
-		"LightRadius": { "U32": 100 }
-	},
-	"class_str": {
-		"Str": { "U32": 6 },
-		"Dex": { "U32": 0 },
-		"Int": { "U32": 0 }
-	},
-	"class_dex": {
-		"Str": { "U32": 0 },
-		"Dex": { "U32": 6 },
-		"Int": { "U32": 0 }
-	},
-	"class_int": {
-		"Str": { "U32": 0 },
-		"Dex": { "U32": 0 },
-		"Int": { "U32": 6 }
-	},
-	"class_str_dex": {
-		"Str": { "U32": 3 },
-		"Dex": { "U32": 3 },
-		"Int": { "U32": 0 }
-	},
-	"class_dex_int": {
-		"Str": { "U32": 0 },
-		"Dex": { "U32": 3 },
-		"Int": { "U32": 3 }
-	},
-	"class_int_str": {
-		"Str": { "U32": 3 },
-		"Dex": { "U32": 0 },
-		"Int": { "U32": 3 }
-	},
-	"class_str_dex_int": {
-		"Str": { "U32": 2 },
-		"Dex": { "U32": 2 },
-		"Int": { "U32": 2 }
-	}
+  "stats": {
+    "Str": {
+      "name": "Strength",
+      "id": 0,
+      "value_kind": "U32"
+    },
+    "Dex": {
+      "name": "Dexterity",
+      "id": 1,
+      "value_kind": "U32"
+    },
+    "Int": {
+      "name": "Intelligence",
+      "id": 2,
+      "value_kind": "U32"
+    },
+    "Hp": {
+      "name": "Health",
+      "id": 4,
+      "value_kind": "U32"
+    },
+    "HpMax": {
+      "name": "Maximum Health",
+      "id": 5,
+      "value_kind": "U32"
+    },
+    "HpRegen": {
+      "name": "Health Regeneration",
+      "id": 6,
+      "value_kind": "F32"
+    },
+    "HpDrain": {
+      "name": "Health Drain",
+      "id": 7,
+      "value_kind": "F32"
+    },
+    "Ep": {
+      "name": "Energy",
+      "id": 8,
+      "value_kind": "U32"
+    },
+    "EpMax": {
+      "name": "Maximum Energy",
+      "id": 9,
+      "value_kind": "U32"
+    },
+    "EpRegen": {
+      "name": "Energy Regeneration",
+      "id": 10,
+      "value_kind": "F32"
+    },
+    "EpDrain": {
+      "name": "Energy Drain",
+      "id": 11,
+      "value_kind": "F32"
+    },
+    "Mp": {
+      "name": "Mana",
+      "id": 12,
+      "value_kind": "U32"
+    },
+    "MpMax": {
+      "name": "Maximum Mana",
+      "id": 13,
+      "value_kind": "U32"
+    },
+    "MpRegen": {
+      "name": "Mana Regeneration",
+      "id": 14,
+      "value_kind": "F32"
+    },
+    "MpDrain": {
+      "name": "Mana Drain",
+      "id": 15,
+      "value_kind": "F32"
+    },
+    "Movement": {
+      "name": "Movement",
+      "id": 16,
+      "value_kind": "U32"
+    },
+    "IncMovement": {
+      "name": "Increased Movement",
+      "id": 17,
+      "value_kind": "F32"
+    },
+    "RunCost": {
+      "name": "Run Cost",
+      "id": 18,
+      "value_kind": "U32"
+    },
+    "PickupRadius": {
+      "name": "Pickup Radius",
+      "id": 19,
+      "value_kind": "U32"
+    },
+    "LightRadius": {
+      "name": "Light Radius",
+      "id": 20,
+      "value_kind": "U32"
+    },
+    "IncAttackSpeed": {
+      "name": "Increased Attack Speed",
+      "id": 21,
+      "value_kind": "F32"
+    },
+    "IncCastSpeed": {
+      "name": "Increased Cast Speed",
+      "id": 22,
+      "value_kind": "F32"
+    },
+    "Xp": {
+      "name": "Experience",
+      "id": 23,
+      "value_kind": "U64"
+    },
+    "Cooldown": {
+      "name": "Cooldown Recovery",
+      "id": 24,
+      "value_kind": "F32"
+    },
+    "BlockChance": {
+      "name": "Block Chance",
+      "id": 25,
+      "value_kind": "F32"
+    },
+    "DodgeChance": {
+      "name": "Dodge Chance",
+      "id": 26,
+      "value_kind": "F32"
+    },
+    "IncPAtk": {
+      "name": "Increased Physical Damage",
+      "id": 27,
+      "value_kind": "F32"
+    },
+    "IncTAtk": {
+      "name": "Increased Toxic Damage",
+      "id": 28,
+      "value_kind": "F32"
+    },
+    "IncMAtk": {
+      "name": "Increased Magic Damage",
+      "id": 29,
+      "value_kind": "F32"
+    },
+    "CritChance": {
+      "name": "Critical Strike Chance",
+      "id": 48,
+      "value_kind": "F32"
+    },
+    "CritMulti": {
+      "name": "Critical Strike Multiplier",
+      "id": 49,
+      "value_kind": "F32"
+    },
+    "IncProjSpeed": {
+      "name": "Increased projectile speed",
+      "id": 128,
+      "value_kind": "F32"
+    },
+    "DecProjSpeed": {
+      "name": "Decreased projectile speed",
+      "id": 129,
+      "value_kind": "F32"
+    },
+    "IncProjSize": {
+      "name": "Increased projectile size",
+      "id": 130,
+      "value_kind": "F32"
+    },
+    "DecProjSize": {
+      "name": "Decreased projectile size",
+      "id": 131,
+      "value_kind": "F32"
+    }
+  },
+  "base_stats": [
+    "Str",
+    "Dex",
+    "Int",
+    "PickupRadius",
+    "LightRadius",
+    "Movement",
+    "RunCost",
+    "HpRegen",
+    "HpDrain",
+    "EpRegen",
+    "EpDrain",
+    "MpRegen",
+    "MpDrain",
+    "Cooldown",
+    "CritChance",
+    "CritMulti"
+  ],
+  "vital_stats": [
+    "Hp",
+    "HpMax",
+    "HpRegen",
+    "HpDrain",
+    "Ep",
+    "EpMax",
+    "EpRegen",
+    "EpDrain",
+    "Mp",
+    "MpMax",
+    "MpRegen",
+    "MpDrain",
+    "Movement",
+    "IncMovement",
+    "IncAttackSpeed",
+    "IncCastSpeed",
+    "BlockChance",
+    "DodgeChance",
+    "LightRadius",
+    "PickupRadius",
+    "CritChance",
+    "CritMulti",
+    "Cooldown",
+    "IncProjSize",
+    "DecProjSize",
+    "IncProjSize",
+    "DecProjSize"
+  ],
+  "base_stat_defaults": {
+    "Str": {
+      "U32": 36
+    },
+    "Dex": {
+      "U32": 36
+    },
+    "Int": {
+      "U32": 36
+    },
+    "HpRegen": {
+      "F32": 0
+    },
+    "EpRegen": {
+      "F32": 0.01
+    },
+    "MpRegen": {
+      "F32": 0.01
+    },
+    "HpDrain": {
+      "F32": 0
+    },
+    "EpDrain": {
+      "F32": 0
+    },
+    "MpDrain": {
+      "F32": 0
+    },
+    "CritChance": {
+      "F32": 0
+    },
+    "CritMulti": {
+      "F32": 1.5
+    },
+    "Movement": {
+      "U32": 120
+    },
+    "RunCost": {
+      "U32": 4
+    },
+    "Cooldown": {
+      "F32": 1
+    },
+    "PickupRadius": {
+      "U32": 150
+    },
+    "LightRadius": {
+      "U32": 100
+    }
+  },
+  "class_str": {
+    "Str": {
+      "U32": 6
+    },
+    "Dex": {
+      "U32": 0
+    },
+    "Int": {
+      "U32": 0
+    }
+  },
+  "class_dex": {
+    "Str": {
+      "U32": 0
+    },
+    "Dex": {
+      "U32": 6
+    },
+    "Int": {
+      "U32": 0
+    }
+  },
+  "class_int": {
+    "Str": {
+      "U32": 0
+    },
+    "Dex": {
+      "U32": 0
+    },
+    "Int": {
+      "U32": 6
+    }
+  },
+  "class_str_dex": {
+    "Str": {
+      "U32": 3
+    },
+    "Dex": {
+      "U32": 3
+    },
+    "Int": {
+      "U32": 0
+    }
+  },
+  "class_dex_int": {
+    "Str": {
+      "U32": 0
+    },
+    "Dex": {
+      "U32": 3
+    },
+    "Int": {
+      "U32": 3
+    }
+  },
+  "class_int_str": {
+    "Str": {
+      "U32": 3
+    },
+    "Dex": {
+      "U32": 0
+    },
+    "Int": {
+      "U32": 3
+    }
+  },
+  "class_str_dex_int": {
+    "Str": {
+      "U32": 2
+    },
+    "Dex": {
+      "U32": 2
+    },
+    "Int": {
+      "U32": 2
+    }
+  }
 }

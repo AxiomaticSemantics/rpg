@@ -1,6 +1,5 @@
 use bevy::{
     ecs::{bundle::Bundle, component::Component, entity::Entity, event::Event},
-    log::info,
     math::Vec3,
     prelude::{Deref, DerefMut},
     time::Timer,
@@ -11,18 +10,15 @@ use rpg_core::{
     damage::Damage,
     metadata::Metadata,
     skill::{effect::*, Origin, SkillId, SkillInstance},
-    unit::UnitKind,
+    uid::Uid,
 };
 
 #[derive(Event)]
 pub struct SkillContactEvent {
     pub entity: Entity,
-    pub owner_entity: Entity,
-    pub defender_entity: Entity,
+    pub owner: Entity,
+    pub defender: Entity,
 }
-
-#[derive(Default, Debug, Component, Deref, DerefMut)]
-pub struct SkillTimer(pub Option<Timer>);
 
 #[derive(Default, Debug)]
 pub struct Tickable {
@@ -41,8 +37,7 @@ pub struct Invulnerability(pub Vec<InvulnerabilityTimer>);
 
 #[derive(Debug, Component)]
 pub struct SkillUse {
-    pub owner: Entity,
-    pub owner_kind: UnitKind,
+    pub owner: Uid,
     pub id: SkillId,
     pub damage: Damage,
     pub instance: SkillInstance,
@@ -52,8 +47,7 @@ pub struct SkillUse {
 
 impl SkillUse {
     pub fn new(
-        owner: Entity,
-        owner_kind: UnitKind,
+        owner: Uid,
         id: SkillId,
         damage: Damage,
         instance: SkillInstance,
@@ -62,7 +56,6 @@ impl SkillUse {
     ) -> Self {
         Self {
             owner,
-            owner_kind,
             id,
             damage,
             instance,
@@ -75,12 +68,11 @@ impl SkillUse {
 #[derive(Bundle)]
 pub struct SkillUseBundle {
     pub skill: SkillUse,
-    pub timer: SkillTimer,
 }
 
 impl SkillUseBundle {
-    pub fn new(skill: SkillUse, timer: SkillTimer) -> Self {
-        Self { skill, timer }
+    pub fn new(skill: SkillUse) -> Self {
+        Self { skill }
     }
 }
 

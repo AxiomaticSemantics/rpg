@@ -1,230 +1,253 @@
 {
-	"skills": {
-		"BasicDirect": {
-			"info": {
-				"Direct": {
-					"range": 200,
-					"frames": 1
-				}
-			},
-			"use_range": 200,
-			"origin": {
-				"Direct": {
-					"offset": [ 0.0, 0.0, -1.0 ]
-				}
-			},
-			"base_damage": {
-				"kind": "Physical",
-				"value": {
-					"Flat": 16
-				}
-			},
-			"base_cost": [ 
-				{
-					"id": 12,
-					"value": {
-						"U32": 3
-					}
-				}
-			],
-			"use_duration_secs": 0.6
-		},
-		"BasicBolt": {
-			"info": {
-				"Projectile": {
-					"shape": "Box",
-					"speed": 300,
-					"duration": 3,
-					"size": 10,
-					"projectiles": 1
-				}
-			},
-			"use_range": 800,
-			"origin": {
-				"Remote": {
-					"offset": [ 0.0, 0.0, -0.25 ]
-				}
-			},
-			"base_damage": {
-				"kind": "Physical",
-				"value": {
-					"Flat": 12
-				}
-			},
-			"base_cost": [
-				{
-					"id": 12,
-					"value": {
-						"U32": 3
-					}
-				}
-			],
-			"effects": [
-				{
-					"Knockback": {
-						"duration": 0.5, 
-						"speed": 100
-					}
-				},
-				{
-					"Pierce": {
-						"pierces": 1
-					}
-				},
-				{
-					"Chain": {
-						"chains": 1
-					}
-				}
-			],
-			"use_duration_secs": 0.8
-		},
-		"BasicOrb": {
-			"info": {
-				"Projectile": {
-					"shape": "Sphere",
-					"speed": 300,
-					"duration": 15,
-					"size": 30,
-					"projectiles": 1,
-					"orbit": {
-						"range": 200
-					}
-				}
-			},
-			"use_range": 800,
-			"origin": {
-				"Remote": {
-					"offset": [ 0.0, 0.0, 0 ]
-				}
-			},
-			"base_damage": {
-				"kind": "Physical",
-				"value": {
-					"Flat": 12
-				}
-			},
-			"base_cost": [
-				{
-					"id": 12,
-					"value": {
-						"U32": 1
-					}
-				}
-			],
-			"effects": [
-				{
-					"Knockback": { 
-						"duration": 0.5, 
-						"speed": 100
-					}
-				}
-			],
-			"use_duration_secs": 0.8
-		},
-		"BasicAerial": {
-			"info": {
-				"Projectile": {
-					"shape": "Sphere",
-					"speed": 500,
-					"size": 100,
-					"projectiles": 1,
-					"tick_rate": 0.666,
-					"aerial": {
-						"height": 800
-					}
-				}
-			},
-			"use_range": 800,
-			"origin": {
-				"Remote": {
-					"offset": [ 0.0, 8.0, 0.0 ]
-				}
-			},
-			"base_damage": {
-				"kind": "Physical",
-				"value": {
-					"Flat": 12
-				}
-			},
-			"base_cost": [
-				{
-					"id": 12,
-					"value": {
-						"U32": 2
-					}
-				}
-				
-			],
-			"effects": [
-				{
-					"Knockback": { 
-						"duration": 0.5, 
-						"speed": 100
-					}
-				}
-			],
-			"use_duration_secs": 0.8
-		},
-		"AreaLocked": {
-			"info": {
-				"Area": {
-					"radius": 300,
-					"duration": 3.0,
-					"tick_rate": 0.666
-				}
-			},
-			"use_range": 250,
-			"origin": {
-				"Locked": {
-					"offset": [ 0.0, 0.0, 0.0]
-				}
-			},
-			"base_damage": {
-				"kind": "Physical",
-				"value": {
-					"Flat": 3
-				}
-			},
-			"base_cost": [
-				{
-					"id": 12,
-					"value": {
-						"U32": 5
-					}
-				}
-			],
-			"use_duration_secs": 1.2
-		},
-		"AreaRemote": {
-			"info": {
-				"Area": {
-					"radius": 150,
-					"duration": 5.0,
-					"tick_rate": 0.666
-				}
-			},
-			"use_range": 800,
-			"origin": {
-				"Remote": {
-					"offset": [0.0, 0.01, 0.0]
-				}
-			},
-			"base_damage": {
-				"kind": "Physical",
-				"value": {
-					"Flat": 6
-				}
-			},
-			"base_cost": [
-				{
-					"id": 12,
-					"value": {
-						"U32": 4
-					}
-				}
-			],
-			"use_duration_secs": 1.0
-		}
-	}
+  "skills": {
+    "BasicDirect": {
+      "info": {
+        "Direct": {
+          "range": 200,
+          "frames": 1
+        }
+      },
+      "use_range": 200,
+      "origin": {
+        "Direct": {
+          "offset": [
+            0,
+            0,
+            -1
+          ]
+        }
+      },
+      "base_damage": {
+        "kind": "Physical",
+        "value": {
+          "Flat": 16
+        }
+      },
+      "base_cost": [
+        {
+          "id": 12,
+          "value": {
+            "U32": 3
+          }
+        }
+      ],
+      "use_duration_secs": 0.6
+    },
+    "BasicBolt": {
+      "info": {
+        "Projectile": {
+          "shape": "Box",
+          "speed": 300,
+          "duration": 3,
+          "size": 10,
+          "projectiles": 1
+        }
+      },
+      "use_range": 800,
+      "origin": {
+        "Remote": {
+          "offset": [
+            0,
+            0,
+            -0.25
+          ]
+        }
+      },
+      "base_damage": {
+        "kind": "Physical",
+        "value": {
+          "Flat": 12
+        }
+      },
+      "base_cost": [
+        {
+          "id": 12,
+          "value": {
+            "U32": 3
+          }
+        }
+      ],
+      "effects": [
+        {
+          "Knockback": {
+            "duration": 0.5,
+            "speed": 100
+          }
+        },
+        {
+          "Pierce": {
+            "pierces": 1
+          }
+        },
+        {
+          "Chain": {
+            "chains": 1
+          }
+        }
+      ],
+      "use_duration_secs": 0.8
+    },
+    "BasicOrb": {
+      "info": {
+        "Projectile": {
+          "shape": "Sphere",
+          "speed": 300,
+          "duration": 15,
+          "size": 30,
+          "projectiles": 1,
+          "orbit": {
+            "range": 200
+          }
+        }
+      },
+      "use_range": 800,
+      "origin": {
+        "Remote": {
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "base_damage": {
+        "kind": "Physical",
+        "value": {
+          "Flat": 12
+        }
+      },
+      "base_cost": [
+        {
+          "id": 12,
+          "value": {
+            "U32": 1
+          }
+        }
+      ],
+      "effects": [
+        {
+          "Knockback": {
+            "duration": 0.5,
+            "speed": 100
+          }
+        }
+      ],
+      "use_duration_secs": 0.8
+    },
+    "BasicAerial": {
+      "info": {
+        "Projectile": {
+          "shape": "Sphere",
+          "speed": 500,
+          "size": 100,
+          "projectiles": 1,
+          "tick_rate": 0.666,
+          "aerial": {
+            "height": 800
+          }
+        }
+      },
+      "use_range": 800,
+      "origin": {
+        "Remote": {
+          "offset": [
+            0,
+            8,
+            0
+          ]
+        }
+      },
+      "base_damage": {
+        "kind": "Physical",
+        "value": {
+          "Flat": 12
+        }
+      },
+      "base_cost": [
+        {
+          "id": 12,
+          "value": {
+            "U32": 2
+          }
+        }
+      ],
+      "effects": [
+        {
+          "Knockback": {
+            "duration": 0.5,
+            "speed": 100
+          }
+        }
+      ],
+      "use_duration_secs": 0.8
+    },
+    "AreaLocked": {
+      "info": {
+        "Area": {
+          "radius": 300,
+          "duration": 3,
+          "tick_rate": 0.666
+        }
+      },
+      "use_range": 250,
+      "origin": {
+        "Locked": {
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "base_damage": {
+        "kind": "Physical",
+        "value": {
+          "Flat": 3
+        }
+      },
+      "base_cost": [
+        {
+          "id": 12,
+          "value": {
+            "U32": 5
+          }
+        }
+      ],
+      "use_duration_secs": 1.2
+    },
+    "AreaRemote": {
+      "info": {
+        "Area": {
+          "radius": 150,
+          "duration": 5,
+          "tick_rate": 0.666
+        }
+      },
+      "use_range": 800,
+      "origin": {
+        "Remote": {
+          "offset": [
+            0,
+            0.01,
+            0
+          ]
+        }
+      },
+      "base_damage": {
+        "kind": "Physical",
+        "value": {
+          "Flat": 6
+        }
+      },
+      "base_cost": [
+        {
+          "id": 12,
+          "value": {
+            "U32": 4
+          }
+        }
+      ],
+      "use_duration_secs": 1
+    }
+  }
 }
