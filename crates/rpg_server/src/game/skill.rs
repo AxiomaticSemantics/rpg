@@ -260,6 +260,7 @@ pub(crate) fn spawn_instance(
         AabbComponent(aabb),
         Invulnerability::default(),
         skill_use,
+        SkillOwner(owner),
         TransformBundle::from(transform),
     ));
 }
@@ -307,6 +308,7 @@ pub(crate) fn collide_skills(
         &SkillUse,
         &SkillOwner,
     )>,
+    owner_q: Query<&Unit>,
     unit_q: Query<(Entity, &Transform, &AabbComponent, &Unit), Without<Corpse>>,
 ) {
     for (s_entity, s_transform, s_aabb, invulnerability, instance, owner) in &skill_q {
@@ -316,9 +318,11 @@ pub(crate) fn collide_skills(
             }
         }
 
+        let owner_kind = owner_q.get(owner.0).unwrap().kind;
         for (u_entity, u_transform, u_aabb, unit) in &unit_q {
             if !unit.is_alive()
                 || unit.uid == instance.owner
+                || unit.kind == owner_kind
                 || invulnerability.iter().any(|i| i.entity == u_entity)
             {
                 continue;
@@ -333,20 +337,8 @@ pub(crate) fn collide_skills(
 
             let collision = match &instance.instance {
                 SkillInstance::Direct(_) | SkillInstance::Projectile(_) => intersect_aabb(
-                    (
-                        &(s_transform.translation),
-                        &Aabb {
-                            center: s_aabb.center,
-                            half_extents: s_aabb.half_extents,
-                        },
-                    ),
-                    (
-                        &(u_transform.translation + unit_offset),
-                        &Aabb {
-                            center: u_aabb.center,
-                            half_extents: u_aabb.half_extents,
-                        },
-                    ),
+                    (&(s_transform.translation), s_aabb),
+                    (&(u_transform.translation + unit_offset), u_aabb),
                 ),
                 SkillInstance::Area(info) => {
                     s_transform.translation.distance(u_transform.translation)
@@ -354,8 +346,8 @@ pub(crate) fn collide_skills(
                 }
             };
 
+            //info!("collide {instance:?} {collision}");
             if collision {
-                info!("collide {instance:?}");
                 skill_events.send(SkillContactEvent {
                     entity: s_entity,
                     owner: owner.0,
@@ -375,7 +367,13 @@ pub fn handle_contacts(
     mut ground_drops: ResMut<GroundItemDrops>,
     mut rng: ResMut<SharedRng>,
     mut skill_events: EventReader<SkillContactEvent>,
-    mut skill_q: Query<(Entity, &mut Transform, &mut Invulnerability, &mut SkillUse)>,
+    mut skill_q: Query<(
+        Entity,
+        &mut Transform,
+        &mut Invulnerability,
+        &SkillOwner,
+        &mut SkillUse,
+    )>,
     mut unit_q: Query<
         (
             Entity,
@@ -400,7 +398,7 @@ pub fn handle_contacts(
             continue;
         }
 
-        let (s_entity, mut s_transform, mut invulnerability, mut instance) =
+        let (s_entity, mut s_transform, mut invulnerability, s_owner, mut instance) =
             skill_q.get_mut(event.entity).unwrap();
         let combat_result =
             defender.handle_attack(&attacker, &metadata.0, &mut rng.0, &instance.damage);
