@@ -1,8 +1,11 @@
-use super::plugin::GameState;
-
 use crate::{account::AccountInstance, assets::MetadataResources, net::server::NetworkParamsRW};
 
-use rpg_core::{metadata::Metadata, uid::NextUid};
+use rpg_core::{
+    metadata::Metadata,
+    uid::NextUid,
+    unit::{UnitInfo, UnitKind, VillainInfo},
+    villain::VillainId,
+};
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions::{Action, ActionData, Actions, AttackData, State},
@@ -27,7 +30,7 @@ use bevy::{
     log::info,
     math::Vec3,
     prelude::{Deref, DerefMut},
-    time::{Time, Timer},
+    time::{Time, Timer, TimerMode},
     transform::{components::Transform, TransformBundle},
 };
 
@@ -99,26 +102,34 @@ pub(crate) fn spawn(
     next_uid: &mut NextUid,
     origin: &Vec3,
     metadata: &Metadata,
-    rng: &mut SharedRng,
+    villain_id: VillainId,
 ) {
-    let mut unit = rpg_core::unit::generation::generate(&mut rng.0, metadata, next_uid, 1);
+    let villain_meta = &metadata.unit.villains[&villain_id];
+    let mut unit = rpg_core::unit::Unit::new(
+        next_uid.get(),
+        villain_meta.class,
+        UnitKind::Villain,
+        UnitInfo::Villain(VillainInfo { id: villain_id }),
+        1,
+        villain_meta.name.clone(),
+        None,
+        metadata,
+    );
+    next_uid.next();
+
     unit.add_default_skills(metadata);
 
     let aabb = AabbComponent(Aabb::from_min_max(
         Vec3::new(-0.3, 0.0, -0.2),
         Vec3::new(0.3, 1.2, 0.2),
     ));
-    let dir_roll = std::f32::consts::TAU * (0.5 - rng.f32());
 
-    let mut transform = Transform::from_translation(*origin);
-    transform.rotate_y(dir_roll);
-
+    let transform = Transform::from_translation(*origin);
     let unit_info = unit.info.villain();
-    let villain_info = &metadata.unit.villains[&unit_info.id];
 
     info!(
-        "spawning villain {unit_info:?} at {:?}",
-        transform.translation
+        "spawning villain uid {:?} {unit_info:?} at {:?}",
+        unit.uid, transform.translation
     );
 
     // spawn
@@ -128,13 +139,10 @@ pub(crate) fn spawn(
             villain: Villain,
             unit: UnitBundle::new(Unit(unit)),
         },
-        ThinkTimer::default(),
+        ThinkTimer(Timer::from_seconds(4.0, TimerMode::Repeating)),
         VillainController::new(VillainState::Idle),
         TransformBundle::from(transform),
     ));
-
-    // TODO ensure aabb is added
-    // TODO decide is shared spawning is desired
 }
 
 // TODO optimize
@@ -201,12 +209,29 @@ pub(crate) fn find_target(
             continue;
         }
 
+        let max_distance =
+            (metadata.0.unit.villains[&unit.info.villain().id].max_vision * 100.).round() as u32;
         if villain.has_target() {
+            if let Ok((_, hero_transform)) = hero_q.get(villain.target) {
+                let distance = (transform.translation.distance(hero_transform.translation) * 100.)
+                    .round() as u32;
+                if distance > max_distance {
+                    // The targeted entity is out of range, unset the target
+                    villain.target = Entity::PLACEHOLDER;
+                } else {
+                    // The targeted entity is in range, keep the current target
+                    continue;
+                }
+            } else {
+                villain.target = Entity::PLACEHOLDER;
+            }
+        }
+
+        if villain.has_target() {
+            // The villain already has a valid target
             continue;
         }
 
-        let max_distance =
-            (metadata.0.unit.villains[&unit.info.villain().id].max_vision * 100.).round() as u32;
         let mut nearest = Entity::PLACEHOLDER;
         let mut nearest_distance = max_distance;
 
@@ -271,9 +296,18 @@ pub(crate) fn villain_think(
 
         let distance =
             (transform.translation.distance(hero_transform.translation) * 100.).round() as u32;
+        let villain_id = unit.info.villain().id;
+        let villain_meta = &metadata.0.unit.villains[&villain_id];
+        if distance > (villain_meta.max_vision * 100.).floor() as u32 {
+            // this should be handled elsewhere
+            villain.target = Entity::PLACEHOLDER;
+            villain.state = VillainState::Idle;
+            continue;
+        }
+
         let target_dir = (hero_transform.translation - transform.translation).normalize_or_zero();
         let rot_diff = transform.forward().dot(target_dir) - 1.;
-        let want_look = rot_diff.abs() > 0.001;
+        let want_look = rot_diff.abs() > 0.01;
         if want_look {
             actions.request(Action::new(
                 ActionData::LookPoint(hero_transform.translation),
@@ -282,50 +316,48 @@ pub(crate) fn villain_think(
             ));
         }
 
-        if actions.movement.is_none() && villain.state != VillainState::Idle {
-            villain.state = VillainState::Idle;
-        }
-
         let skill_id = unit.active_skills.primary.skill.unwrap();
         let skill_info = &metadata.0.skill.skills[&skill_id];
 
         let wanted_range = (skill_info.use_range as f32 * 0.5) as u32;
         let wanted_range = wanted_range.clamp(150, wanted_range.max(150));
         let in_range = skill_info.use_range > 0 && distance < wanted_range;
-        if in_range && actions.movement.is_some() {
-            actions.movement.as_mut().unwrap().state = State::Finalize;
-        }
-
-        if rot_diff.abs() < 0.1 {
-            if !in_range && villain.has_target() && actions.movement.is_none() {
-                info!("villain move request");
+        if !in_range {
+            if actions.movement.is_none() {
+                info!("move request");
                 actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
                 villain.state = VillainState::Tracking;
-                continue;
             }
+            continue;
+        }
 
-            if think_timer.finished()
-                && actions.attack.is_none()
-                && villain.state == VillainState::Tracking
-            {
-                //println!("distance {distance} use range {}", skill_info.use_range);
-
-                info!("villain skill request");
-                let (origin, target) =
-                    get_skill_origin(&metadata.0, transform, hero_transform.translation, skill_id);
-
-                actions.request(Action::new(
-                    ActionData::Attack(AttackData {
-                        skill_id,
-                        user: transform.translation,
-                        origin,
-                        target,
-                    }),
-                    None,
-                    true,
-                ));
-                think_timer.reset();
+        if let Some(action) = &mut actions.movement {
+            if action.state == State::Active {
+                action.state = State::Finalize;
             }
+            continue;
+        }
+
+        assert!(actions.movement.is_none());
+
+        if think_timer.finished() && actions.attack.is_none() {
+            // debug!("distance {distance} use range {}", skill_info.use_range);
+
+            info!("skill request");
+            let (origin, target) =
+                get_skill_origin(&metadata.0, transform, hero_transform.translation, skill_id);
+
+            actions.request(Action::new(
+                ActionData::Attack(AttackData {
+                    skill_id,
+                    user: transform.translation,
+                    origin,
+                    target,
+                }),
+                None,
+                true,
+            ));
+            think_timer.reset();
         }
     }
 }

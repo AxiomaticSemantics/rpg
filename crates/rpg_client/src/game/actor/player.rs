@@ -100,7 +100,7 @@ pub fn input_actions(
 
     let (transform, mut actions, unit) = player_q.single_mut();
 
-    if controls.mouse_primary.pressed || controls.gamepad_b.pressed {
+    if controls.mouse_primary.just_pressed || controls.gamepad_b.just_pressed {
         let skill_id = unit.active_skills.primary.skill.unwrap();
 
         let skill_meta = &metadata.rpg.skill.skills[&skill_id];
@@ -121,7 +121,7 @@ pub fn input_actions(
             }),
         };
 
-        let (origin, target) =
+        /*let (origin, target) =
             get_skill_origin(&metadata.rpg, transform, cursor_position.ground, skill_id);
 
         if actions.attack.is_none() && actions.knockback.is_none() {
@@ -138,7 +138,7 @@ pub fn input_actions(
 
             // No other user actions can happen while attacking
             return;
-        }
+        }*/
     }
 
     if controls.mouse_secondary.just_pressed || controls.gamepad_a.just_pressed {

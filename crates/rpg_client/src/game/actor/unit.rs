@@ -3,12 +3,13 @@
 use crate::{
     assets::AudioAssets,
     game::{
-        actor::{animation::AnimationState, player::Player},
-        assets::RenderResources,
+        actor::{
+            animation::{AnimationState, ANIM_ATTACK, ANIM_IDLE},
+            player::Player,
+        },
         health_bar::{HealthBar, HealthBarFrame, HealthBarRect},
         metadata::MetadataResources,
         plugin::{GameCamera, GameState},
-        skill,
     },
 };
 
@@ -16,7 +17,6 @@ use audio_manager::plugin::AudioActions;
 use rpg_core::{
     skill::{SkillInfo, SkillUseResult},
     storage::Storage,
-    unit::UnitKind,
 };
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
@@ -28,8 +28,6 @@ use rpg_util::{
 use util::random::SharedRng;
 
 use bevy::{
-    animation::RepeatAnimation,
-    asset::Assets,
     audio::{AudioBundle, PlaybackSettings},
     ecs::{
         entity::Entity,
@@ -39,7 +37,6 @@ use bevy::{
     hierarchy::{BuildChildren, Children, DespawnRecursiveExt},
     input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
     math::Vec3,
-    render::mesh::Mesh,
     time::{Time, Timer, TimerMode},
     transform::components::Transform,
 };
@@ -180,7 +177,7 @@ pub fn pick_storable_items(
     }
 }
 
-// NOTE some desync is acceptible here
+// NOTE some desync is acceptible here but this needs to be fixed to attract towards the correct hero unit
 pub(crate) fn attract_resource_items(
     mut game_state: ResMut<GameState>,
     time: Res<Time>,
@@ -215,18 +212,13 @@ pub(crate) fn attract_resource_items(
 }
 
 pub fn action(
-    mut commands: Commands,
     mut net_client: ResMut<Client>,
     time: Res<Time>,
     metadata: Res<MetadataResources>,
-    mut renderables: ResMut<RenderResources>,
     mut rng: ResMut<SharedRng>,
-    mut state: ResMut<GameState>,
-    mut meshes: ResMut<Assets<Mesh>>,
     mut unit_q: Query<
         (
-            Entity,
-            &mut Unit,
+            &Unit,
             &mut Transform,
             &mut Actions,
             &mut AnimationState,
@@ -239,9 +231,7 @@ pub fn action(
 
     let dt = time.delta_seconds();
 
-    for (entity, mut unit, mut transform, mut actions, mut anim_state, mut audio_actions) in
-        &mut unit_q
-    {
+    for (unit, mut transform, mut actions, mut anim_state, mut audio_actions) in &mut unit_q {
         // debug!("action request {:?}", action.request);
 
         if let Some(action) = &mut actions.knockback {
@@ -290,11 +280,7 @@ pub fn action(
                     let duration = skill_info.use_duration_secs
                         * unit.stats.vitals.stats["Cooldown"].value.f32();
 
-                    *anim_state = AnimationState {
-                        repeat: RepeatAnimation::Never,
-                        paused: false,
-                        index: 0,
-                    };
+                    *anim_state = ANIM_ATTACK;
 
                     let sound_key = match skill_info.info {
                         SkillInfo::Direct(_) => match rng.usize(0..2) {
@@ -314,7 +300,7 @@ pub fn action(
                     action.state = State::Timer;
                 }
                 State::Active => {
-                    let distance = (attack.user.distance(attack.target) * 100.).round() as u32;
+                    /*let distance = (attack.user.distance(attack.target) * 100.).round() as u32;
                     let skill_use_result = unit.use_skill(&metadata.rpg, attack.skill_id, distance);
                     match skill_use_result {
                         SkillUseResult::Ok => {}
@@ -336,16 +322,14 @@ pub fn action(
 
                     let (skill_aabb, skill_transform, skill_use, mesh_handle, material_handle) =
                         skill::prepare_skill(
-                            entity,
-                            &attack,
+                            unit.uid,
+                            &attack.origin,
+                            &attack.target,
                             &time,
-                            &mut rng,
                             &mut renderables,
                             &mut meshes,
                             skill_info,
-                            skill,
-                            &unit,
-                            &transform,
+                            skill.id,
                         );
 
                     skill::spawn_instance(
@@ -355,10 +339,14 @@ pub fn action(
                         skill_use,
                         mesh_handle,
                         material_handle,
-                    );
+                    );*/
 
-                    action.state = State::Completed;
+                    action.state = State::Finalize;
                     action.timer = None;
+                }
+                State::Finalize => {
+                    *anim_state = ANIM_IDLE;
+                    action.state = State::Completed;
                 }
                 _ => {}
             }

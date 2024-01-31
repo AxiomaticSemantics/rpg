@@ -123,13 +123,19 @@ pub(crate) fn attract_resource_items(
 
 pub(crate) fn remove_corpses(
     mut commands: Commands,
+    mut net_params: NetworkParamsRW,
     time: Res<Time>,
-    mut unit_q: Query<(Entity, &mut CorpseTimer), With<Unit>>,
+    mut unit_q: Query<(Entity, &Unit, &mut CorpseTimer), With<Corpse>>,
 ) {
-    for (entity, mut timer) in &mut unit_q {
+    for (entity, unit, mut timer) in &mut unit_q {
         timer.tick(time.delta());
         if timer.just_finished() {
             // TODO tell the client to despawn the entity
+            net_params.server.send_message_to_target::<Channel1, _>(
+                SCDespawnCorpse(unit.uid),
+                NetworkTarget::All,
+            );
+
             commands.entity(entity).despawn_recursive();
         }
     }

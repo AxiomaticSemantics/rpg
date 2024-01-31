@@ -126,9 +126,25 @@ pub(crate) fn action(
                     );
 
                     info!("spawning skill");
-                    skill::spawn_instance(&mut commands, skill_aabb, skill_transform, skill_use);
+                    skill::spawn_instance(
+                        &mut commands,
+                        skill_aabb,
+                        skill_transform,
+                        skill_use,
+                        entity,
+                    );
 
-                    action.state = State::Completed;
+                    net_params.server.send_message_to_target::<Channel1, _>(
+                        SCSpawnSkill {
+                            id: skill.id,
+                            uid: unit.uid,
+                            origin,
+                            target,
+                        },
+                        NetworkTarget::All,
+                    );
+
+                    action.state = State::Finalize;
                     action.timer = None;
                 }
                 _ => {}
@@ -185,111 +201,118 @@ pub(crate) fn action(
         }
 
         if let Some(action) = &mut actions.movement {
-            if action.state == State::Pending {
-                let movespeed = unit.get_effective_movement_speed() as f32 / 100. * dt;
-                if unit.can_run() {
-                    unit.stats.consume_stamina(dt);
+            match &action.state {
+                State::Pending => {
+                    let movespeed = unit.get_effective_movement_speed() as f32 / 100. * dt;
+                    if unit.can_run() {
+                        unit.stats.consume_stamina(dt);
+                    }
+
+                    let translation = transform.forward() * movespeed;
+                    transform.translation += translation;
+
+                    if unit.kind == UnitKind::Hero {
+                        let client = net_params
+                            .context
+                            .get_client_from_account_id(account.as_ref().unwrap().0.info.id)
+                            .unwrap();
+
+                        net_params
+                            .server
+                            .send_message_to_target::<Channel1, _>(
+                                SCMovePlayer(transform.translation),
+                                NetworkTarget::Only(vec![client.id]),
+                            )
+                            .unwrap();
+                    } else {
+                        info!("villain move pending");
+                        net_params
+                            .server
+                            .send_message_to_target::<Channel1, _>(
+                                SCMoveUnit {
+                                    uid: unit.uid,
+                                    position: transform.translation,
+                                },
+                                NetworkTarget::All,
+                            )
+                            .unwrap();
+                    }
+
+                    action.state = State::Active;
                 }
+                State::Active => {
+                    let movespeed = unit.get_effective_movement_speed() as f32 / 100. * dt;
+                    if unit.can_run() {
+                        unit.stats.consume_stamina(dt);
+                    }
 
-                let translation = transform.forward() * movespeed;
-                transform.translation += translation;
+                    let translation = transform.forward() * movespeed;
+                    transform.translation += translation;
 
-                if unit.kind == UnitKind::Hero {
-                    let client = net_params
-                        .context
-                        .get_client_from_account_id(account.as_ref().unwrap().0.info.id)
-                        .unwrap();
+                    if unit.kind == UnitKind::Hero {
+                        let client = net_params
+                            .context
+                            .get_client_from_account_id(account.as_ref().unwrap().0.info.id)
+                            .unwrap();
 
-                    net_params
-                        .server
-                        .send_message_to_target::<Channel1, _>(
-                            SCMovePlayer(transform.translation),
-                            NetworkTarget::Only(vec![client.id]),
-                        )
-                        .unwrap();
-                } else {
-                    net_params
-                        .server
-                        .send_message_to_target::<Channel1, _>(
-                            SCMoveUnit {
-                                uid: unit.uid,
-                                position: transform.translation,
-                            },
-                            NetworkTarget::All,
-                        )
-                        .unwrap();
+                        net_params
+                            .server
+                            .send_message_to_target::<Channel1, _>(
+                                SCMovePlayer(transform.translation),
+                                NetworkTarget::Only(vec![client.id]),
+                            )
+                            .unwrap();
+                    } else {
+                        info!("villain move active {:?}", unit.uid);
+                        net_params
+                            .server
+                            .send_message_to_target::<Channel1, _>(
+                                SCMoveUnit {
+                                    uid: unit.uid,
+                                    position: transform.translation,
+                                },
+                                NetworkTarget::All,
+                            )
+                            .unwrap();
+                    }
                 }
+                State::Finalize => {
+                    let movespeed = unit.get_effective_movement_speed() as f32 / 100. * dt;
+                    if unit.can_run() {
+                        unit.stats.consume_stamina(dt);
+                    }
 
-                action.state = State::Active;
-            } else if action.state == State::Active {
-                let movespeed = unit.get_effective_movement_speed() as f32 / 100. * dt;
-                if unit.can_run() {
-                    unit.stats.consume_stamina(dt);
+                    let translation = transform.forward() * movespeed;
+                    transform.translation += translation;
+
+                    if unit.kind == UnitKind::Hero {
+                        let client = net_params
+                            .context
+                            .get_client_from_account_id(account.as_ref().unwrap().0.info.id)
+                            .unwrap();
+
+                        net_params
+                            .server
+                            .send_message_to_target::<Channel1, _>(
+                                SCMovePlayerEnd(transform.translation),
+                                NetworkTarget::Only(vec![client.id]),
+                            )
+                            .unwrap();
+                    } else {
+                        net_params
+                            .server
+                            .send_message_to_target::<Channel1, _>(
+                                SCMoveUnitEnd {
+                                    uid: unit.uid,
+                                    position: transform.translation,
+                                },
+                                NetworkTarget::All,
+                            )
+                            .unwrap();
+                    }
+                    action.state = State::Completed;
                 }
-
-                let translation = transform.forward() * movespeed;
-                transform.translation += translation;
-
-                if unit.kind == UnitKind::Hero {
-                    let client = net_params
-                        .context
-                        .get_client_from_account_id(account.as_ref().unwrap().0.info.id)
-                        .unwrap();
-
-                    net_params
-                        .server
-                        .send_message_to_target::<Channel1, _>(
-                            SCMovePlayer(transform.translation),
-                            NetworkTarget::Only(vec![client.id]),
-                        )
-                        .unwrap();
-                } else {
-                    net_params
-                        .server
-                        .send_message_to_target::<Channel1, _>(
-                            SCMoveUnit {
-                                uid: unit.uid,
-                                position: transform.translation,
-                            },
-                            NetworkTarget::All,
-                        )
-                        .unwrap();
-                }
-            } else if action.state == State::Finalize {
-                let movespeed = unit.get_effective_movement_speed() as f32 / 100. * dt;
-                if unit.can_run() {
-                    unit.stats.consume_stamina(dt);
-                }
-
-                let translation = transform.forward() * movespeed;
-                transform.translation += translation;
-
-                if unit.kind == UnitKind::Hero {
-                    let client = net_params
-                        .context
-                        .get_client_from_account_id(account.as_ref().unwrap().0.info.id)
-                        .unwrap();
-
-                    net_params
-                        .server
-                        .send_message_to_target::<Channel1, _>(
-                            SCMovePlayerEnd(transform.translation),
-                            NetworkTarget::Only(vec![client.id]),
-                        )
-                        .unwrap();
-                } else {
-                    net_params
-                        .server
-                        .send_message_to_target::<Channel1, _>(
-                            SCMoveUnitEnd {
-                                uid: unit.uid,
-                                position: transform.translation,
-                            },
-                            NetworkTarget::All,
-                        )
-                        .unwrap();
-                }
-                action.state = State::Completed;
+                _ => {}
             }
         }
     }

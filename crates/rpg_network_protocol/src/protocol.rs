@@ -13,11 +13,11 @@ use rpg_core::{
     class::Class,
     combat::CombatResult,
     damage::Damage,
-    item::{Item, ItemDrops, ItemId},
+    item::ItemDrops,
     skill::SkillId,
     stat::StatUpdate,
     uid::Uid,
-    unit::{HeroGameMode, UnitKind, VillainInfo},
+    unit::{HeroGameMode, VillainInfo},
 };
 use rpg_lobby::lobby::{Lobby, LobbyId, LobbyMessage};
 use rpg_world::zone::ZoneId;
@@ -279,21 +279,21 @@ pub struct SCMovePlayerEnd(pub Vec3);
 pub struct SCRotPlayer(pub Vec3);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCMoveUnit{ 
+pub struct SCMoveUnit {
     pub uid: Uid,
-    pub position: Vec3
+    pub position: Vec3,
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCMoveUnitEnd {
     pub uid: Uid,
-    pub position: Vec3
+    pub position: Vec3,
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCRotUnit {
     pub uid: Uid,
-    pub direction: Vec3
+    pub direction: Vec3,
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -306,6 +306,8 @@ pub struct SCStatUpdates(pub Vec<StatUpdate>);
 pub struct SCSpawnSkill {
     pub id: SkillId,
     pub uid: Uid,
+    pub origin: Vec3,
+    pub target: Vec3,
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]

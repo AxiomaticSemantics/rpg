@@ -51,6 +51,10 @@ impl FromWorld for RenderResources {
             Cow::Owned("direct_attack".into()),
             Aabb::from_min_max(Vec3::new(-0.1, -0.1, -0.5), Vec3::new(0.1, 0.1, 0.5)),
         );
+        aabbs.insert(
+            Cow::Owned("bolt_01".into()),
+            Aabb::from_min_max(Vec3::new(-0.1, -0.1, -0.25), Vec3::new(0.1, 0.1, 0.25)),
+        );
 
         let mut textures = HashMap::<&'static str, Handle<Image>>::new();
 

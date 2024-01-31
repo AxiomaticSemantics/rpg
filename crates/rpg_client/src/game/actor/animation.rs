@@ -12,14 +12,51 @@ use bevy::{
     hierarchy::{Children, HierarchyQueryExt},
 };
 
-#[derive(Component, Default, Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub(crate) struct AnimationIndex(pub(crate) usize);
+
+pub(crate) const ANIM_ATTACK_IDX: AnimationIndex = AnimationIndex(0);
+pub(crate) const ANIM_DEATH_IDX: AnimationIndex = AnimationIndex(1);
+pub(crate) const ANIM_DEFEND_IDX: AnimationIndex = AnimationIndex(2);
+pub(crate) const ANIM_WALK_IDX: AnimationIndex = AnimationIndex(3);
+
+pub(crate) const ANIM_WALK: AnimationState =
+    AnimationState::new(RepeatAnimation::Forever, false, ANIM_WALK_IDX);
+pub(crate) const ANIM_IDLE: AnimationState =
+    AnimationState::new(RepeatAnimation::Forever, true, ANIM_WALK_IDX);
+pub(crate) const ANIM_ATTACK: AnimationState =
+    AnimationState::new(RepeatAnimation::Never, false, ANIM_ATTACK_IDX);
+pub(crate) const ANIM_DEFEND: AnimationState =
+    AnimationState::new(RepeatAnimation::Never, false, ANIM_DEFEND_IDX);
+pub(crate) const ANIM_DEATH: AnimationState =
+    AnimationState::new(RepeatAnimation::Never, false, ANIM_DEATH_IDX);
+
+#[derive(Component, Debug, PartialEq, Clone)]
 pub struct AnimationState {
     pub repeat: RepeatAnimation,
     pub paused: bool,
-    pub index: usize,
+    pub index: AnimationIndex,
+}
+
+impl Default for AnimationState {
+    fn default() -> Self {
+        Self {
+            repeat: RepeatAnimation::Forever,
+            paused: true,
+            index: ANIM_WALK_IDX,
+        }
+    }
 }
 
 impl AnimationState {
+    pub const fn new(repeat: RepeatAnimation, paused: bool, index: AnimationIndex) -> Self {
+        Self {
+            repeat,
+            paused,
+            index,
+        }
+    }
+
     pub fn set_state(&mut self, state: AnimationState) -> bool {
         if state != *self {
             *self = state;
@@ -56,9 +93,9 @@ pub fn animator(
             //if curr.index != before.index {
             if !anim.paused {
                 if anim.repeat == RepeatAnimation::Never {
-                    player.start(clip_handles[anim.index].clone());
+                    player.start(clip_handles[anim.index.0].clone());
                 } else {
-                    player.play(clip_handles[anim.index].clone());
+                    player.play(clip_handles[anim.index.0].clone());
                 }
             }
         }

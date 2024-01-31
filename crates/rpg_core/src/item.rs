@@ -102,7 +102,32 @@ pub mod generation {
             StatModifier,
         },
         uid::NextUid,
+        unit_tables::VillainsTableEntry,
     };
+
+    pub(crate) fn roll_item_drops(
+        metadata: &Metadata,
+        villain_info: &VillainsTableEntry,
+        rng: &mut Rng,
+        next_uid: &mut NextUid,
+    ) -> Vec<Item> {
+        let mut drops = Vec::new();
+        for i in 0..villain_info.drop_chances {
+            let drop_roll = rng.f32();
+            println!(
+                "Rolling {} of {} drop chances: {drop_roll} {}",
+                i + 1,
+                villain_info.drop_chances,
+                villain_info.drop_chance
+            );
+            if drop_roll < villain_info.drop_chance {
+                let item = crate::item::generation::generate(rng, metadata, 1, next_uid);
+                drops.push(item);
+            }
+        }
+
+        drops
+    }
 
     pub fn generate(rng: &mut Rng, metadata: &Metadata, level: u8, next_uid: &mut NextUid) -> Item {
         assert!(level > 0, "Level must be non-zero");

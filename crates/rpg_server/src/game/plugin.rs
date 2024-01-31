@@ -20,7 +20,7 @@ use lightyear::netcode::ClientId;
 use lightyear::shared::NetworkTarget;
 
 use rpg_account::{account::AccountId, character::CharacterSlot};
-use rpg_core::{uid::Uid, unit::HeroGameMode};
+use rpg_core::{uid::Uid, unit::HeroGameMode, villain::VillainId};
 use rpg_network_protocol::protocol::*;
 use rpg_util::{item::GroundItemDrops, skill::SkillContactEvent};
 
@@ -105,13 +105,13 @@ impl Plugin for GamePlugin {
                 FixedUpdate,
                 (
                     unit::upkeep,
-                    action::action,
                     skill::update_skill,
                     skill::collide_skills,
                     skill::handle_contacts,
-                    item::spawn_ground_items,
                     villain::find_target,
                     villain::villain_think,
+                    action::action,
+                    item::spawn_ground_items,
                 )
                     .chain()
                     .run_if(in_state(AppState::Simulation)),
@@ -132,15 +132,17 @@ pub(crate) fn setup_simulation(
         Cow::Owned("direct_attack".into()),
         Aabb::from_min_max(Vec3::new(-0.1, -0.1, -0.5), Vec3::new(0.1, 0.1, 0.5)),
     );
-    for _ in 0..50 {
+
+    for _ in 0..20 {
         let position = Vec3::new(rng.f32() * 128.0 - 64.0, 0., rng.f32() * 128.0 - 64.0);
 
+        let villain_id = VillainId::sample(&mut rng);
         villain::spawn(
             &mut commands,
             &mut server_metadata.0.next_uid,
             &position,
             &metadata.0,
-            &mut rng,
+            villain_id,
         );
     }
 

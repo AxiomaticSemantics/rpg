@@ -74,7 +74,7 @@ impl Plugin for NetworkClientPlugin {
             .add_systems(
                 Update,
                 (
-                    reconnect,
+                    connect,
                     receive_server_hello,
                     (
                         account::receive_account_create_success,
@@ -87,21 +87,25 @@ impl Plugin for NetworkClientPlugin {
                         account::receive_game_create_error,
                         account::receive_game_join_success,
                         account::receive_game_join_error,
-                    ),
+                    )
+                        .run_if(in_state(AppState::Menu)),
                     (
-                        lobby::receive_join_success,
-                        lobby::receive_join_error,
-                        lobby::receive_create_success,
-                        lobby::receive_create_error,
-                        lobby::receive_lobby_message,
-                    ),
-                    (
-                        chat::receive_join_success,
-                        chat::receive_join_error,
-                        chat::receive_channel_join_success,
-                        chat::receive_channel_join_error,
-                        chat::receive_chat_message,
-                    ),
+                        (
+                            lobby::receive_join_success,
+                            lobby::receive_join_error,
+                            lobby::receive_create_success,
+                            lobby::receive_create_error,
+                            lobby::receive_lobby_message,
+                        ),
+                        (
+                            chat::receive_join_success,
+                            chat::receive_join_error,
+                            chat::receive_channel_join_success,
+                            chat::receive_channel_join_error,
+                            chat::receive_chat_message,
+                        ),
+                    )
+                        .run_if(in_state(AppState::Menu).or_else(in_state(AppState::Game))),
                     (
                         game::receive_player_spawn,
                         game::receive_player_join_success,
@@ -119,6 +123,8 @@ impl Plugin for NetworkClientPlugin {
                     game::receive_hero_death,
                     game::receive_villain_death,
                     game::receive_despawn_corpse,
+                    game::receive_spawn_skill,
+                    game::receive_despawn_skill,
                     game::receive_spawn_item,
                     game::receive_spawn_items,
                     game::receive_despawn_item,
@@ -145,22 +151,30 @@ impl FromWorld for ConnectionTimer {
     }
 }
 
-fn reconnect(
+fn connect(
     time: Res<Time>,
     mut net_client: ResMut<Client>,
     mut connection_timer: ResMut<ConnectionTimer>,
 ) {
-    let dt = time.delta();
-    connection_timer.tick(dt);
-
     if net_client.is_connected() {
         if !connection_timer.paused() {
             connection_timer.pause();
+            connection_timer.reset();
         }
-    } else {
-        if connection_timer.just_finished() {
-            net_client.connect();
-        }
+        return;
+    }
+
+    let dt = time.delta();
+    if connection_timer.elapsed_secs() == 0.0 {
+        net_client.connect();
+        connection_timer.tick(dt);
+        return;
+    }
+
+    connection_timer.tick(dt);
+
+    if connection_timer.just_finished() {
+        net_client.connect();
     }
 }
 
