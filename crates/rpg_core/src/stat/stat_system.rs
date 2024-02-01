@@ -1,12 +1,11 @@
 use crate::{
     class::Class,
     metadata::Metadata,
-    stat::{
-        modifier::Operation,
-        stat_list::StatList,
-        value::{Value, ValueKind},
-        Stat, StatChange, StatId, StatModifier, StatUpdate,
-    },
+    value::{Value, ValueKind},
+};
+
+use super::{
+    modifier::Operation, stat_list::StatList, Stat, StatChange, StatId, StatModifier, StatUpdate,
 };
 
 use serde_derive::{Deserialize as De, Serialize as Ser};

@@ -1,5 +1,5 @@
 use super::{
-    plugin::{AabbResources, GameSessionCleanup},
+    plugin::{AabbResources, GameSessionCleanup, GameState},
     unit::CorpseTimer,
 };
 use crate::{
@@ -8,7 +8,7 @@ use crate::{
 };
 
 use rpg_core::{
-    combat::{AttackResult, CombatResult},
+    combat::{CombatResult, DamageResult},
     item::ItemDrops,
     skill::{
         effect::*, skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData, Origin,
@@ -78,6 +78,7 @@ pub(crate) fn prepare_skill(
     unit: &Unit,
     unit_transform: &Transform,
 ) -> (Aabb, Transform, SkillUse) {
+    // TODO move to a new fn in rpg_util
     let mut origin = match &skill_info.origin {
         Origin::Direct(_) => {
             unit_transform.translation
@@ -361,6 +362,7 @@ pub fn handle_contacts(
     mut commands: Commands,
     time: Res<Time>,
     metadata: Res<MetadataResources>,
+    game_state: Res<GameState>,
     mut server_metadata: ResMut<ServerMetadataResource>,
     mut net_params: NetworkParamsRW,
     mut ground_drops: ResMut<GroundItemDrops>,
@@ -399,76 +401,77 @@ pub fn handle_contacts(
         info!("{combat_result:?}");
 
         match &combat_result {
-            CombatResult::Attack(attack) => match &attack {
-                AttackResult::Blocked => {
-                    debug!("blocked");
-                    /*if defender.kind == UnitKind::Hero {
-                        game_state.session_stats.blocks += 1;
-                    } else {
-                        game_state.session_stats.times_blocked += 1;
-                    }*/
+            CombatResult::Blocked => {
+                debug!("blocked");
+                /*if defender.kind == UnitKind::Hero {
+                    game_state.session_stats.blocks += 1;
+                } else {
+                    game_state.session_stats.times_blocked += 1;
+                }*/
 
-                    match &instance.instance {
-                        SkillInstance::Direct(_) | SkillInstance::Projectile(_) => {
-                            commands.entity(s_entity).despawn_recursive();
-                            continue;
-                        }
-                        SkillInstance::Area(_) => {}
+                match &instance.instance {
+                    SkillInstance::Direct(_) | SkillInstance::Projectile(_) => {
+                        commands.entity(s_entity).despawn_recursive();
+                        continue;
+                    }
+                    SkillInstance::Area(_) => {}
+                }
+            }
+            CombatResult::Dodged => {
+                debug!("dodge");
+                /*if defender.kind == UnitKind::Hero {
+                    game_state.session_stats.dodges += 1;
+                } else {
+                    game_state.session_stats.times_dodged += 1;
+                }*/
+            }
+            CombatResult::Damage(damage) => {
+                /*if defender.kind == UnitKind::Villain {
+                    game_state.session_stats.hits += 1;
+                } else {
+                    game_state.session_stats.villain_hits += 1;
+                }*/
+
+                if defender.kind == UnitKind::Hero {
+                    // TODO should probably move the lookup out of game state?
+                    let id_info = game_state.get_id_info_from_uid(defender.uid).unwrap();
+
+                    /*let client = net_params
+                    .context
+                    .get_client_from_account_id(d_account.as_ref().unwrap().0.info.id)
+                    .unwrap();*/
+                    net_params.server.send_message_to_target::<Channel1, _>(
+                        SCCombatResult(combat_result.clone()),
+                        NetworkTarget::Only(vec![id_info.client_id]),
+                    );
+                } else if defender.kind == UnitKind::Villain {
+                    let client = net_params
+                        .context
+                        .get_client_from_account_id(a_account.as_ref().unwrap().0.info.id)
+                        .unwrap();
+                    net_params.server.send_message_to_target::<Channel1, _>(
+                        SCDamage {
+                            uid: defender.uid,
+                            damage: damage.clone(),
+                        },
+                        NetworkTarget::Only(vec![client.id]),
+                    );
+                }
+
+                if let SkillInstance::Projectile(_) = &instance.instance {
+                    if instance
+                        .effects
+                        .iter()
+                        .any(|e| matches!(e.info, EffectInfo::Pierce(_)))
+                    {
+                        invulnerability.push(InvulnerabilityTimer {
+                            entity: d_entity,
+                            timer: Timer::from_seconds(0.5, TimerMode::Once),
+                        });
                     }
                 }
-                AttackResult::Dodged => {
-                    debug!("dodge");
-                    /*if defender.kind == UnitKind::Hero {
-                        game_state.session_stats.dodges += 1;
-                    } else {
-                        game_state.session_stats.times_dodged += 1;
-                    }*/
-                }
-                AttackResult::Hit(damage) | AttackResult::HitCrit(damage) => {
-                    /*if defender.kind == UnitKind::Villain {
-                        game_state.session_stats.hits += 1;
-                    } else {
-                        game_state.session_stats.villain_hits += 1;
-                    }*/
-
-                    if defender.kind == UnitKind::Hero {
-                        let client = net_params
-                            .context
-                            .get_client_from_account_id(d_account.as_ref().unwrap().0.info.id)
-                            .unwrap();
-                        net_params.server.send_message_to_target::<Channel1, _>(
-                            SCCombatResult(combat_result.clone()),
-                            NetworkTarget::Only(vec![client.id]),
-                        );
-                    } else if defender.kind == UnitKind::Villain {
-                        let client = net_params
-                            .context
-                            .get_client_from_account_id(a_account.as_ref().unwrap().0.info.id)
-                            .unwrap();
-                        net_params.server.send_message_to_target::<Channel1, _>(
-                            SCDamage {
-                                uid: defender.uid,
-                                damage: damage.clone(),
-                            },
-                            NetworkTarget::Only(vec![client.id]),
-                        );
-                    }
-
-                    if let SkillInstance::Projectile(_) = &instance.instance {
-                        if instance
-                            .effects
-                            .iter()
-                            .any(|e| matches!(e.info, EffectInfo::Pierce(_)))
-                        {
-                            invulnerability.push(InvulnerabilityTimer {
-                                entity: d_entity,
-                                timer: Timer::from_seconds(0.5, TimerMode::Once),
-                            });
-                        }
-                    }
-                }
-            },
-            CombatResult::Death(_) => {
+            }
+            CombatResult::Death(damage) => {
                 debug!("death");
 
                 d_actions.reset();
@@ -482,7 +485,7 @@ pub fn handle_contacts(
                         .get_client_from_account_id(a_account.as_ref().unwrap().0.info.id)
                         .unwrap();
 
-                    if let Some(death) = defender.handle_death(
+                    if let Some(items) = defender.handle_death(
                         &mut attacker,
                         &metadata.0,
                         &mut rng.0,
@@ -492,7 +495,7 @@ pub fn handle_contacts(
 
                         let drops = ItemDrops {
                             source: defender.uid,
-                            items: death.items.clone(),
+                            items: items.clone(),
                         };
 
                         ground_drops.0.push(drops.clone());
@@ -504,12 +507,12 @@ pub fn handle_contacts(
                             },
                             NetworkTarget::Only(vec![client.id]),
                         );
-
-                        net_params.server.send_message_to_target::<Channel1, _>(
-                            SCVillainDeath(defender.uid),
-                            NetworkTarget::Only(vec![client.id]),
-                        );
                     }
+
+                    net_params.server.send_message_to_target::<Channel1, _>(
+                        SCVillainDeath(defender.uid),
+                        NetworkTarget::Only(vec![client.id]),
+                    );
                 } else {
                     // game_state.session_stats.villain_hits += 1;
                     let client = net_params

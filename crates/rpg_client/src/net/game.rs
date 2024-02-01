@@ -35,8 +35,10 @@ use bevy::{
 };
 
 use rpg_core::{
+    combat::{CombatResult, DamageResult},
     damage::DamageValue,
     unit::{UnitInfo, UnitKind},
+    value::Value,
 };
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
@@ -386,9 +388,31 @@ pub(crate) fn receive_spawn_villain(
     }
 }
 
-pub(crate) fn receive_combat_result(mut combat_reader: EventReader<MessageEvent<SCCombatResult>>) {
+pub(crate) fn receive_combat_result(
+    mut combat_reader: EventReader<MessageEvent<SCCombatResult>>,
+    mut player_q: Query<&mut Unit, With<Player>>,
+) {
     for event in combat_reader.read() {
         let combat_msg = event.message();
+
+        let mut player = player_q.single_mut();
+        match &combat_msg.0 {
+            CombatResult::Damage(damage) => {
+                let stat = player
+                    .stats
+                    .vitals
+                    .get_mut_stat("Hp")
+                    .unwrap()
+                    .value
+                    .u32_mut();
+                *stat = stat.saturating_sub(damage.damage.damage);
+            }
+            CombatResult::Death(damage) => {
+                player.stats.vitals.set("Hp", Value::U32(0));
+            }
+            CombatResult::Blocked | CombatResult::Dodged => {}
+            CombatResult::Error => debug!("combat error received!?"),
+        }
 
         info!("combat result {combat_msg:?}");
     }
@@ -406,12 +430,9 @@ pub(crate) fn receive_damage(
                 continue;
             }
 
-            if let DamageValue::Flat(damage) = combat_msg.damage.value {
-                let hp = &mut unit.stats.vitals.stats.get_mut("Hp").unwrap();
-
-                let hp_ref = hp.value.u32_mut();
-                *hp_ref = hp_ref.saturating_sub(damage);
-            }
+            let hp = &mut unit.stats.vitals.stats.get_mut("Hp").unwrap();
+            let hp_ref = hp.value.u32_mut();
+            *hp_ref = combat_msg.damage.total;
         }
         info!("combat result {combat_msg:?}");
     }

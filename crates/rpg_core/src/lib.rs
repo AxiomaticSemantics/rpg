@@ -1,4 +1,5 @@
 pub mod uid;
+pub mod value;
 
 pub mod combat;
 

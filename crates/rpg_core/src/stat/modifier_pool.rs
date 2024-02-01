@@ -1,8 +1,8 @@
 use super::{
     modifier::{Affix, ModifierId, ModifierKind},
-    value::Value,
     StatId,
 };
+use crate::value::Value;
 
 use serde_derive::{Deserialize as De, Serialize as Ser};
 

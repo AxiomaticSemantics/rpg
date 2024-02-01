@@ -65,6 +65,10 @@ impl GameState {
         self.players.iter().map(|p| p.client_id).collect()
     }
 
+    pub(crate) fn get_id_info_from_uid(&self, uid: Uid) -> Option<&PlayerIdInfo> {
+        self.players.iter().find(|p| p.character_id == uid)
+    }
+
     pub(crate) fn get_id_info_from_account_id(
         &self,
         account_id: AccountId,

@@ -1,5 +1,14 @@
 use serde_derive::{Deserialize as De, Serialize as Ser};
-use std::{convert::From, ops};
+
+use fastrand::Rng;
+use ordered_float::OrderedFloat;
+
+use std::{
+    convert::From,
+    fmt,
+    hash::{Hash, Hasher},
+    ops,
+};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ser, De)]
 pub enum ValueKind {
@@ -9,12 +18,12 @@ pub enum ValueKind {
     F64,
 }
 
-#[derive(Debug, Copy, Clone, PartialOrd, Ser, De)]
+#[derive(Debug, Copy, Clone, PartialOrd, Ord, Ser, De)]
 pub enum Value {
     U32(u32),
     U64(u64),
-    F32(f32),
-    F64(f64),
+    F32(OrderedFloat<f32>),
+    F64(OrderedFloat<f64>),
 }
 
 impl PartialEq for Value {
@@ -22,30 +31,81 @@ impl PartialEq for Value {
         match self {
             Self::U32(v) => *v == *rhs.u32(),
             Self::U64(v) => *v == *rhs.u64(),
-            Self::F32(v) => (f32::max(*v, *rhs.f32()) - f32::min(*v, *rhs.f32())) <= f32::EPSILON,
-            Self::F64(v) => (f64::max(*v, *rhs.f64()) - f64::min(*v, *rhs.f64())) <= f64::EPSILON,
+            Self::F32(v) => (f32::max(v.0, *rhs.f32()) - f32::min(v.0, *rhs.f32())) <= f32::EPSILON,
+            Self::F64(v) => (f64::max(v.0, *rhs.f64()) - f64::min(v.0, *rhs.f64())) <= f64::EPSILON,
         }
     }
 }
 
 impl Eq for Value {}
 
+impl Hash for Value {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            Self::U32(v) => v.hash(state),
+            Self::U64(v) => v.hash(state),
+            Self::F32(v) => v.hash(state),
+            Self::F64(v) => v.hash(state),
+        }
+    }
+}
+
+pub trait Sample<T, O> {
+    type Out;
+
+    fn sample(rng: &mut Rng, range: ops::RangeInclusive<T>) -> Self::Out;
+}
+
+impl Sample<u32, Value> for Value {
+    type Out = Self;
+
+    fn sample(rng: &mut Rng, range: ops::RangeInclusive<u32>) -> Value {
+        Value::U32(rng.u32(range))
+    }
+}
+
+impl Sample<u64, Value> for Value {
+    type Out = Self;
+
+    fn sample(rng: &mut Rng, range: ops::RangeInclusive<u64>) -> Self {
+        Value::U64(rng.u64(range))
+    }
+}
+
+impl Sample<f32, Value> for Value {
+    type Out = Self;
+
+    fn sample(rng: &mut Rng, _range: ops::RangeInclusive<f32>) -> Self {
+        Value::F32(OrderedFloat(rng.f32()))
+    }
+}
+
+impl Sample<f64, Value> for Value {
+    type Out = Self;
+
+    fn sample(rng: &mut Rng, _range: ops::RangeInclusive<f64>) -> Self {
+        Value::F64(OrderedFloat(rng.f64()))
+    }
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Value::U32(v) => write!(f, "{v}"),
+            Value::U64(v) => write!(f, "{v}"),
+            Value::F32(v) => write!(f, "{:.2}", v * 100_f32),
+            Value::F64(v) => write!(f, "{:.2}", v * 100_f64),
+        }
+    }
+}
+
 impl Value {
     pub fn zero(kind: ValueKind) -> Self {
         match kind {
             ValueKind::U32 => Self::U32(0),
             ValueKind::U64 => Self::U64(0),
-            ValueKind::F32 => Self::F32(0.),
-            ValueKind::F64 => Self::F64(0.),
-        }
-    }
-
-    pub fn to_string(&self) -> String {
-        match self {
-            Self::U32(v) => v.to_string(),
-            Self::U64(v) => v.to_string(),
-            Self::F32(v) => v.to_string(),
-            Self::F64(v) => v.to_string(),
+            ValueKind::F32 => Self::F32(OrderedFloat(0.)),
+            ValueKind::F64 => Self::F64(OrderedFloat(0.)),
         }
     }
 
@@ -128,13 +188,13 @@ impl From<u64> for Value {
 
 impl From<f32> for Value {
     fn from(value: f32) -> Self {
-        Self::F32(value)
+        Self::F32(OrderedFloat(value))
     }
 }
 
 impl From<f64> for Value {
     fn from(value: f64) -> Self {
-        Self::F64(value)
+        Self::F64(OrderedFloat(value))
     }
 }
 
