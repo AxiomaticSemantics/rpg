@@ -143,6 +143,7 @@ impl Plugin for NetworkClientPlugin {
                         game::receive_hero_death,
                         game::receive_villain_death,
                     )
+                        .chain()
                         .after(game::receive_damage),
                 )
                     .after(FixedUpdateSet::Main),
