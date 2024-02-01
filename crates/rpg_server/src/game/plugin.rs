@@ -25,6 +25,7 @@ use rpg_network_protocol::protocol::*;
 use rpg_util::{
     item::GroundItemDrops,
     skill::{update_skill, SkillContactEvent},
+    unit::collide_units,
 };
 
 use util::{
@@ -99,6 +100,7 @@ impl Plugin for GamePlugin {
             .add_systems(
                 FixedPreUpdate,
                 (
+                    collide_units,
                     villain::remote_spawn,
                     skill::update_invulnerability,
                     unit::remove_corpses,
@@ -145,7 +147,7 @@ pub(crate) fn setup_simulation(
         Aabb::from_min_max(Vec3::new(-0.2, -0.2, -0.2), Vec3::new(0.2, 0.2, 0.2)),
     );
 
-    for _ in 0..20 {
+    for _ in 0..24 {
         let position = Vec3::new(rng.f32() * 128.0 - 64.0, 0., rng.f32() * 128.0 - 64.0);
 
         let villain_id = VillainId::sample(&mut rng);
@@ -169,12 +171,8 @@ pub(crate) fn transition_to_game(mut state: ResMut<NextState<AppState>>) {
 pub(crate) fn join_clients(game_state: ResMut<GameState>, mut net_params: NetworkParamsRW) {
     info!("joining clients to game");
 
-    let client_ids = game_state.client_ids();
-
-    // FIXME spawn positions need to account for player intersections
-    // for now just spawn all clients at the origin
     net_params.server.send_message_to_target::<Channel1, _>(
         SCPlayerJoinSuccess,
-        NetworkTarget::Only(client_ids.clone()),
+        NetworkTarget::Only(game_state.client_ids()),
     );
 }

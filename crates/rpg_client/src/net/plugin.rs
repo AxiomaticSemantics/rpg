@@ -129,15 +129,17 @@ impl Plugin for NetworkClientPlugin {
             .add_systems(
                 FixedUpdate,
                 (
+                    game::receive_damage,
                     game::receive_stat_updates,
                     game::receive_stat_update,
-                    game::receive_player_rotation,
-                    game::receive_player_move,
-                    game::receive_player_move_end,
-                    game::receive_unit_rotation,
-                    game::receive_unit_move,
-                    game::receive_unit_move_end,
-                    game::receive_damage,
+                    (
+                        game::receive_player_rotation,
+                        game::receive_player_move,
+                        game::receive_player_move_end.after(game::receive_player_move),
+                        game::receive_unit_rotation,
+                        game::receive_unit_move,
+                        game::receive_unit_move_end.after(game::receive_unit_move),
+                    ),
                     (
                         game::receive_combat_result,
                         game::receive_hero_death,
