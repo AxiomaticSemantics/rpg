@@ -185,6 +185,7 @@ fn connect(
     connection_timer.tick(dt);
 
     if connection_timer.just_finished() {
+        connection_timer.reset();
         net_client.connect();
     }
 }
