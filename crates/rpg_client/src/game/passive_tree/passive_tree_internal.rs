@@ -86,7 +86,6 @@ pub struct PassiveTreePopupFlavour;
 pub(crate) fn setup(
     mut commands: Commands,
     metadata: Res<MetadataResources>,
-    ui_theme: Res<UiTheme>,
     mut renderables: ResMut<RenderResources>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -207,183 +206,26 @@ pub(crate) fn setup(
         .insert("line_allocated".into(), line_allocated_material.clone());
 
     /*
-    let node_scale = 3.0;
-    let cluster_scale = 9.0;
-    let section_scale = 27.0;
-    let zone_scale = 81.0;
+    let graph_index = graph.add_node(node_id);
+    graph_indices.insert(node_id, graph_index);
+    passive_indices.insert(node_id, graph_indices.len() - 1);
 
-    for z in 0..7 {
-        let zone_name = match z {
-            0 => "StrDexInt",
-            1 => "Str",
-            2 => "StrDex",
-            3 => "Dex",
-            4 => "DexInt",
-            5 => "Int",
-            6 => "IntStr",
-            _ => unreachable!(),
-        };
-        let zone_hex_pos = HexPosition::from_index(z);
-        let zone_pos = zone_hex_pos.unit_position();
-        let zone_origin = Vec3::new(zone_pos.x, zone_pos.y, 0.0) * zone_scale;
+    passive_tree.nodes.push(node);
 
-        for s in 0..7 {
-            let section_hex_pos = HexPosition::from_index(s);
-            let section_pos = section_hex_pos.unit_position();
-            let section_origin =
-                zone_origin + Vec3::new(section_pos.x, section_pos.y, 0.0) * section_scale;
-
-            let is_root_section = z == s;
-            for c in 0..7 {
-                let cluster_hex_pos = HexPosition::from_index(c);
-                let cluster_pos = cluster_hex_pos.unit_position();
-                let cluster_origin =
-                    section_origin + Vec3::new(cluster_pos.x, cluster_pos.y, 0.0) * cluster_scale;
-
-                let is_root_cluster = is_root_section && c == 6;
-                for n in 0..7 {
-                    let node_hex_pos = HexPosition::from_index(n);
-                    let node_pos = node_hex_pos.unit_position();
-                    let node_origin =
-                        cluster_origin + Vec3::new(node_pos.x, node_pos.y, 0.0) * node_scale;
-
-                    let (kind, circle_material, circle_mesh) = match c {
-                        _ if n == 6 && is_root_cluster => (
-                            NodeKind::Root,
-                            circle_material_root.clone(),
-                            circle_root.clone(),
-                        ),
-                        _ if n == 6 && !is_root_cluster => (
-                            NodeKind::Major,
-                            circle_material_major.clone(),
-                            circle_major.clone(),
-                        ),
-                        _ => (
-                            NodeKind::Minor,
-                            circle_material_minor.clone(),
-                            circle_minor.clone(),
-                        ),
-                    };
-
-                    let mut connections = vec![];
-
-                    if n < 6 {
-                        connections.push(NodeId::from_coordinates(
-                            z as u16,
-                            s as u16,
-                            c as u16,
-                            ((n + 1) % 6) as u16,
-                        ));
-                    } else if n == 6 {
-                        if c < 6 {
-                            connections.push(NodeId::from_coordinates(
-                                z as u16,
-                                s as u16,
-                                c as u16,
-                                cluster_hex_pos.opposite().to_index() as u16,
-                            ));
-                        } else {
-                            connections
-                                .push(NodeId::from_coordinates(z as u16, s as u16, c as u16, 0));
-                        }
-                    }
-
-                    // inner cluster connections
-                    if c == 6 && n != 6 && n % 2 == 0 {
-                        connections.push(NodeId::from_coordinates(
-                            z as u16,
-                            s as u16,
-                            ((c + n) % 6) as u16,
-                            node_hex_pos.opposite().to_index() as u16,
-                        ));
-                    } else if c != 6 && n != 6 && c == (n + 4) % 6 && c % 2 == 0 {
-                        connections.push(NodeId::from_coordinates(
-                            z as u16,
-                            s as u16,
-                            ((c + 1) % 6) as u16,
-                            node_hex_pos.opposite().to_index() as u16,
-                        ));
-                    } else if s != 6
-                        && c != 6
-                        && n != 6
-                        && c % 2 == 0
-                        && c == (n + 3) % 6
-                        && s == (c + 4) % 6
-                    {
-                        connections.push(NodeId::from_coordinates(
-                            z as u16,
-                            ((s + 1) % 6) as u16,
-                            //cluster_hex_pos.opposite().to_index() as u16,
-                            ((c + 3) % 6) as u16,
-                            node_hex_pos.opposite().to_index() as u16,
-                        ));
-                    }
-
-                    /*
-                    if !section_hex_pos.is_ring_pos()
-                        && cluster_hex_pos.is_ring_pos()
-                        && node_hex_pos.is_ring_pos()
-                        && n % 2 == 0
-                        && c == node_hex_pos.opposite().to_index()
-                    //node_hex_pos.opposite().to_index()
-                    //&& n == cluster_hex_pos.opposite().to_index()
-                    //&& c == (s + 1) % 6
-                    //&& s == (n + 3) % 6
-                    //&& s = (
-                    //cluster_hex_pos.opposite().to_index()
-                    {
-                        println!("k");
-                        connections.push(NodeId::from_coordinates(
-                            z as u16,
-                            cluster_hex_pos.opposite().to_index() as u16,
-                            ((c + 3) % 6) as u16,
-                            //cluster_hex_pos.opposite().to_index() as u16,
-                            //((c + 3) % 6) as u16,
-                            //((n + cluster_hex_pos.opposite().to_index()) % 6) as u16,
-                            ((node_hex_pos.opposite().to_index()) % 6) as u16,
-                        ));
-                    }*/
-
-                    let node_id = NodeId(id);
-                    let node = Node {
-                        name: format!("{}{:?}{}", zone_name, kind, node_id).into(),
-                        id: node_id,
-                        kind,
-                        position: node_origin.xy(),
-                        connections,
-                    };
-
-                    println!(
-                        "{{ \"name\": \"{}\", \"id\": {}, \"position\": {},\n\"kind\": \"{kind:?}\", \"connections\": {:?} }},\n",
-                        node.name, node_id.0, node_origin.xy(), node.connections
-                    );
-
-                    let graph_index = graph.add_node(node_id);
-                    graph_indices.insert(node_id, graph_index);
-                    passive_indices.insert(node_id, graph_indices.len() - 1);
-
-                    passive_tree.nodes.push(node);
-
-                    let node_transform = Transform::from_translation(node_origin);
-                    commands.spawn((
-                        first_pass_layer,
-                        MaterialMeshBundle {
-                            transform: node_transform,
-                            mesh: circle_mesh.clone(),
-                            material: circle_material.clone(),
-                            ..default()
-                        },
-                    ));
-
-                    id += 1;
-                }
-            }
-        }
-    }
+    let node_transform = Transform::from_translation(node_origin);
+    commands.spawn((
+        first_pass_layer,
+            MaterialMeshBundle {
+            transform: node_transform,
+            mesh: circle_mesh.clone(),
+            material: circle_material.clone(),
+            ..default()
+        },
+    ));
     */
 
-    // FIXME this needs to be split into two functions
-    // one that spawns the base resource and another function that uses the players skill graph
+    // FIXME there needs to be a system that applies the characters passive tree to the default
+    // tree
     for node in &metadata.rpg.passive_tree.nodes {
         let (circle_material, circle_mesh) = match node.kind {
             NodeKind::Root => {
@@ -454,6 +296,11 @@ pub(crate) fn setup(
             .unwrap()
             .position;
     */
+}
+
+pub(crate) fn setup_ui(mut commands: Commands, ui_theme: Res<UiTheme>) {
+    let first_pass_layer = RenderLayers::layer(1);
+
     commands.spawn((
         GameSessionCleanup,
         CleanupStrategy::Despawn,
