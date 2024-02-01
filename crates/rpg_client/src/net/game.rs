@@ -390,27 +390,24 @@ pub(crate) fn receive_spawn_villain(
 
 pub(crate) fn receive_combat_result(
     mut combat_reader: EventReader<MessageEvent<SCCombatResult>>,
-    mut player_q: Query<&mut Unit, With<Player>>,
+    mut player_q: Query<(&mut Unit, &mut AnimationState), With<Player>>,
 ) {
     for event in combat_reader.read() {
         let combat_msg = event.message();
 
-        let mut player = player_q.single_mut();
+        let (mut player, mut anim) = player_q.single_mut();
         match &combat_msg.0 {
             CombatResult::Damage(damage) => {
-                let stat = player
-                    .stats
-                    .vitals
-                    .get_mut_stat("Hp")
-                    .unwrap()
-                    .value
-                    .u32_mut();
-                *stat = stat.saturating_sub(damage.damage.damage);
+                player.stats.vitals.set("Hp", Value::U32(damage.total));
+                *anim = ANIM_DEFEND;
             }
-            CombatResult::Death(damage) => {
+            CombatResult::Death(_) => {
                 player.stats.vitals.set("Hp", Value::U32(0));
+                *anim = ANIM_DEATH;
             }
-            CombatResult::Blocked | CombatResult::Dodged => {}
+            CombatResult::Blocked | CombatResult::Dodged => {
+                *anim = ANIM_DEFEND;
+            }
             CombatResult::Error => debug!("combat error received!?"),
         }
 
