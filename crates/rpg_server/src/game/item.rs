@@ -1,3 +1,4 @@
+use super::plugin::{AabbResources, GameSessionCleanup};
 use crate::assets::MetadataResources;
 
 use rpg_core::{
@@ -10,7 +11,8 @@ use rpg_util::{
 };
 
 use util::{
-    math::{Aabb, AabbComponent},
+    cleanup::CleanupStrategy,
+    math::AabbComponent,
     random::{Rng, SharedRng},
 };
 
@@ -23,6 +25,7 @@ use bevy::{
 pub(crate) fn spawn_ground_items(
     mut commands: Commands,
     metadata: Res<MetadataResources>,
+    aabbs: Res<AabbResources>,
     mut rng: ResMut<SharedRng>,
     mut ground_drop_items: ResMut<GroundItemDrops>,
     mut unit_q: Query<(&Transform, &Unit)>,
@@ -38,6 +41,7 @@ pub(crate) fn spawn_ground_items(
                     &mut commands,
                     &mut rng.0,
                     &metadata.0,
+                    &aabbs,
                     source_transform.translation,
                     item.clone(),
                 );
@@ -50,16 +54,16 @@ fn spawn_item(
     commands: &mut Commands,
     rng: &mut Rng,
     metadata: &Metadata,
+    aabbs: &AabbResources,
     position: Vec3,
     item: Item,
 ) {
+    use std::f32::consts;
+
     // info!("spawning ground item at {position:?}");
     let item_info = &metadata.item.items[&item.id];
 
-    let aabb = AabbComponent(Aabb::from_min_max(Vec3::splat(-0.2), Vec3::splat(0.2)));
-
-    use std::f32::consts;
-
+    let aabb = AabbComponent(aabbs.aabbs["item_normal"]);
     let dir = consts::TAU * (0.5 - rng.f32());
 
     let mut transform = Transform::from_xyz(position.x, 0.8, position.z);
@@ -67,8 +71,8 @@ fn spawn_item(
 
     let id = commands
         .spawn((
-            // FIXME GameSessionCleanup,
-            //CleanupStrategy::DespawnRecursive,
+            GameSessionCleanup,
+            CleanupStrategy::DespawnRecursive,
             transform,
             GroundItemBundle {
                 item: GroundItem(Some(item)),
