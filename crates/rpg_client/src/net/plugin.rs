@@ -2,7 +2,7 @@ use super::{account, chat, game, lobby};
 use crate::state::AppState;
 
 use bevy::{
-    app::{App, FixedUpdate, Plugin, Startup, Update},
+    app::{App, FixedPreUpdate, FixedUpdate, Plugin, Startup, Update},
     ecs::{
         event::EventReader,
         schedule::{common_conditions::*, Condition, IntoSystemConfigs},
@@ -115,27 +115,35 @@ impl Plugin for NetworkClientPlugin {
                 ),
             )
             .add_systems(
+                FixedPreUpdate,
+                (
+                    game::receive_despawn_corpse,
+                    game::receive_despawn_item,
+                    game::receive_despawn_skill,
+                    game::receive_spawn_item,
+                    game::receive_spawn_items,
+                    game::receive_spawn_villain,
+                    game::receive_spawn_skill,
+                ),
+            )
+            .add_systems(
                 FixedUpdate,
                 (
                     game::receive_stat_updates,
                     game::receive_stat_update,
-                    game::receive_spawn_villain,
-                    game::receive_hero_death,
-                    game::receive_villain_death,
-                    game::receive_despawn_corpse,
-                    game::receive_spawn_skill,
-                    game::receive_despawn_skill,
-                    game::receive_spawn_item,
-                    game::receive_spawn_items,
-                    game::receive_despawn_item,
                     game::receive_player_rotation,
                     game::receive_player_move,
                     game::receive_player_move_end,
                     game::receive_unit_rotation,
                     game::receive_unit_move,
                     game::receive_unit_move_end,
-                    game::receive_combat_result,
                     game::receive_damage,
+                    (
+                        game::receive_combat_result,
+                        game::receive_hero_death,
+                        game::receive_villain_death,
+                    )
+                        .after(game::receive_damage),
                 )
                     .after(FixedUpdateSet::Main),
             );
