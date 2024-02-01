@@ -98,11 +98,11 @@ pub mod generation {
         metadata::Metadata,
         stat::{
             modifier::{Affix, Modifier, ModifierFormat, ModifierId, ModifierKind, Operation},
-            value::{Sample, Value, ValueKind},
             StatModifier,
         },
         uid::NextUid,
         unit_tables::VillainsTableEntry,
+        value::{Sample, Value, ValueKind},
     };
 
     pub(crate) fn roll_item_drops(
@@ -121,7 +121,7 @@ pub mod generation {
                 villain_info.drop_chance
             );
             if drop_roll < villain_info.drop_chance {
-                let item = crate::item::generation::generate(rng, metadata, 1, next_uid);
+                let item = super::generation::generate(rng, metadata, 1, next_uid);
                 drops.push(item);
             }
         }

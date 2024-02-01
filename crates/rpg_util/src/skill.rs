@@ -13,7 +13,7 @@ use bevy::{
 };
 
 use rpg_core::{
-    damage::Damage,
+    damage::DamageDescriptor,
     metadata::Metadata,
     skill::{effect::*, Origin, SkillId, SkillInstance},
     uid::Uid,
@@ -45,7 +45,7 @@ pub struct Invulnerability(pub Vec<InvulnerabilityTimer>);
 pub struct SkillUse {
     pub owner: Uid,
     pub id: SkillId,
-    pub damage: Damage,
+    pub damage: DamageDescriptor,
     pub instance: SkillInstance,
     pub effects: Vec<EffectInstance>,
     pub tickable: Option<Tickable>,
@@ -55,7 +55,7 @@ impl SkillUse {
     pub fn new(
         owner: Uid,
         id: SkillId,
-        damage: Damage,
+        damage: DamageDescriptor,
         instance: SkillInstance,
         effects: Vec<EffectInstance>,
         tickable: Option<Tickable>,

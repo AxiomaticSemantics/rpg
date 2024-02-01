@@ -1,10 +1,6 @@
 use super::effect::EffectInfo;
 
-use crate::{
-    damage::Damage,
-    metadata::Metadata,
-    stat::{value::Value, StatId},
-};
+use crate::{damage::DamageDescriptor, metadata::Metadata, stat::StatId, value::Value};
 
 use glam::Vec3;
 use serde_derive::{Deserialize as De, Serialize as Ser};
@@ -182,7 +178,7 @@ pub struct SkillCost {
 pub struct Skill {
     pub id: SkillId,
     pub level: u8,
-    pub damage: Damage,
+    pub damage: DamageDescriptor,
     pub info: SkillInfo,
     pub origin: Origin,
     pub effects: Vec<EffectInfo>,
@@ -192,7 +188,7 @@ impl Skill {
     pub fn new(
         id: SkillId,
         level: u8,
-        damage: Damage,
+        damage: DamageDescriptor,
         info: SkillInfo,
         origin: Origin,
         effects: Vec<EffectInfo>,

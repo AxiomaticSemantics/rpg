@@ -8,9 +8,21 @@ pub enum DamageKind {
 }
 
 #[derive(Ser, De, Debug, PartialEq, Copy, Clone)]
-pub enum DamageValue {
+pub enum DamageValueDescriptor {
     Flat(u32),
     MinMax(u32, u32),
+}
+
+#[derive(Ser, De, Debug, PartialEq, Copy, Clone)]
+pub struct DamageDescriptor {
+    pub kind: DamageKind,
+    pub value: DamageValueDescriptor,
+}
+
+#[derive(Ser, De, Debug, PartialEq, Copy, Clone)]
+pub struct DamageValue {
+    pub damage: u32,
+    pub total: u32,
 }
 
 #[derive(Ser, De, Debug, PartialEq, Clone)]

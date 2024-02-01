@@ -4,7 +4,6 @@ pub mod modifier_pool;
 
 mod stat_internal;
 pub mod stat_list;
-pub mod value;
 
 pub mod stat_system;
 

@@ -9,7 +9,7 @@ use crate::{
 };
 use rpg_core::{
     passive_tree::{EdgeNodes, Node, NodeId, NodeKind, PassiveSkillGraph},
-    stat::value::ValueKind,
+    value::ValueKind,
 };
 use rpg_util::unit::Unit;
 use ui_util::style::UiTheme;

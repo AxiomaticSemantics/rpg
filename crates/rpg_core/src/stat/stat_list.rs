@@ -1,7 +1,5 @@
-use super::{
-    modifier_list::ModifierList,
-    value::{Value, ValueKind},
-};
+use super::modifier_list::ModifierList;
+use crate::value::{Value, ValueKind};
 
 use serde_derive::{Deserialize as De, Serialize as Ser};
 

@@ -1,4 +1,5 @@
-use super::{value::Value, StatDescriptor};
+use super::StatDescriptor;
+use crate::value::Value;
 
 use std::borrow::Cow;
 use std::collections::HashMap;

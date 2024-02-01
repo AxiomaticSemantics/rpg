@@ -11,8 +11,7 @@ use rpg_account::{
 use rpg_chat::chat::{ChannelId, Message as ChatMessage};
 use rpg_core::{
     class::Class,
-    combat::CombatResult,
-    damage::Damage,
+    combat::{CombatResult, DamageResult},
     item::ItemDrops,
     skill::SkillId,
     stat::StatUpdate,
@@ -352,7 +351,7 @@ pub struct SCCombatResult(pub CombatResult);
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCDamage {
     pub uid: Uid,
-    pub damage: Damage,
+    pub damage: DamageResult,
 }
 
 #[message_protocol(protocol = "RpgProtocol")]

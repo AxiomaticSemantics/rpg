@@ -1,7 +1,7 @@
 use crate::{
     class::Class,
-    combat::{AttackResult, CombatResult, DeathResult},
-    damage::{Damage, DamageKind, DamageValue},
+    combat::{CombatResult, DamageResult},
+    damage::{DamageDescriptor, DamageKind, DamageValue, DamageValueDescriptor},
     item::{self, Item, ItemId, ItemUid, Rarity},
     metadata::Metadata,
     passive_tree::PassiveSkillGraph,
@@ -9,11 +9,11 @@ use crate::{
     stat::{
         modifier::{Modifier, ModifierFormat, ModifierId, ModifierKind, Operation},
         stat_system::Stats,
-        value::{Value, ValueKind},
         Stat, StatId, StatModifier,
     },
     storage::{StorageIndex, UnitStorage, STORAGE_INVENTORY, STORAGE_STASH},
     uid::{NextUid, Uid},
+    value::{Value, ValueKind},
     villain::VillainId,
 };
 
@@ -200,25 +200,25 @@ impl Unit {
         attacker: &Self,
         metadata: &Metadata,
         rng: &mut Rng,
-        damage: &Damage,
+        damage: &DamageDescriptor,
     ) -> CombatResult {
         if !self.is_alive() {
             println!("handle_attack, skipping dead unit");
-            return CombatResult::IsDead;
+            return CombatResult::Error;
         }
 
         if self.dodge_attack(attacker, rng) {
-            return CombatResult::Attack(AttackResult::Dodged);
+            return CombatResult::Dodged;
         }
 
         if self.block_attack(attacker, rng) {
-            return CombatResult::Attack(AttackResult::Blocked);
+            return CombatResult::Blocked;
         }
 
         // TODO split Damage into seperate structs
         let mut damage_roll = match damage.value {
-            DamageValue::Flat(flat) => flat,
-            DamageValue::MinMax(min, max) => rng.u32(min..=max),
+            DamageValueDescriptor::Flat(flat) => flat,
+            DamageValueDescriptor::MinMax(min, max) => rng.u32(min..=max),
         };
 
         let crit_chance = *attacker.stats.vitals.stats["CritChance"].value.f32();
@@ -253,21 +253,20 @@ impl Unit {
             .value
             .u32_mut() = new_hp;
 
-        let damage = Damage {
+        let damage = DamageResult {
             kind: DamageKind::Physical,
-            value: DamageValue::Flat(*damage_dealt.u32()),
-        };
-
-        let attack_result = if is_crit {
-            AttackResult::HitCrit(damage)
-        } else {
-            AttackResult::Hit(damage)
+            damage: DamageValue {
+                total: new_hp,
+                damage: *damage_dealt.u32(),
+            },
+            total: new_hp,
+            is_crit,
         };
 
         if self.is_alive() {
-            CombatResult::Attack(attack_result)
+            CombatResult::Damage(damage)
         } else {
-            CombatResult::Death(attack_result)
+            CombatResult::Death(damage)
         }
     }
 
@@ -460,7 +459,7 @@ impl Unit {
         metadata: &Metadata,
         rng: &mut Rng,
         next_uid: &mut NextUid,
-    ) -> Option<DeathResult> {
+    ) -> Option<Vec<Item>> {
         match self.kind {
             UnitKind::Villain => {
                 let villain_info = self.info.villain();
@@ -500,7 +499,7 @@ impl Unit {
 
                 println!("generated {} item(s)", items.len());
 
-                Some(DeathResult { items })
+                Some(items)
             }
             _ => None,
         }

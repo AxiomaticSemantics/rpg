@@ -1,24 +1,30 @@
-use crate::{damage::Damage, item::Item};
+use crate::{
+    damage::{DamageKind, DamageValue},
+    item::Item,
+};
 
 use serde_derive::{Deserialize as De, Serialize as Ser};
 
 #[derive(Debug, Ser, De, Clone, PartialEq)]
-pub enum AttackResult {
-    Hit(Damage),
-    HitCrit(Damage),
-    Blocked,
-    Dodged,
+pub struct DamageResult {
+    pub kind: DamageKind,
+    pub damage: DamageValue,
+    pub total: u32,
+    pub is_crit: bool,
 }
 
 #[derive(Debug, Ser, De, Clone, PartialEq)]
 pub enum CombatResult {
-    Attack(AttackResult),
-    Death(AttackResult),
+    Damage(DamageResult),
+    Death(DamageResult),
+    Blocked,
+    Dodged,
     // FIXME rename this
-    IsDead,
+    Error,
 }
 
-#[derive(Debug, Ser, De, Clone)]
+// TODO remove this
+#[derive(Debug, Ser, De, Clone, PartialEq)]
 pub struct DeathResult {
     pub items: Vec<Item>,
 }

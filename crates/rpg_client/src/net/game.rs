@@ -35,8 +35,10 @@ use bevy::{
 };
 
 use rpg_core::{
+    combat::{CombatResult, DamageResult},
     damage::DamageValue,
     unit::{UnitInfo, UnitKind},
+    value::Value,
 };
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
@@ -131,7 +133,7 @@ pub(crate) fn receive_player_move(
     for event in move_events.read() {
         let move_msg = event.message();
 
-        info!("move player {move_msg:?}");
+        // info!("move player {move_msg:?}");
         let (mut transform, mut anim) = player_q.single_mut();
         transform.translation = move_msg.0;
 
@@ -233,10 +235,9 @@ pub(crate) fn receive_stat_update(
     for event in update_events.read() {
         let update_msg = event.message();
 
-        info!("stat update: {:?}", update_msg.0);
+        // info!("player stat update: {:?}", update_msg.0);
 
         let mut player = player_q.single_mut();
-
         player
             .stats
             .vitals
@@ -253,12 +254,7 @@ pub(crate) fn receive_stat_updates(
 
         let mut player = player_q.single_mut();
         for update in &update_msg.0 {
-            player
-                .stats
-                .vitals
-                .get_mut_stat_from_id(update.id)
-                .unwrap()
-                .value = update.total;
+            player.stats.vitals.set_from_id(update.id, update.total);
             info!("stat update: {update:?}");
         }
     }
@@ -392,9 +388,28 @@ pub(crate) fn receive_spawn_villain(
     }
 }
 
-pub(crate) fn receive_combat_result(mut combat_reader: EventReader<MessageEvent<SCCombatResult>>) {
+pub(crate) fn receive_combat_result(
+    mut combat_reader: EventReader<MessageEvent<SCCombatResult>>,
+    mut player_q: Query<(&mut Unit, &mut AnimationState), With<Player>>,
+) {
     for event in combat_reader.read() {
         let combat_msg = event.message();
+
+        let (mut player, mut anim) = player_q.single_mut();
+        match &combat_msg.0 {
+            CombatResult::Damage(damage) => {
+                player.stats.vitals.set("Hp", Value::U32(damage.total));
+                *anim = ANIM_DEFEND;
+            }
+            CombatResult::Death(_) => {
+                player.stats.vitals.set("Hp", Value::U32(0));
+                *anim = ANIM_DEATH;
+            }
+            CombatResult::Blocked | CombatResult::Dodged => {
+                *anim = ANIM_DEFEND;
+            }
+            CombatResult::Error => debug!("combat error received!?"),
+        }
 
         info!("combat result {combat_msg:?}");
     }
@@ -412,12 +427,9 @@ pub(crate) fn receive_damage(
                 continue;
             }
 
-            if let DamageValue::Flat(damage) = combat_msg.damage.value {
-                let hp = &mut unit.stats.vitals.stats.get_mut("Hp").unwrap();
-
-                let hp_ref = hp.value.u32_mut();
-                *hp_ref = hp_ref.saturating_sub(damage);
-            }
+            let hp = &mut unit.stats.vitals.stats.get_mut("Hp").unwrap();
+            let hp_ref = hp.value.u32_mut();
+            *hp_ref = combat_msg.damage.total;
         }
         info!("combat result {combat_msg:?}");
     }

@@ -65,6 +65,10 @@ impl GameState {
         self.players.iter().map(|p| p.client_id).collect()
     }
 
+    pub(crate) fn get_id_info_from_uid(&self, uid: Uid) -> Option<&PlayerIdInfo> {
+        self.players.iter().find(|p| p.character_id == uid)
+    }
+
     pub(crate) fn get_id_info_from_account_id(
         &self,
         account_id: AccountId,
@@ -130,9 +134,15 @@ pub(crate) fn setup_simulation(
 ) {
     info!("spawning game");
 
+    // FIXME more aabbs need to be inserted, impl FromWorld and move
     aabbs.aabbs.insert(
         Cow::Owned("direct_attack".into()),
         Aabb::from_min_max(Vec3::new(-0.1, -0.1, -0.5), Vec3::new(0.1, 0.1, 0.5)),
+    );
+
+    aabbs.aabbs.insert(
+        Cow::Owned("item_normal".into()),
+        Aabb::from_min_max(Vec3::new(-0.2, -0.2, -0.2), Vec3::new(0.2, 0.2, 0.2)),
     );
 
     for _ in 0..20 {

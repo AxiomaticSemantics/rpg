@@ -1,9 +1,7 @@
 use serde_derive::{Deserialize as De, Serialize as Ser};
 
-use super::{
-    modifier::{self, Modifier},
-    value::{Value, ValueKind},
-};
+use super::modifier::{self, Modifier};
+use crate::value::{Value, ValueKind};
 
 use std::borrow::Cow;
 use std::fmt;

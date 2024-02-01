@@ -1,5 +1,5 @@
 use crate::{
-    damage::Damage,
+    damage::DamageDescriptor,
     skill::{effect::EffectInfo, Origin, SkillId, SkillInfo},
     stat::Stat,
 };
@@ -13,7 +13,7 @@ pub struct SkillTableEntry {
     pub info: SkillInfo,
     pub origin: Origin,
     pub use_range: u32,
-    pub base_damage: Damage,
+    pub base_damage: DamageDescriptor,
     pub base_cost: Vec<Stat>,
     pub effects: Option<Vec<EffectInfo>>,
     pub use_duration_secs: f32,
