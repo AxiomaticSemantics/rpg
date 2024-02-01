@@ -61,10 +61,8 @@ pub struct GameCamera {
 
 #[derive(Debug, Default)]
 pub struct SessionStats {
-    pub spawned: u32,
     pub kills: u32,
-    pub villain_attacks: u32,
-    pub villain_hits: u32,
+    pub times_hit: u32,
     pub attacks: u32,
     pub hits: u32,
     pub dodges: u32,
@@ -80,7 +78,6 @@ pub struct SessionStats {
     pub times_knockbacked: u32,
     pub distance_knockbacked: f32,
     pub distance_travelled: f32,
-    pub items_spawned: u32,
     pub items_looted: u32,
 
     // Various stats
@@ -102,18 +99,15 @@ pub struct SessionStats {
 
 pub(crate) fn build_stats_string(stats: &SessionStats) -> String {
     format!(
-        "Villain Stats:\nSpawned: {} Killed: {} Attacks: {} Hits: {}\n\nPlayer Stats:\nAttacks: {} Hits: {}\nBlocks: {} Dodges: {} Times Blocked: {} Times Dodged: {}\n\nItems Stats:\nSpawned: {} Looted: {}",
-        stats.spawned,
+        "Player Stats:\n\nKills: {} Attacks: {} Hits: {}\nBlocks: {} Dodges: {}\n\nTimes Hit: {} Times Blocked: {} Times Dodged: {}\n\nItems Looted: {}",
         stats.kills,
-        stats.villain_attacks,
-        stats.villain_hits,
         stats.attacks,
         stats.hits,
         stats.blocks,
         stats.dodges,
+        stats.times_hit,
         stats.times_blocked,
         stats.times_dodged,
-        stats.items_spawned,
         stats.items_looted,
     )
 }
@@ -159,7 +153,6 @@ pub enum GameOverState {
 
 #[derive(Debug, Resource, Default)]
 pub struct GameState {
-    pub session_stats: SessionStats,
     pub state: PlayState,
     pub mode: HeroGameMode,
 }
@@ -192,7 +185,6 @@ impl Plugin for GamePlugin {
                         ui::hero::setup,
                         ui::inventory::setup,
                         ui::menu::setup,
-                        ui::game_over::setup,
                         passive_tree::setup,
                         passive_tree::setup_ui,
                     )
@@ -250,7 +242,7 @@ impl Plugin for GamePlugin {
                 Update,
                 (
                     ui::menu::toggle_menu,
-                    ui::menu::save_button,
+                    ui::menu::exit_button,
                     ui::menu::cancel_button,
                 )
                     .chain()
@@ -274,9 +266,7 @@ impl Plugin for GamePlugin {
                 PostUpdate,
                 (
                     ui::hud::update,
-                    ui::game_over::exit_button,
-                    ui::game_over::restart_button,
-                    ui::game_over::game_over_transition,
+                    // FIXME remove ui::game_over::game_over_transition,
                 )
                     .chain()
                     .run_if(in_state(AppState::Game).and_then(is_death)),
@@ -449,76 +439,6 @@ fn setup(mut commands: Commands, mut camera_2d_q: Query<&mut Camera, With<OutOfG
             ),
         },*/
     ));
-
-    // let mut image = images.get_mut(&textures.heightmap).unwrap();
-    // image.sampler_descriptor = ImageSampler::Descriptor(SamplerDescriptor {
-    // address_mode_u: AddressMode::MirrorRepeat,
-    // address_mode_v: AddressMode::MirrorRepeat,
-    // address_mode_w: AddressMode::Repeat,
-    // ..default()
-    // });
-    //
-    // let image_size = image.size();
-    // let size = image_size.x as u32;
-    // let size_y = size - 1;
-    // let size_x = size - 1;
-    // let num_vertices = (size_y * size_x) as usize;
-    // let num_indices = ((size_y - 1) * (size_x - 1) * 6) as usize;
-    //
-    // let mut positions: Vec<[f32; 3]> = Vec::with_capacity(num_vertices);
-    // let mut normals: Vec<[f32; 3]> = Vec::with_capacity(num_vertices);
-    // let mut uvs: Vec<[f32; 2]> = Vec::with_capacity(num_vertices);
-    // let mut indices: Vec<u32> = Vec::with_capacity(num_indices);
-    //
-    // let mut uv: [f32; 2] = [0., 1.];
-    // for y in 0..size_y {
-    // if y % 8 == 0 {
-    // uv[1] = 1.;
-    // }
-    //
-    // for x in 0..size_x {
-    // if x % 8 == 0 {
-    // uv[0] = 0.;
-    // }
-    //
-    // let index = y * size_x + x;
-    //
-    // let h = *image.data.get(index as usize * 4).unwrap();
-    // let h_s = (size_x - 1) as f32 / 2.;
-    //
-    // let pos = Vec3::new(-h_s + x as f32, -16. + (h as f32) / 8., -h_s + y as f32);
-    // positions.push(pos.to_array());
-    // normals.push([0., 0., 0.]);
-    // uvs.push(uv);
-    //
-    // println!("UV: {uv:?}");
-    //
-    // uv[0] += 0.142857142857;
-    // }
-    // uv[1] -= 0.142857142857;
-    // }
-    //
-    // make_indices(&mut indices, [size_x, size_y]);
-    // calculate_normals(&indices, &positions, &mut normals);
-    //
-    // let mut terrain_mesh = Mesh::new(PrimitiveTopology::TriangleList);
-    // terrain_mesh.set_indices(Some(Indices::U32(indices)));
-    // terrain_mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-    // terrain_mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-    // terrain_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
-    //
-    // commands.spawn(PbrBundle {
-    // mesh: meshes.add(terrain_mesh),
-    // material: materials.add(StandardMaterial {
-    // base_color_texture: Some(textures.seamless_grass.clone()),
-    // perceptual_roughness: 0.95,
-    // ..default()
-    // }),
-    // ..default()
-    // });
-    // transform: Transform::from_xyz(32., 32., 0.),
-    // ..default()
-    // });
 
     info!("spawning complete");
 }

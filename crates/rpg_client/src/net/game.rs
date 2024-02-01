@@ -295,12 +295,12 @@ pub(crate) fn receive_despawn_item(
         let despawn_msg = event.message();
 
         for (entity, item) in &item_q {
-            if item.0.as_ref().unwrap().uid.0 != despawn_msg.0 {
+            if item.0.as_ref().unwrap().uid != despawn_msg.0 {
                 continue;
             }
 
             commands.entity(entity).despawn_recursive();
-            info!("ground item depspawn: {despawn_msg:?}");
+            info!("ground item despawn: {despawn_msg:?}");
         }
     }
 }

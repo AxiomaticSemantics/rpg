@@ -16,6 +16,8 @@ features = [
   "bevy_asset",
   "bevy_text",
   "bevy_ui",
+  "bevy_window",
+  "bevy_input",
   "subpixel_glyph_atlas",
 ]
 optional = false

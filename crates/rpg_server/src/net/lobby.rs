@@ -21,8 +21,6 @@ pub(crate) fn receive_lobby_create(
     mut net_params: NetworkParamsRW,
 ) {
     for event in create_reader.read() {
-        info!("lobby create");
-
         let client_id = event.context();
         let client = net_params.context.clients.get(client_id).unwrap();
         if !client.is_authenticated() {
@@ -35,6 +33,8 @@ pub(crate) fn receive_lobby_create(
         if let Some(lobby_id) =
             lobby_manager.add_lobby(create_msg.name.clone(), create_msg.game_mode)
         {
+            info!("lobby created");
+
             lobby_manager.add_account(lobby_id, account_id);
 
             net_params.server.send_message_to_target::<Channel1, _>(
@@ -72,9 +72,8 @@ pub(crate) fn receive_lobby_join(
 
         let join_msg = event.message();
 
-        info!("lobby join");
-
         if let Some(lobby) = lobby_manager.get_lobby_mut(join_msg.0) {
+            info!("client joined join");
             if lobby.add_account(account_id) {
                 // TODO Handle rejections for banned accounts etc.
                 net_params.server.send_message_to_target::<Channel1, _>(
@@ -106,7 +105,7 @@ pub(crate) fn receive_lobby_leave(
 
         lobby.remove_account(client.account_id.unwrap());
 
-        info!("lobby leave");
+        info!("client left lobby");
 
         // TODO Handle rejections for banned accounts etc.
         net_params.server.send_message_to_target::<Channel1, _>(
@@ -116,7 +115,6 @@ pub(crate) fn receive_lobby_leave(
 
         if lobby.accounts.is_empty() {
             lobby.clear();
-            return;
         }
     }
 }
@@ -171,10 +169,5 @@ pub(crate) fn receive_lobby_message(
         );
 
         lobby.messages.push(lobby_message);
-
-        /*net_params.server.send_message_to_target::<Channel1, _>(
-            SCLobbyMessageSuccess,
-            NetworkTarget::Only(vec![*client_id]),
-        );*/
     }
 }

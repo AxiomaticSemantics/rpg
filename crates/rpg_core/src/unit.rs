@@ -2,7 +2,7 @@ use crate::{
     class::Class,
     combat::{CombatResult, DamageResult},
     damage::{DamageDescriptor, DamageKind, DamageValue, DamageValueDescriptor},
-    item::{self, Item, ItemId, ItemUid, Rarity},
+    item::{self, Item, ItemId, Rarity},
     metadata::Metadata,
     passive_tree::PassiveSkillGraph,
     skill::{ActiveSkills, Skill, SkillId, SkillSlotId, SkillUseResult},
@@ -485,7 +485,7 @@ impl Unit {
                     ),
                 );
                 let xp_item = Item::new(
-                    ItemUid(next_uid.get()),
+                    next_uid.get(),
                     ItemId(32768),
                     1,
                     Rarity::Normal,
@@ -493,6 +493,8 @@ impl Unit {
                     false,
                     false,
                 );
+                next_uid.next();
+
                 let mut items =
                     item::generation::roll_item_drops(metadata, villain_info, rng, next_uid);
                 items.push(xp_item);

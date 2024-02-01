@@ -315,18 +315,6 @@ pub(crate) fn update(
             style_set.p2().single_mut().display = Display::None;
         }
     }
-
-    /*
-    let unit = player_q.single();
-    let hero_info = unit.info.hero();
-    let level_info = &metadata.rpg.level.levels[&unit.level];
-
-    text_set.p0().single_mut().sections[0].value = format!(
-        "HP {}/{}",
-        unit.stats.vitals.hp.value.u32(),
-        unit.stats.vitals.hp_max.value.u32()
-    );
-    */
 }
 
 pub(crate) fn setup(
@@ -335,8 +323,6 @@ pub(crate) fn setup(
     ui_theme: Res<UiTheme>,
     textures: Res<TextureAssets>,
 ) {
-    println!("game::ui::inventory::setup");
-
     let vertical_spacing = NodeBundle {
         style: ui_theme.vertical_spacer.clone(),
         ..default()
@@ -448,8 +434,6 @@ pub(crate) fn setup(
 
     let row_style = Style {
         flex_direction: FlexDirection::Row,
-        //align_items: AlignItems::Center,
-        //align_content: AlignContent::SpaceEvenly,
         justify_content: JustifyContent::Center,
         ..default()
     };
@@ -461,8 +445,6 @@ pub(crate) fn setup(
 
     let frame_col_style = Style {
         flex_direction: FlexDirection::Column,
-        //margin: UiRect::all(ui_theme.margin),
-        //padding: UiRect::all(ui_theme.padding),
         border: UiRect::all(ui_theme.border),
         ..default()
     };

@@ -8,7 +8,7 @@ use crate::{
     state::AppState,
 };
 
-use super::server::{ClientType, NetworkParamsRW};
+use super::{client::ClientType, server::NetworkParamsRW};
 
 use bevy::{
     ecs::{
