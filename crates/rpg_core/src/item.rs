@@ -5,9 +5,6 @@ use crate::{
 
 use serde_derive::{Deserialize as De, Serialize as Ser};
 
-#[derive(PartialEq, Copy, Clone, Default, Debug, Ser, De)]
-pub struct ItemUid(pub Uid);
-
 #[derive(PartialEq, Eq, PartialOrd, Hash, Default, Copy, Clone, Debug, Ser, De)]
 pub struct ItemId(pub u16);
 
@@ -58,7 +55,7 @@ pub struct ItemDrops {
 
 #[derive(Debug, Clone, PartialEq, Ser, De)]
 pub struct Item {
-    pub uid: ItemUid,
+    pub uid: Uid,
     pub id: ItemId,
     pub level: u8,
     pub rarity: Rarity,
@@ -69,7 +66,7 @@ pub struct Item {
 
 impl Item {
     pub fn new(
-        uid: ItemUid,
+        uid: Uid,
         id: ItemId,
         level: u8,
         rarity: Rarity,
@@ -94,7 +91,7 @@ pub mod generation {
     use ordered_float::OrderedFloat;
 
     use crate::{
-        item::{Item, ItemId, ItemInfo, ItemKind, ItemUid, Rarity},
+        item::{Item, ItemId, ItemInfo, ItemKind, Rarity},
         metadata::Metadata,
         stat::{
             modifier::{Affix, Modifier, ModifierFormat, ModifierId, ModifierKind, Operation},
@@ -114,13 +111,11 @@ pub mod generation {
         let mut drops = Vec::new();
         for i in 0..villain_info.drop_chances {
             let drop_roll = rng.f32();
-            println!(
-                "Rolling {} of {} drop chances: {drop_roll} {}",
-                i + 1,
-                villain_info.drop_chances,
-                villain_info.drop_chance
-            );
             if drop_roll < villain_info.drop_chance {
+                println!(
+                    "Rolled: {drop_roll} {} {}",
+                    villain_info.drop_chances, villain_info.drop_chance
+                );
                 let item = super::generation::generate(rng, metadata, 1, next_uid);
                 drops.push(item);
             }
@@ -209,7 +204,7 @@ pub mod generation {
 
                 modifiers.push(StatModifier::new(modifier_meta.stat_id, modifier));
             }
-            ItemInfo::Gem(info) => {
+            ItemInfo::Gem(_) => {
                 let rarity_info = &metadata.item.drop_info.rarity;
 
                 let max_modifers = match rarity {
@@ -286,7 +281,7 @@ pub mod generation {
         }
 
         let item = Item {
-            uid: ItemUid(uid),
+            uid,
             id: ItemId(item_table_id),
             level,
             rarity,

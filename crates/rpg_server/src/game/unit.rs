@@ -107,7 +107,7 @@ pub(crate) fn attract_resource_items(
                 .unwrap();
 
             net_params.server.send_message_to_target::<Channel1, _>(
-                SCDespawnItem(item.uid.0),
+                SCDespawnItem(item.uid),
                 NetworkTarget::Only(vec![client.id]),
             );
 

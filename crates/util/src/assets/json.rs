@@ -16,16 +16,13 @@ impl<A> JsonAssetLoader<A> {
     }
 }
 
-/// Possible errors that can be produced by [`CustomAssetLoader`]
+/// [`JsonAssetLoader`] error types
 #[non_exhaustive]
 #[derive(Debug, Error)]
 pub enum JsonAssetLoaderError {
     /// An [IO](std::io) Error
     #[error("Could load json: {0}")]
     Io(#[from] std::io::Error),
-    // /// A [RON](ron) Error
-    //#[error("Could not parse RON: {0}")]
-    //RonSpannedError(#[from] ron::error::SpannedError),
 }
 
 #[derive(Asset, Default, Debug, TypePath)]
@@ -48,18 +45,12 @@ where
         Box::pin(async move {
             let mut bytes = Vec::new();
             reader.read_to_end(&mut bytes).await?;
-
-            //println!("{bytes:?}");
-            //let mut asset: JsonSource = serde_json::from_slice(&bytes).expect("unable to decode asset");
-
-            //load_context.set_default_asset(LoadedAsset::new(JsonSource(bytes.to_vec())));
-            let asset: JsonSource = JsonSource(bytes);
-
-            Ok(asset)
+            
+            Ok(JsonSource(bytes))
         })
     }
 
     fn extensions(&self) -> &[&str] {
-        &["json"] //self.extensions
+        &["json"]
     }
 }

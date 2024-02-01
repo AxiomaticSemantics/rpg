@@ -55,7 +55,7 @@ pub(crate) fn game_over_transition(
 
             //} else if let PlayState::Death(GameOverState::Exit) = &game_state.state {
             let mut stats = gameover_stats_q.single_mut();
-            stats.sections[0].value = build_stats_string(&game_state.session_stats);
+            // FIXME stats.sections[0].value = build_stats_string(&game_state.session_stats);
         }
     } else if let PlayState::Death(GameOverState::Exit) = &game_state.state {
         state.set(AppState::GameCleanup);

@@ -49,7 +49,7 @@ pub(crate) fn toggle_menu(
             style.display = Display::Flex;
 
             let mut stats = stats_q.single_mut();
-            stats.sections[0].value = build_stats_string(&game_state.session_stats);
+            // FIXME stats.sections[0].value = build_stats_string(&game_state.session_stats);
         } else {
             style.display = Display::None;
         }

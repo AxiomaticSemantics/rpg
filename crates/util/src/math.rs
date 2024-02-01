@@ -84,3 +84,75 @@ fn _make_indices(indices: &mut Vec<u32>, size: [u32; 2]) {
         }
     }
 }
+
+/*
+    let mut image = images.get_mut(&textures.heightmap).unwrap();
+    image.sampler_descriptor = ImageSampler::Descriptor(SamplerDescriptor {
+        address_mode_u: AddressMode::MirrorRepeat,
+        address_mode_v: AddressMode::MirrorRepeat,
+        address_mode_w: AddressMode::Repeat,
+        ..default()
+    });
+
+    let image_size = image.size();
+    let size = image_size.x as u32;
+    let size_y = size - 1;
+    let size_x = size - 1;
+    let num_vertices = (size_y * size_x) as usize;
+    let num_indices = ((size_y - 1) * (size_x - 1) * 6) as usize;
+
+    let mut positions: Vec<[f32; 3]> = Vec::with_capacity(num_vertices);
+    let mut normals: Vec<[f32; 3]> = Vec::with_capacity(num_vertices);
+    let mut uvs: Vec<[f32; 2]> = Vec::with_capacity(num_vertices);
+    let mut indices: Vec<u32> = Vec::with_capacity(num_indices);
+
+    let mut uv: [f32; 2] = [0., 1.];
+    for y in 0..size_y {
+        if y % 8 == 0 {
+            uv[1] = 1.;
+        }
+
+        for x in 0..size_x {
+            if x % 8 == 0 {
+                uv[0] = 0.;
+            }
+
+            let index = y * size_x + x;
+
+            let h = *image.data.get(index as usize * 4).unwrap();
+            let h_s = (size_x - 1) as f32 / 2.;
+
+            let pos = Vec3::new(-h_s + x as f32, -16. + (h as f32) / 8., -h_s + y as f32);
+            positions.push(pos.to_array());
+            normals.push([0., 0., 0.]);
+            uvs.push(uv);
+
+            println!("UV: {uv:?}");
+
+            uv[0] += 0.142857142857;
+        }
+        uv[1] -= 0.142857142857;
+    }
+
+    make_indices(&mut indices, [size_x, size_y]);
+    calculate_normals(&indices, &positions, &mut normals);
+
+    let mut terrain_mesh = Mesh::new(PrimitiveTopology::TriangleList);
+    terrain_mesh.set_indices(Some(Indices::U32(indices)));
+    terrain_mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+    terrain_mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+    terrain_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
+
+    commands.spawn(PbrBundle {
+    mesh: meshes.add(terrain_mesh),
+    material: materials.add(StandardMaterial {
+        base_color_texture: Some(textures.seamless_grass.clone()),
+        perceptual_roughness: 0.95,
+        ..default()
+        }),
+        ..default()
+        });
+        transform: Transform::from_xyz(32., 32., 0.),
+        ..default()
+    });
+*/

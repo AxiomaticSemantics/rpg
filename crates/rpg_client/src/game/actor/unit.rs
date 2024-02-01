@@ -165,11 +165,9 @@ pub fn pick_storable_items(
             let Some(slot) = u_storage.get_empty_slot_mut() else {
                 return;
             };
-
             slot.item = i_item.0.take();
 
             u_audio.push("item_pickup".into());
-            game_state.session_stats.items_looted += 1;
 
             commands.entity(i_entity).despawn_recursive();
             return;
@@ -203,7 +201,6 @@ pub(crate) fn attract_resource_items(
         } else if distance < 0.25 {
             // FIXME trigger this after receiving a message
             u_audio.push("item_pickup".into());
-            game_state.session_stats.items_looted += 1;
         } else {
             let target_dir = (u_transform.translation - i_ground).normalize_or_zero();
             i_transform.translation += target_dir * time.delta_seconds() * 4.;
