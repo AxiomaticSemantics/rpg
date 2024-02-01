@@ -230,7 +230,6 @@ pub(crate) fn action(
                             )
                             .unwrap();
                     } else {
-                        info!("villain move pending");
                         net_params
                             .server
                             .send_message_to_target::<Channel1, _>(
@@ -268,7 +267,6 @@ pub(crate) fn action(
                             )
                             .unwrap();
                     } else {
-                        info!("villain move active {:?}", unit.uid);
                         net_params
                             .server
                             .send_message_to_target::<Channel1, _>(

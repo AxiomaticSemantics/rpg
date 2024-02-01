@@ -127,51 +127,8 @@ pub(crate) fn setup(
     ui_theme: Res<UiTheme>,
     _textures: Res<TextureAssets>,
 ) {
-    println!("game::ui::hero::setup");
-
     let mut container_hidden_style = ui_theme.container_absolute_max.clone();
     container_hidden_style.display = Display::None;
-
-    /*
-    let vertical_spacing = NodeBundle {
-        style: ui_theme.vertical_spacer.clone(),
-        ..default()
-    };
-
-    let large_text_style = TextStyle {
-        font: ui_theme.font.clone(),
-        font_size: ui_theme.font_size_large,
-        color: ui_theme.text_color_dark,
-    };
-
-    let normal_text_style = TextStyle {
-        font: ui_theme.font.clone(),
-        font_size: ui_theme.font_size_regular,
-        color: ui_theme.text_color_dark,
-    };
-
-    let row_node = NodeBundle {
-        style: ui_theme.row_style.clone(),
-        ..default()
-    };
-
-    let col_node = NodeBundle {
-        style: ui_theme.col_style.clone(),
-        ..default()
-    };
-
-    let frame_col_node = NodeBundle {
-        style: ui_theme.frame_col_style.clone(),
-        border_color: ui_theme.border_color,
-        background_color: ui_theme.frame_background_color.0.with_a(0.98).into(),
-        ..default()
-    };
-
-    let frame_row_node = NodeBundle {
-        style: ui_theme.frame_row_style.clone(),
-        background_color: ui_theme.menu_background_color,
-        ..default()
-    };*/
 
     // Hero View
     commands
@@ -188,8 +145,6 @@ pub(crate) fn setup(
             p.spawn(NodeBundle {
                 style: Style {
                     flex_direction: FlexDirection::Column,
-                    //align_items: AlignItems::Center,
-                    //justify_content: JustifyContent::Center,
                     ..default()
                 },
                 ..default()
@@ -218,7 +173,6 @@ pub(crate) fn setup(
                             align_items: AlignItems::Center,
                             align_content: AlignContent::SpaceEvenly,
                             justify_content: JustifyContent::Center,
-                            //width: Val::Percent(100.),
                             ..default()
                         },
                         ..default()
@@ -237,7 +191,6 @@ pub(crate) fn setup(
                             ..default()
                         })
                         .with_children(|p| {
-                            //ui_util::widgets::build_bar_label(p, &ui_theme, HealthText);
                             ui_util::widgets::build_horizontal_bar(
                                 p,
                                 &ui_theme,
@@ -260,13 +213,34 @@ pub(crate) fn setup(
                             ..default()
                         })
                         .with_children(|p| {
-                            //ui_util::widgets::build_bar_label(p, &ui_theme, StaminaText);
                             ui_util::widgets::build_horizontal_bar(
                                 p,
                                 &ui_theme,
                                 Color::rgb_u8(0x50, 0xfa, 0x50),
                                 Stamina,
                                 StaminaText,
+                                bar_size.0,
+                                bar_size.1,
+                            );
+                        });
+
+                        p.spawn(NodeBundle {
+                            style: Style {
+                                width: Val::Percent(33.333333),
+                                flex_direction: FlexDirection::Column,
+                                margin: UiRect::all(ui_theme.margin),
+                                padding: UiRect::all(ui_theme.padding),
+                                ..default()
+                            },
+                            ..default()
+                        })
+                        .with_children(|p| {
+                            ui_util::widgets::build_horizontal_bar(
+                                p,
+                                &ui_theme,
+                                Color::rgb_u8(0x50, 0xfa, 0x50),
+                                Mana,
+                                ManaText,
                                 bar_size.0,
                                 bar_size.1,
                             );

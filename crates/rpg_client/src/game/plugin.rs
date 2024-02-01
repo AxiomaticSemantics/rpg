@@ -185,7 +185,6 @@ impl Plugin for GamePlugin {
                         ui::hero::setup,
                         ui::inventory::setup,
                         ui::menu::setup,
-                        ui::game_over::setup,
                         passive_tree::setup,
                         passive_tree::setup_ui,
                     )
@@ -243,7 +242,7 @@ impl Plugin for GamePlugin {
                 Update,
                 (
                     ui::menu::toggle_menu,
-                    ui::menu::save_button,
+                    ui::menu::exit_button,
                     ui::menu::cancel_button,
                 )
                     .chain()
@@ -267,9 +266,7 @@ impl Plugin for GamePlugin {
                 PostUpdate,
                 (
                     ui::hud::update,
-                    ui::game_over::exit_button,
-                    ui::game_over::restart_button,
-                    ui::game_over::game_over_transition,
+                    // FIXME remove ui::game_over::game_over_transition,
                 )
                     .chain()
                     .run_if(in_state(AppState::Game).and_then(is_death)),

@@ -24,6 +24,8 @@ use bevy::{
     utils::default,
 };
 
+use rpg_network_protocol::protocol::*;
+
 #[derive(Component)]
 pub struct MenuView;
 
@@ -31,14 +33,12 @@ pub struct MenuView;
 pub struct GameStats;
 
 #[derive(Component)]
-pub struct SaveButton;
+pub struct ExitButton;
 
 #[derive(Component)]
 pub struct CancelButton;
 
-// FIXME pausing no longer exists, this is temporary
 pub(crate) fn toggle_menu(
-    game_state: ResMut<GameState>,
     input: Res<ButtonInput<KeyCode>>,
     mut menu_q: Query<&mut Style, With<MenuView>>,
     mut stats_q: Query<&mut Text, With<GameStats>>,
@@ -48,25 +48,28 @@ pub(crate) fn toggle_menu(
         if style.display == Display::None {
             style.display = Display::Flex;
 
+            /* FIXME
             let mut stats = stats_q.single_mut();
-            // FIXME stats.sections[0].value = build_stats_string(&game_state.session_stats);
+            stats.sections[0].value = build_stats_string(&game_state.session_stats);
+            */
         } else {
             style.display = Display::None;
         }
     }
 }
 
-pub(crate) fn save_button(
+pub(crate) fn exit_button(
+    mut net_client: ResMut<Client>,
     mut menu_q: Query<&mut Style, With<MenuView>>,
-    save_button_q: Query<&Interaction, (With<SaveButton>, Changed<Interaction>)>,
+    exit_button_q: Query<&Interaction, (With<ExitButton>, Changed<Interaction>)>,
 ) {
-    let Ok(interaction) = save_button_q.get_single() else {
+    let Ok(interaction) = exit_button_q.get_single() else {
         return;
     };
 
     if interaction == &Interaction::Pressed {
         menu_q.single_mut().display = Display::None;
-        // TODO send event to trigger sending exit game packet to server
+        net_client.send_message::<Channel1, _>(CSPlayerLeave);
     }
 }
 
@@ -80,18 +83,12 @@ pub(crate) fn cancel_button(
 
     if interaction == &Interaction::Pressed {
         menu_q.single_mut().display = Display::None;
-        // TODO send event to trigger sending exit game packet to server
     }
 }
 
 pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, _textures: Res<TextureAssets>) {
     let mut container_hidden_style = ui_theme.container_absolute_max.clone();
     container_hidden_style.display = Display::None;
-
-    let vertical_spacing = NodeBundle {
-        style: ui_theme.vertical_spacer.clone(),
-        ..default()
-    };
 
     let row_node = NodeBundle {
         style: ui_theme.row_style.clone(),
@@ -149,8 +146,9 @@ pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, _textures: R
                         ..default()
                     },
                 ));
+
                 p.spawn((
-                    SaveButton,
+                    ExitButton,
                     ButtonBundle {
                         style: ui_theme.button_theme.style.clone(),
                         border_color: BorderColor(Color::rgb(0.3, 0.3, 0.3)),
