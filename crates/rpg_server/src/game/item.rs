@@ -10,11 +10,7 @@ use rpg_util::{
     unit::Unit,
 };
 
-use util::{
-    cleanup::CleanupStrategy,
-    math::AabbComponent,
-    random::{Rng, SharedRng},
-};
+use util::{cleanup::CleanupStrategy, math::AabbComponent};
 
 use bevy::{
     ecs::system::{Commands, Query, Res, ResMut},
@@ -26,7 +22,6 @@ pub(crate) fn spawn_ground_items(
     mut commands: Commands,
     metadata: Res<MetadataResources>,
     aabbs: Res<AabbResources>,
-    mut rng: ResMut<SharedRng>,
     mut ground_drop_items: ResMut<GroundItemDrops>,
     mut unit_q: Query<(&Transform, &Unit)>,
 ) {
@@ -39,7 +34,6 @@ pub(crate) fn spawn_ground_items(
             for item in &items.items {
                 spawn_item(
                     &mut commands,
-                    &mut rng.0,
                     &metadata.0,
                     &aabbs,
                     source_transform.translation,
@@ -52,22 +46,17 @@ pub(crate) fn spawn_ground_items(
 
 fn spawn_item(
     commands: &mut Commands,
-    rng: &mut Rng,
     metadata: &Metadata,
     aabbs: &AabbResources,
     position: Vec3,
     item: Item,
 ) {
-    use std::f32::consts;
-
     // info!("spawning ground item at {position:?}");
     let item_info = &metadata.item.items[&item.id];
 
     let aabb = AabbComponent(aabbs.aabbs["item_normal"]);
-    let dir = consts::TAU * (0.5 - rng.f32());
 
-    let mut transform = Transform::from_xyz(position.x, 0.8, position.z);
-    transform.rotate_y(dir);
+    let transform = Transform::from_xyz(position.x, 0.8, position.z);
 
     let id = commands
         .spawn((
