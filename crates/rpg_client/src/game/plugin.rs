@@ -194,6 +194,7 @@ impl Plugin for GamePlugin {
                         ui::menu::setup,
                         ui::game_over::setup,
                         passive_tree::setup,
+                        passive_tree::setup_ui,
                     )
                         .after(environment::setup)
                         .before(send_client_ready),
