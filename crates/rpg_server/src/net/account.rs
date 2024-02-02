@@ -393,7 +393,6 @@ pub(crate) fn receive_game_join(
     mut net_params: NetworkParamsRW,
     mut join_events: EventReader<MessageEvent<CSJoinGame>>,
     account_q: Query<&AccountInstance>,
-    unit_q: Query<(&Unit, &Transform)>,
 ) {
     for join in join_events.read() {
         let client_id = *join.context();
@@ -425,26 +424,18 @@ pub(crate) fn receive_game_join(
             continue;
         };
 
-        /*let clients = game_state
-        .players
-        .iter()
-        .map(|p| p.client_id)
-        .collect::<Vec<_>>();*/
-
-        for player in game_state.players.iter() {
-            let (unit, unit_transform) = unit_q.get(player.entity).unwrap();
-
-            net_params.server.send_message_to_target::<Channel1, _>(
-                SCSpawnHero {
-                    position: unit_transform.translation,
-                    uid: unit.uid,
-                    name: unit.name.clone(),
-                    level: unit.level,
-                    class: unit.class,
-                },
-                NetworkTarget::Only(vec![client.id]),
-            );
-        }
+        // TODO optimize
+        // spawn the new player on all connected players
+        net_params.server.send_message_to_target::<Channel1, _>(
+            SCSpawnHero {
+                position: Vec3::ZERO,
+                uid: character.info.uid,
+                class: character.character.unit.class,
+                level: character.character.unit.level,
+                name: character.character.unit.name.clone(),
+            },
+            NetworkTarget::AllExcept(vec![client_id]),
+        );
 
         game_state.players.push(PlayerIdInfo {
             slot: join_msg.slot,
@@ -457,17 +448,6 @@ pub(crate) fn receive_game_join(
         net_params.server.send_message_to_target::<Channel1, _>(
             SCGameJoinSuccess,
             NetworkTarget::Only(vec![client_id]),
-        );
-
-        net_params.server.send_message_to_target::<Channel1, _>(
-            SCSpawnHero {
-                position: Vec3::ZERO,
-                uid: character.info.uid,
-                class: character.character.unit.class,
-                level: character.character.unit.level,
-                name: character.character.unit.name.clone(),
-            },
-            NetworkTarget::AllExcept(vec![client_id]),
         );
     }
 }

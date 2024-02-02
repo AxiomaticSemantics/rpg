@@ -94,8 +94,7 @@ pub(crate) fn receive_player_spawn(
 
         let (entity, account) = account_q.single();
 
-        let transform = Transform::from_translation(spawn_msg.position)
-            .looking_to(spawn_msg.direction, Vec3::Y);
+        let transform = Transform::from_translation(spawn_msg.position);
 
         let character_record = account
             .0
@@ -223,7 +222,7 @@ pub(crate) fn receive_unit_rotation(
                 continue;
             }
 
-            info!("rot unit: {rot_msg:?}");
+            // info!("rot unit: {rot_msg:?}");
             transform.look_to(rot_msg.direction, Vec3::Y);
         }
     }

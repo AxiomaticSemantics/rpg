@@ -25,10 +25,7 @@ use lightyear::{
     shared::{ping::manager::PingConfig, sets::FixedUpdateSet},
     transport::io::*,
 };
-use rpg_network_protocol::{
-    protocol::{protocol, Client, *},
-    KEY, PROTOCOL_ID,
-};
+use rpg_network_protocol::{protocol::*, KEY, PROTOCOL_ID};
 
 use std::net::{Ipv4Addr, SocketAddr};
 
@@ -65,7 +62,7 @@ impl Plugin for NetworkClientPlugin {
             interpolation: InterpolationConfig::default()
                 .with_delay(InterpolationDelay::default().with_send_interval_ratio(2.0)),
         };
-        let plugin_config = PluginConfig::new(config, io, protocol(), auth);
+        let plugin_config = PluginConfig::new(config, io, RpgProtocol::new(), auth);
 
         app.add_plugins(ClientPlugin::new(plugin_config))
             .insert_resource(Time::<Fixed>::from_seconds(1.0 / 60.))

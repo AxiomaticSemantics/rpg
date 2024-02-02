@@ -265,7 +265,6 @@ pub struct SCPlayerJoinError;
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCPlayerSpawn {
     pub position: Vec3,
-    pub direction: Vec3,
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -474,11 +473,14 @@ protocolize! {
     Message = Messages,
 }
 
-pub fn protocol() -> RpgProtocol {
-    let mut protocol = RpgProtocol::default();
-    protocol.add_channel::<Channel1>(ChannelSettings {
-        mode: ChannelMode::OrderedReliable(ReliableSettings::default()),
-        direction: ChannelDirection::Bidirectional,
-    });
-    protocol
+impl RpgProtocol {
+    pub fn new() -> Self {
+        let mut protocol = RpgProtocol::default();
+        protocol.add_channel::<Channel1>(ChannelSettings {
+            mode: ChannelMode::OrderedReliable(ReliableSettings::default()),
+            direction: ChannelDirection::Bidirectional,
+        });
+
+        protocol
+    }
 }

@@ -49,7 +49,7 @@ impl Plugin for NetworkServerPlugin {
             netcode: netcode_config,
             ping: PingConfig::default(),
         };
-        let plugin_config = PluginConfig::new(config, io, protocol());
+        let plugin_config = PluginConfig::new(config, io, RpgProtocol::new());
 
         app.add_plugins(server::ServerPlugin::new(plugin_config))
             .init_resource::<NetworkContext>()
