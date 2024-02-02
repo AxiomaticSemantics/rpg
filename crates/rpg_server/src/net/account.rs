@@ -17,6 +17,8 @@ use bevy::{
         system::{Commands, Query, Res, ResMut},
     },
     log::info,
+    math::Vec3,
+    transform::components::Transform,
 };
 
 use lightyear::prelude::server::*;
@@ -29,9 +31,10 @@ use rpg_account::{
 use rpg_core::{
     passive_tree::PassiveSkillGraph,
     storage::UnitStorage,
-    unit::{HeroInfo, Unit, UnitInfo, UnitKind},
+    unit::{HeroInfo, Unit as RpgUnit, UnitInfo, UnitKind},
 };
 use rpg_network_protocol::protocol::*;
+use rpg_util::unit::Unit;
 
 use util::fs::{open_read, open_write};
 
@@ -267,7 +270,7 @@ pub(crate) fn receive_character_create(
                     .unwrap();
             } else {
                 let unit_info = UnitInfo::Hero(HeroInfo::new(&metadata.0, create_msg.game_mode));
-                let mut unit = Unit::new(
+                let mut unit = RpgUnit::new(
                     server_metadata.0.next_uid.get(),
                     create_msg.class,
                     UnitKind::Hero,
@@ -368,6 +371,7 @@ pub(crate) fn receive_game_create(
             account_id: account.0.info.id,
             character_id: character.info.uid,
             client_id,
+            entity: client.entity,
         });
         game_state.options.mode = create_msg.game_mode;
 
@@ -383,11 +387,13 @@ pub(crate) fn receive_game_create(
     }
 }
 
+// FIXME move to net/game.rs
 pub(crate) fn receive_game_join(
     mut game_state: ResMut<GameState>,
     mut net_params: NetworkParamsRW,
     mut join_events: EventReader<MessageEvent<CSJoinGame>>,
     account_q: Query<&AccountInstance>,
+    unit_q: Query<(&Unit, &Transform)>,
 ) {
     for join in join_events.read() {
         let client_id = *join.context();
@@ -419,11 +425,33 @@ pub(crate) fn receive_game_join(
             continue;
         };
 
+        /*let clients = game_state
+        .players
+        .iter()
+        .map(|p| p.client_id)
+        .collect::<Vec<_>>();*/
+
+        for player in game_state.players.iter() {
+            let (unit, unit_transform) = unit_q.get(player.entity).unwrap();
+
+            net_params.server.send_message_to_target::<Channel1, _>(
+                SCSpawnHero {
+                    position: unit_transform.translation,
+                    uid: unit.uid,
+                    name: unit.name.clone(),
+                    level: unit.level,
+                    class: unit.class,
+                },
+                NetworkTarget::Only(vec![client.id]),
+            );
+        }
+
         game_state.players.push(PlayerIdInfo {
             slot: join_msg.slot,
             account_id: account.0.info.id,
             character_id: character.info.uid,
             client_id,
+            entity: client.entity,
         });
 
         net_params.server.send_message_to_target::<Channel1, _>(
@@ -431,6 +459,15 @@ pub(crate) fn receive_game_join(
             NetworkTarget::Only(vec![client_id]),
         );
 
-        // TODO broadcast to players
+        net_params.server.send_message_to_target::<Channel1, _>(
+            SCSpawnHero {
+                position: Vec3::ZERO,
+                uid: character.info.uid,
+                class: character.character.unit.class,
+                level: character.character.unit.level,
+                name: character.character.unit.name.clone(),
+            },
+            NetworkTarget::AllExcept(vec![client_id]),
+        );
     }
 }

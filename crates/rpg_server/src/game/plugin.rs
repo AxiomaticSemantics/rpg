@@ -9,6 +9,7 @@ use bevy::{
     app::{App, FixedPreUpdate, FixedUpdate, Plugin, Update},
     ecs::{
         component::Component,
+        entity::Entity,
         schedule::{common_conditions::in_state, IntoSystemConfigs, NextState, OnEnter},
         system::{Commands, Res, ResMut, Resource},
     },
@@ -48,6 +49,7 @@ pub(crate) struct PlayerIdInfo {
     pub(crate) client_id: ClientId,
     pub(crate) account_id: AccountId,
     pub(crate) character_id: Uid,
+    pub(crate) entity: Entity,
 }
 
 #[derive(Default, Debug, Resource)]

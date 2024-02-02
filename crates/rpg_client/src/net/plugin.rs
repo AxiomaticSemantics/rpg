@@ -123,6 +123,7 @@ impl Plugin for NetworkClientPlugin {
                     game::receive_spawn_item,
                     game::receive_spawn_items,
                     game::receive_spawn_villain,
+                    game::receive_spawn_hero,
                     game::receive_spawn_skill,
                 ),
             )

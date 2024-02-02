@@ -1,7 +1,6 @@
 use rpg_account::account::AccountId;
-use rpg_chat::chat::MessageId;
 use rpg_core::unit::HeroGameMode;
-use rpg_lobby::lobby::{Lobby, LobbyId};
+use rpg_lobby::lobby::{Lobby, LobbyId, LobbyPlayer};
 
 use bevy::ecs::system::Resource;
 
@@ -42,25 +41,28 @@ impl LobbyManager {
         self.lobbies.iter_mut().find(|l| l.id == id)
     }
 
-    pub(crate) fn has_account(&self, id: LobbyId, account_id: AccountId) -> bool {
+    pub(crate) fn has_player(&self, id: LobbyId, account_id: AccountId) -> bool {
         if let Some(lobby) = self.lobbies.iter().find(|l| l.id == id) {
-            lobby.has_account(account_id)
+            lobby.has_player(account_id)
         } else {
             false
         }
     }
 
-    pub(crate) fn add_account(&mut self, id: LobbyId, account_id: AccountId) -> bool {
+    pub(crate) fn add_player(&mut self, id: LobbyId, account_id: AccountId, name: String) -> bool {
         if let Some(lobby) = self.lobbies.iter_mut().find(|l| l.id == id) {
-            lobby.add_account(account_id)
+            lobby.add_player(LobbyPlayer {
+                account_id,
+                account_name: name,
+            })
         } else {
             false
         }
     }
 
-    pub(crate) fn remove_account(&mut self, id: LobbyId, account_id: AccountId) {
+    pub(crate) fn remove_player(&mut self, id: LobbyId, account_id: AccountId) {
         if let Some(lobby) = self.lobbies.iter_mut().find(|l| l.id == id) {
-            lobby.remove_account(account_id);
+            lobby.remove_player(account_id);
         }
     }
 }

@@ -1,10 +1,7 @@
 use crate::{
     assets::TextureAssets,
     net::{account::RpgAccount, lobby::Lobby},
-    ui::menu::{
-        account::{AccountListRoot, SelectedCharacter},
-        main::MainRoot,
-    },
+    ui::menu::account::{AccountListRoot, SelectedCharacter},
 };
 
 use ui_util::{
@@ -12,7 +9,6 @@ use ui_util::{
     widgets::{EditText, FocusedElement, NewlineBehaviour},
 };
 
-use rpg_chat::chat::ChannelId;
 use rpg_network_protocol::protocol::*;
 
 use bevy::{
@@ -26,7 +22,6 @@ use bevy::{
     hierarchy::{BuildChildren, ChildBuilder, Children, DespawnRecursiveExt},
     input::{keyboard::KeyCode, ButtonInput},
     log::info,
-    prelude::{Deref, DerefMut},
     render::color::Color,
     text::Text,
     ui::{
@@ -56,6 +51,9 @@ pub(crate) struct LobbyMessageButton;
 
 #[derive(Component)]
 pub(crate) struct GameCreateButton;
+
+#[derive(Component)]
+pub(crate) struct GameJoinButton;
 
 #[derive(Component)]
 pub(crate) struct LeaveButton;
@@ -266,6 +264,14 @@ pub(crate) fn spawn(
                         ));
                     });
 
+                p.spawn((button.clone(), GameJoinButton))
+                    .with_children(|p| {
+                        p.spawn(TextBundle::from_section(
+                            "Join Game",
+                            ui_theme.text_style_regular.clone(),
+                        ));
+                    });
+
                 p.spawn((button.clone(), LeaveButton)).with_children(|p| {
                     p.spawn(TextBundle::from_section(
                         "Leave Lobby",
@@ -366,6 +372,42 @@ pub(crate) fn game_create_button(
     }
 }
 
+pub(crate) fn game_join_button(
+    selected_character: Res<SelectedCharacter>,
+    lobby: Res<Lobby>,
+    mut net_client: ResMut<Client>,
+    mut account_q: Query<&mut RpgAccount>,
+    button_q: Query<&Interaction, (Changed<Interaction>, With<GameJoinButton>)>,
+    mut menu_set: ParamSet<(
+        Query<&mut Style, With<UiRoot>>,
+        Query<&mut Style, With<LobbyRoot>>,
+    )>,
+) {
+    let interaction = button_q.get_single();
+    if let Ok(Interaction::Pressed) = interaction {
+        let Some(lobby) = &lobby.0 else {
+            info!("not in a lobby");
+            return;
+        };
+
+        let Some(slot_character) = &selected_character.0 else {
+            info!("no character selected");
+            return;
+        };
+
+        net_client.send_message::<Channel1, _>(CSJoinGame {
+            game_mode: lobby.game_mode,
+            slot: slot_character.slot,
+        });
+
+        // FIXME temp hack
+        account_q.single_mut().0.info.selected_slot = Some(slot_character.slot);
+
+        menu_set.p0().single_mut().display = Display::None;
+        menu_set.p1().single_mut().display = Display::None;
+    }
+}
+
 pub(crate) fn leave_button(
     mut net_client: ResMut<Client>,
     button_q: Query<&Interaction, (Changed<Interaction>, With<LeaveButton>)>,
@@ -385,7 +427,7 @@ pub(crate) fn leave_button(
 
 pub(crate) fn update_lobby_messages(
     mut lobby: ResMut<Lobby>,
-    lobby_messages_q: Query<(Entity, &Children), With<LobbyMessages>>,
+    lobby_messages_q: Query<&Children, With<LobbyMessages>>,
     mut message_item_q: Query<&mut Text, With<LobbyMessageText>>,
 ) {
     if !lobby.is_changed() {
@@ -401,10 +443,10 @@ pub(crate) fn update_lobby_messages(
     info!("updating lobby messages {}", len);
 
     let mut count = len.saturating_sub(10);
-    let (entity, children) = lobby_messages_q.single();
+    let children = lobby_messages_q.single();
 
     for child in children.iter() {
-        let mut message_text = &mut message_item_q.get_mut(*child).unwrap();
+        let message_text = &mut message_item_q.get_mut(*child).unwrap();
         let Some(msg) = lobby.messages.get(count) else {
             continue;
         };
@@ -421,7 +463,7 @@ pub(crate) fn update_lobby_messages(
 pub(crate) fn update_players_container(
     mut commands: Commands,
     ui_theme: Res<UiTheme>,
-    mut lobby: ResMut<Lobby>,
+    lobby: Res<Lobby>,
     players_container_q: Query<(Entity, Option<&Children>), With<PlayersContainer>>,
 ) {
     if !lobby.is_changed() {
@@ -443,7 +485,7 @@ pub(crate) fn update_players_container(
 
     // rebuild a new node hierarchy
     if let Some(lobby) = &lobby.0 {
-        for account in lobby.accounts.iter() {
+        for player in lobby.players.iter() {
             let child = commands
                 .spawn(NodeBundle {
                     style: ui_theme.col_style.clone(),
@@ -451,7 +493,7 @@ pub(crate) fn update_players_container(
                 })
                 .with_children(|p| {
                     p.spawn(TextBundle::from_section(
-                        format!("{}", account.0),
+                        player.account_name.clone(),
                         ui_theme.text_style_regular.clone(),
                     ));
                 })

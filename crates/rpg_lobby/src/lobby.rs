@@ -1,11 +1,17 @@
 use rpg_account::account::AccountId;
 use rpg_chat::chat::MessageId;
-use rpg_core::unit::HeroGameMode;
+use rpg_core::{uid::Uid, unit::HeroGameMode};
 
 use serde_derive::{Deserialize as De, Serialize as Ser};
 
 #[derive(Ser, De, Debug, Default, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct LobbyId(pub u64);
+
+#[derive(Ser, De, Debug, Clone, PartialEq)]
+pub struct LobbyPlayer {
+    pub account_id: AccountId,
+    pub account_name: String,
+}
 
 #[derive(Ser, De, Debug, Clone, PartialEq)]
 pub struct LobbyMessage {
@@ -20,7 +26,7 @@ pub struct Lobby {
     pub id: LobbyId,
     pub name: String,
     pub game_mode: HeroGameMode,
-    pub accounts: Vec<AccountId>,
+    pub players: Vec<LobbyPlayer>,
     pub messages: Vec<LobbyMessage>,
 }
 
@@ -30,22 +36,23 @@ impl Lobby {
             id,
             name,
             game_mode,
-            accounts: vec![],
+            players: vec![],
             messages: vec![],
         }
     }
 
+    // This is a destructive action
     pub fn clear(&mut self) {
-        self.accounts.clear();
+        self.players.clear();
     }
 
-    pub fn has_account(&self, account_id: AccountId) -> bool {
-        self.accounts.iter().any(|a| *a == account_id)
+    pub fn has_player(&self, account_id: AccountId) -> bool {
+        self.players.iter().any(|a| a.account_id == account_id)
     }
 
-    pub fn add_account(&mut self, id: AccountId) -> bool {
-        if !self.accounts.contains(&id) {
-            self.accounts.push(id);
+    pub fn add_player(&mut self, player: LobbyPlayer) -> bool {
+        if !self.has_player(player.account_id) {
+            self.players.push(player);
 
             true
         } else {
@@ -53,7 +60,7 @@ impl Lobby {
         }
     }
 
-    pub fn remove_account(&mut self, id: AccountId) {
-        self.accounts.retain(|c| *c != id);
+    pub fn remove_player(&mut self, id: AccountId) {
+        self.players.retain(|p| p.account_id != id);
     }
 }

@@ -157,7 +157,7 @@ pub(crate) fn receive_game_join_success(
         let join_msg = event.message();
         info!("game join success {join_msg:?}");
 
-        state.set(AppState::GameJoin);
+        state.set(AppState::GameSpawn);
 
         join_events.clear();
         return;

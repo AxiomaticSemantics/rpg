@@ -328,6 +328,15 @@ pub struct SCSpawnItems {
 pub struct SCDespawnItem(pub Uid);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCSpawnHero {
+    pub position: Vec3,
+    pub uid: Uid,
+    pub name: String,
+    pub class: Class,
+    pub level: u8,
+}
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCSpawnVillain {
     pub position: Vec3,
     pub direction: Vec3,
@@ -412,6 +421,7 @@ pub enum Messages {
     SCSpawnItem(SCSpawnItem),
     SCSpawnItems(SCSpawnItems),
     SCDespawnItem(SCDespawnItem),
+    SCSpawnHero(SCSpawnHero),
     SCSpawnVillain(SCSpawnVillain),
     SCHeroDeath(SCHeroDeath),
     SCVillainDeath(SCVillainDeath),

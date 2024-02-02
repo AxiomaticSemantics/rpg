@@ -25,7 +25,7 @@ use util::math::{Aabb, AabbComponent};
 
 pub(crate) fn receive_player_join(
     mut join_reader: EventReader<MessageEvent<CSPlayerJoin>>,
-    mut net_params: NetworkParamsRW,
+    net_params: NetworkParamsRO,
     game_state: Res<GameState>,
     mut account_q: Query<&AccountInstance>,
 ) {
@@ -127,9 +127,8 @@ pub(crate) fn receive_movement(
         };
 
         let mut actions = player_q.get_mut(client.entity).unwrap();
-
         actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
-        info!("move request");
+        //info!("player move request");
     }
 }
 
@@ -148,7 +147,7 @@ pub(crate) fn receive_movement_end(
         let mut actions = player_q.get_mut(client.entity).unwrap();
         if let Some(action) = &mut actions.movement {
             action.state = State::Finalize;
-            info!("end move request");
+            //info!("end player move request");
         }
     }
 }
@@ -156,8 +155,8 @@ pub(crate) fn receive_movement_end(
 /// Rotate player
 pub(crate) fn receive_rotation(
     mut rotation_reader: EventReader<MessageEvent<CSRotPlayer>>,
-    mut net_params: NetworkParamsRW,
-    mut player_q: Query<(&mut Transform, &Unit), With<Hero>>,
+    net_params: NetworkParamsRO,
+    mut player_q: Query<&mut Actions, With<Hero>>,
 ) {
     for event in rotation_reader.read() {
         let client_id = *event.context();
@@ -166,18 +165,10 @@ pub(crate) fn receive_rotation(
             continue;
         };
 
-        let (mut transform, player) = player_q.get_mut(client.entity).unwrap();
-
         let rot_msg = event.message();
-        transform.look_to(rot_msg.0, Vec3::Y);
 
-        net_params
-            .server
-            .send_message_to_target::<Channel1, SCRotPlayer>(
-                SCRotPlayer(rot_msg.0),
-                NetworkTarget::Only(vec![client_id]),
-            )
-            .unwrap();
+        let mut actions = player_q.get_mut(client.entity).unwrap();
+        actions.request(Action::new(ActionData::LookDir(rot_msg.0), None, true));
     }
 }
 
