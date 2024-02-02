@@ -102,7 +102,7 @@ pub fn update_health_bars(
                 transform.translation = target;
             }
 
-            transform.look_to(camera_forward, Vec3::Y);
+            transform.look_to(*camera_forward, Vec3::Y);
 
             *children.first().unwrap()
         };
@@ -295,7 +295,7 @@ pub fn action(
                 transform.rotation = lerped;
             }
 
-            net_client.send_message::<Channel1, _>(CSRotPlayer(wanted.forward()));
+            net_client.send_message::<Channel1, _>(CSRotPlayer(*wanted.forward()));
 
             action.state = State::Completed;
         }

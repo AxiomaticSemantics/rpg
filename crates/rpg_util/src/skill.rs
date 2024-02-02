@@ -92,8 +92,8 @@ pub fn get_skill_origin(
 
     match &skill_meta.origin {
         Origin::Direct(data) => (
-            unit_transform.translation + data.offset * unit_transform.forward(),
-            unit_transform.translation + data.offset * unit_transform.forward(),
+            unit_transform.translation + data.offset * *unit_transform.forward(),
+            unit_transform.translation + data.offset * *unit_transform.forward(),
         ),
         Origin::Remote(data) => (unit_transform.translation + data.offset, target),
         Origin::Locked(data) => (

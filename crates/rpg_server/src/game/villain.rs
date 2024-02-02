@@ -180,7 +180,7 @@ pub(crate) fn remote_spawn(
             net_params.server.send_message_to_target::<Channel1, _>(
                 SCSpawnVillain {
                     position: transform.translation,
-                    direction: transform.forward(),
+                    direction: *transform.forward(),
                     info: villain_info,
                     level: unit.level,
                     uid: unit.uid,

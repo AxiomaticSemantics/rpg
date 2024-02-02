@@ -122,7 +122,7 @@ pub(crate) fn prepare_skill(
             });
 
             let skill_transform =
-                Transform::from_translation(origin).looking_to(unit_transform.forward(), Vec3::Y);
+                Transform::from_translation(origin).looking_to(*unit_transform.forward(), Vec3::Y);
 
             (aabb, instance, skill_transform, None)
         }
@@ -164,7 +164,7 @@ pub(crate) fn prepare_skill(
             };
 
             let time = time.elapsed_seconds();
-            let forward = unit_transform.forward();
+            let forward = *unit_transform.forward();
 
             let spawn_transform = if info.orbit.is_some() {
                 let mut rot_transform = *unit_transform;
@@ -580,7 +580,7 @@ fn handle_effects(
 
         defender_actions.set(Action::new(
             ActionData::Knockback(KnockbackActionData {
-                direction: skill_transform.forward(),
+                direction: *skill_transform.forward(),
                 speed: info.speed,
                 start: time.elapsed_seconds(),
                 duration: info.duration,
