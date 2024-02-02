@@ -13,7 +13,6 @@ pub const KEY: [u8; 32] = [0; 32];
 
 pub fn shared_config() -> SharedConfig {
     SharedConfig {
-        enable_replication: false,
         client_send_interval: Duration::default(),
         server_send_interval: Duration::from_millis(32),
         tick: TickConfig {
