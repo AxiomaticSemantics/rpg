@@ -20,7 +20,7 @@
       "skill_id": "BasicOrb",
       "think_cooldown": 3.5,
       "xp_reward": 10,
-      "drop_chances": 10,
+      "drop_chances": 4,
       "drop_chance": 0.5,
       "move_speed": 90,
       "max_vision": 10
@@ -31,7 +31,7 @@
       "skill_id": "BasicDirect",
       "think_cooldown": 3,
       "xp_reward": 9,
-      "drop_chances": 12,
+      "drop_chances": 4,
       "drop_chance": 0.5,
       "move_speed": 100,
       "max_vision": 9
@@ -42,7 +42,7 @@
       "skill_id": "BasicBolt",
       "think_cooldown": 3.5,
       "xp_reward": 8,
-      "drop_chances": 12,
+      "drop_chances": 4,
       "drop_chance": 0.5,
       "move_speed": 110,
       "max_vision": 11
@@ -53,7 +53,7 @@
       "skill_id": "AreaRemote",
       "think_cooldown": 3.5,
       "xp_reward": 12,
-      "drop_chances": 12,
+      "drop_chances": 4,
       "drop_chance": 0.5,
       "move_speed": 95,
       "max_vision": 10
