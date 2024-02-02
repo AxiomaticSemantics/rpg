@@ -433,7 +433,7 @@ pub enum Messages {
     SCDespawnCorpse(SCDespawnCorpse),
     SCCombatResult(SCCombatResult),
     SCDamage(SCDamage),
-    SCUnitANim(SCUnitAnim),
+    SCUnitAnim(SCUnitAnim),
 
     // Client -> Server
 
