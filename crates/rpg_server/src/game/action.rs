@@ -96,6 +96,14 @@ pub(crate) fn action(
                         }
                     }
 
+                    net_params.server.send_message_to_target::<Channel1, _>(
+                        SCUnitAttack {
+                            uid: unit.uid,
+                            skill_id,
+                        },
+                        NetworkTarget::All,
+                    );
+
                     let duration = skill_info.use_duration_secs
                         * unit.stats.vitals.stats["Cooldown"].value.f32();
 
@@ -185,14 +193,14 @@ pub(crate) fn action(
                     .unwrap();
 
                 net_params.server.send_message_to_target::<Channel1, _>(
-                    SCRotPlayer(direction),
+                    SCRotPlayer(*direction),
                     NetworkTarget::Only(vec![client.id]),
                 );
 
                 net_params.server.send_message_to_target::<Channel1, _>(
                     SCRotUnit {
                         uid: unit.uid,
-                        direction,
+                        direction: *direction,
                     },
                     NetworkTarget::AllExcept(vec![client.id]),
                 );
@@ -200,7 +208,7 @@ pub(crate) fn action(
                 net_params.server.send_message_to_target::<Channel1, _>(
                     SCRotUnit {
                         uid: unit.uid,
-                        direction,
+                        direction: *direction,
                     },
                     NetworkTarget::All,
                 );

@@ -69,7 +69,9 @@ pub(crate) fn update(
         Query<&mut Text, With<XpText>>,
     )>,
 ) {
-    let unit = player_q.single();
+    let Ok(unit) = player_q.get_single() else {
+        return;
+    };
 
     // TODO optimize to avoid change detection
     bar_set.p0().single_mut().width = Val::Percent(

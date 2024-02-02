@@ -37,6 +37,7 @@ use bevy::{
 use rpg_core::{
     combat::CombatResult,
     passive_tree::PassiveSkillGraph,
+    skill::SkillInfo,
     stat::{Stat, StatId},
     storage::UnitStorage,
     unit::{HeroInfo, UnitInfo, UnitKind},
@@ -49,6 +50,7 @@ use rpg_util::{
 };
 
 use audio_manager::plugin::AudioActions;
+use util::random::SharedRng;
 
 use lightyear::client::events::MessageEvent;
 
@@ -318,7 +320,6 @@ pub(crate) fn receive_spawn_skill(
     for event in spawn_reader.read() {
         let spawn_msg = event.message();
         let skill_id = spawn_msg.id;
-        //let owner = owner_q.get();
 
         info!("spawning skill: {spawn_msg:?}");
 
@@ -487,7 +488,38 @@ pub(crate) fn receive_damage(
     }
 }
 
-// TODO rework and support both animation and audio in message format
+pub(crate) fn receive_unit_attack(
+    mut rng: ResMut<SharedRng>,
+    metadata: Res<MetadataResources>,
+    mut attack_reader: EventReader<MessageEvent<SCUnitAttack>>,
+    mut unit_q: Query<(&mut AnimationState, &mut AudioActions, &Unit)>,
+) {
+    for event in attack_reader.read() {
+        let attack_msg = event.message();
+
+        for (mut anim, mut audio, unit) in &mut unit_q {
+            if unit.uid != attack_msg.uid {
+                continue;
+            }
+
+            let skill_info = &metadata.rpg.skill.skills[&attack_msg.skill_id];
+            let audio_key = match skill_info.info {
+                SkillInfo::Direct(_) => match rng.usize(0..2) {
+                    0 => "attack_proj1",
+                    _ => "attack_proj2",
+                },
+                SkillInfo::Projectile(_) => match rng.usize(0..2) {
+                    0 => "attack_proj1",
+                    _ => "attack_proj2",
+                },
+                SkillInfo::Area(_) => "attack_proj1",
+            };
+            audio.push(audio_key.into());
+            *anim = ANIM_ATTACK;
+        }
+    }
+}
+
 pub(crate) fn receive_unit_anim(
     mut anim_reader: EventReader<MessageEvent<SCUnitAnim>>,
     mut unit_q: Query<(&mut AnimationState, &mut AudioActions, &Unit)>,
@@ -508,6 +540,9 @@ pub(crate) fn receive_unit_anim(
                 1 => {
                     *anim = ANIM_DEFEND;
                     audio.push("hit_blocked".into());
+                }
+                2 => {
+                    *anim = ANIM_IDLE;
                 }
                 id => {
                     info!("unhandled anim {id}");

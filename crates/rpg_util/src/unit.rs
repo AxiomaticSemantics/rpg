@@ -61,7 +61,7 @@ pub fn collide_units(
         while intersect_aabb((&mut t1.translation, &a1), (&mut t2.translation, &a2)) {
             let distance = t1.translation.distance(t2.translation);
 
-            let offset = 0.01 * t1.forward();
+            let offset = 0.01 * *t1.forward();
 
             if (t1.translation + offset).distance(t2.translation) > distance {
                 t1.translation += offset;

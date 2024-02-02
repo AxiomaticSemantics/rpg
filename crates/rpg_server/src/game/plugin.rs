@@ -109,19 +109,19 @@ impl Plugin for GamePlugin {
                     skill::clean_skills,
                     rpg_util::actions::action_tick,
                     unit::upkeep,
+                    item::spawn_ground_items,
                 )
                     .run_if(in_state(AppState::Simulation)),
             )
             .add_systems(
                 FixedUpdate,
                 (
-                    villain::find_target,
-                    villain::villain_think,
-                    action::action,
                     update_skill,
                     skill::collide_skills,
                     skill::handle_contacts,
-                    (item::spawn_ground_items, unit::attract_resource_items),
+                    villain::find_target,
+                    villain::villain_think,
+                    action::action,
                 )
                     .chain()
                     .run_if(in_state(AppState::Simulation)),

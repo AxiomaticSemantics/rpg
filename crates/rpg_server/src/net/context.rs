@@ -73,10 +73,9 @@ impl NetworkContext {
 
     pub(crate) fn remove_client(&mut self, commands: &mut Commands, id: ClientId) {
         if let Some(client) = self.clients.remove(&id) {
-            info!("Removed {id} from global map");
-
             if client.entity != Entity::PLACEHOLDER {
-                info!("despawning client entity");
+                info!("removed client {id}, despawning");
+                // NOTE Attempting to create an EntityCommands for entity 0v1, which doesn't exist.
                 commands.entity(client.entity).despawn_recursive();
             }
         }

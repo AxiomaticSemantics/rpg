@@ -206,7 +206,6 @@ impl Plugin for GamePlugin {
                             player::input_actions,
                             unit::action,
                             update_skill,
-                            unit::attract_resource_items,
                             unit::pick_storable_items,
                             player::update_camera,
                         )

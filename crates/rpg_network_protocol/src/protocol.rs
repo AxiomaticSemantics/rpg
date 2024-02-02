@@ -363,6 +363,12 @@ pub struct SCUnitAnim {
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCUnitAttack {
+    pub uid: Uid,
+    pub skill_id: SkillId,
+}
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCDamage {
     pub uid: Uid,
     pub damage: DamageResult,
@@ -434,6 +440,7 @@ pub enum Messages {
     SCCombatResult(SCCombatResult),
     SCDamage(SCDamage),
     SCUnitAnim(SCUnitAnim),
+    SCUnitAttack(SCUnitAttack),
 
     // Client -> Server
 

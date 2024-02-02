@@ -21,7 +21,7 @@ use rpg_core::{
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions::{ActionData, Actions, State},
-    item::{GroundItem, ResourceItem, StorableItem, UnitStorage},
+    item::{GroundItem, StorableItem, UnitStorage},
     unit::{Corpse, Hero, Unit},
 };
 
@@ -102,7 +102,7 @@ pub fn update_health_bars(
                 transform.translation = target;
             }
 
-            transform.look_to(camera_forward, Vec3::Y);
+            transform.look_to(*camera_forward, Vec3::Y);
 
             *children.first().unwrap()
         };
@@ -171,39 +171,6 @@ pub fn pick_storable_items(
 
             commands.entity(i_entity).despawn_recursive();
             return;
-        }
-    }
-}
-
-// NOTE some desync is acceptible here but this needs to be fixed to attract towards the correct hero unit
-pub(crate) fn attract_resource_items(
-    mut game_state: ResMut<GameState>,
-    time: Res<Time>,
-    mut item_q: Query<&mut Transform, (With<GroundItem>, With<ResourceItem>)>,
-    mut hero_q: Query<
-        (&Transform, &Unit, &mut AudioActions),
-        (With<Hero>, Without<GroundItem>, Without<Corpse>),
-    >,
-) {
-    let Ok((u_transform, unit, mut u_audio)) = hero_q.get_single_mut() else {
-        return;
-    };
-
-    for mut i_transform in &mut item_q {
-        let mut i_ground = i_transform.translation;
-        i_ground.y = 0.;
-
-        let pickup_radius = *unit.stats.vitals.stats["PickupRadius"].value.u32() as f32 / 100.;
-
-        let distance = u_transform.translation.distance(i_ground);
-        if distance > pickup_radius {
-            continue;
-        } else if distance < 0.25 {
-            // FIXME trigger this after receiving a message
-            u_audio.push("item_pickup".into());
-        } else {
-            let target_dir = (u_transform.translation - i_ground).normalize_or_zero();
-            i_transform.translation += target_dir * time.delta_seconds() * 4.;
         }
     }
 }
@@ -297,47 +264,6 @@ pub fn action(
                     action.state = State::Timer;
                 }
                 State::Active => {
-                    /*let distance = (attack.user.distance(attack.target) * 100.).round() as u32;
-                    let skill_use_result = unit.use_skill(&metadata.rpg, attack.skill_id, distance);
-                    match skill_use_result {
-                        SkillUseResult::Ok => {}
-                        _ => panic!("This should never happen. {skill_use_result:?}"),
-                    }
-
-                    let Some(skill) = unit.skills.iter().find(|s| s.id == attack.skill_id) else {
-                        panic!("skill missing");
-                    };
-                    let Some(skill_info) = metadata.rpg.skill.skills.get(&attack.skill_id) else {
-                        panic!("skill metadata not found");
-                    };
-
-                    if unit.kind == UnitKind::Hero {
-                        state.session_stats.attacks += 1;
-                    } else {
-                        state.session_stats.villain_attacks += 1;
-                    }
-
-                    let (skill_aabb, skill_transform, skill_use, mesh_handle, material_handle) =
-                        skill::prepare_skill(
-                            unit.uid,
-                            &attack.origin,
-                            &attack.target,
-                            &time,
-                            &mut renderables,
-                            &mut meshes,
-                            skill_info,
-                            skill.id,
-                        );
-
-                    skill::spawn_instance(
-                        &mut commands,
-                        skill_aabb,
-                        skill_transform,
-                        skill_use,
-                        mesh_handle,
-                        material_handle,
-                    );*/
-
                     action.state = State::Finalize;
                     action.timer = None;
                 }
@@ -369,7 +295,7 @@ pub fn action(
                 transform.rotation = lerped;
             }
 
-            net_client.send_message::<Channel1, _>(CSRotPlayer(wanted.forward()));
+            net_client.send_message::<Channel1, _>(CSRotPlayer(*wanted.forward()));
 
             action.state = State::Completed;
         }

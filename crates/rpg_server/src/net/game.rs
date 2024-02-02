@@ -191,7 +191,7 @@ pub(crate) fn receive_skill_use_direct(
 
         let (transform, mut actions) = player_q.get_mut(client.entity).unwrap();
         let skill_msg = event.message();
-        info!("skill use direct: {skill_msg:?}");
+        // info!("skill use direct: {skill_msg:?}");
 
         let (origin, target) = get_skill_origin(
             &metadata.0,
@@ -220,7 +220,7 @@ pub(crate) fn receive_skill_use_targeted(
     mut skill_use_reader: EventReader<MessageEvent<CSSkillUseTargeted>>,
     net_params: NetworkParamsRO,
     metadata: Res<MetadataResources>,
-    mut player_q: Query<(&Transform, &Unit, &mut Actions, &AccountInstance), With<Hero>>,
+    mut player_q: Query<(&Transform, &mut Actions), With<Hero>>,
 ) {
     for event in skill_use_reader.read() {
         let client_id = *event.context();
@@ -229,9 +229,9 @@ pub(crate) fn receive_skill_use_targeted(
             continue;
         };
 
-        let (transform, player, mut actions, account) = player_q.get_mut(client.entity).unwrap();
+        let (transform, mut actions) = player_q.get_mut(client.entity).unwrap();
         let skill_msg = event.message();
-        info!("skill use targeted: {skill_msg:?}");
+        // info!("skill use targeted: {skill_msg:?}");
 
         let (origin, target) = get_skill_origin(
             &metadata.0,
