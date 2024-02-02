@@ -48,6 +48,8 @@ use rpg_util::{
     unit::{Corpse, Unit, Villain},
 };
 
+use audio_manager::plugin::AudioActions;
+
 use lightyear::client::events::MessageEvent;
 
 pub(crate) fn receive_player_join_success(
@@ -255,7 +257,7 @@ pub(crate) fn receive_stat_updates(
         let mut player = player_q.single_mut();
         for update in &update_msg.0 {
             player.stats.vitals.set_from_id(update.id, update.total);
-            info!("stat update: {update:?}");
+            // info!("stat update: {update:?}");
         }
     }
 }
@@ -434,22 +436,25 @@ pub(crate) fn receive_spawn_villain(
 
 pub(crate) fn receive_combat_result(
     mut combat_reader: EventReader<MessageEvent<SCCombatResult>>,
-    mut player_q: Query<(&mut Unit, &mut AnimationState), With<Player>>,
+    mut player_q: Query<(&mut Unit, &mut AudioActions, &mut AnimationState), With<Player>>,
 ) {
     for event in combat_reader.read() {
         let combat_msg = event.message();
 
-        let (mut player, mut anim) = player_q.single_mut();
+        let (mut player, mut audio, mut anim) = player_q.single_mut();
         match &combat_msg.0 {
             CombatResult::Damage(damage) => {
                 player.stats.vitals.set("Hp", Value::U32(damage.total));
                 *anim = ANIM_DEFEND;
+                audio.push("hit_soft".into());
             }
             CombatResult::Death(_) => {
                 player.stats.vitals.set("Hp", Value::U32(0));
+                audio.push("hit_death".into());
                 *anim = ANIM_DEATH;
             }
             CombatResult::Blocked | CombatResult::Dodged => {
+                audio.push("hit_blocked".into());
                 *anim = ANIM_DEFEND;
             }
             CombatResult::Error => debug!("combat error received!?"),
@@ -461,17 +466,18 @@ pub(crate) fn receive_combat_result(
 
 pub(crate) fn receive_damage(
     mut combat_reader: EventReader<MessageEvent<SCDamage>>,
-    mut unit_q: Query<(&mut AnimationState, &mut Unit)>,
+    mut unit_q: Query<(&mut AnimationState, &mut AudioActions, &mut Unit)>,
 ) {
     for event in combat_reader.read() {
         let combat_msg = event.message();
 
-        for (mut anim, mut unit) in &mut unit_q {
+        for (mut anim, mut audio, mut unit) in &mut unit_q {
             if unit.uid != combat_msg.uid {
                 continue;
             }
 
             *anim = ANIM_DEFEND;
+            audio.push("hit_soft".into());
 
             let hp = &mut unit.stats.vitals.stats.get_mut("Hp").unwrap();
             let hp_ref = hp.value.u32_mut();
@@ -481,24 +487,31 @@ pub(crate) fn receive_damage(
     }
 }
 
+// TODO rework and support both animation and audio in message format
 pub(crate) fn receive_unit_anim(
     mut anim_reader: EventReader<MessageEvent<SCUnitAnim>>,
-    mut unit_q: Query<(&mut AnimationState, &Unit)>,
+    mut unit_q: Query<(&mut AnimationState, &mut AudioActions, &Unit)>,
 ) {
     for event in anim_reader.read() {
         let anim_msg = event.message();
 
-        for (mut anim, unit) in &mut unit_q {
+        for (mut anim, mut audio, unit) in &mut unit_q {
             if unit.uid != anim_msg.uid {
                 continue;
             }
 
-            info!("combat result {anim_msg:?}");
-
             match anim_msg.anim {
-                0 => *anim = ANIM_DEFEND,
-                1 => *anim = ANIM_DEFEND,
-                _ => {}
+                0 => {
+                    *anim = ANIM_DEFEND;
+                    audio.push("hit_blocked".into());
+                }
+                1 => {
+                    *anim = ANIM_DEFEND;
+                    audio.push("hit_blocked".into());
+                }
+                id => {
+                    info!("unhandled anim {id}");
+                }
             }
         }
     }
@@ -507,14 +520,14 @@ pub(crate) fn receive_unit_anim(
 pub(crate) fn receive_villain_death(
     mut commands: Commands,
     mut death_reader: EventReader<MessageEvent<SCVillainDeath>>,
-    mut villain_q: Query<(Entity, &Unit, &mut AnimationState), With<Villain>>,
+    mut villain_q: Query<(Entity, &Unit, &mut AudioActions, &mut AnimationState), With<Villain>>,
 ) {
     for event in death_reader.read() {
         let death_msg = event.message();
 
         info!("villain death {death_msg:?}");
 
-        for (entity, villain, mut villain_anim) in &mut villain_q {
+        for (entity, villain, mut villain_audio, mut villain_anim) in &mut villain_q {
             if villain.uid != death_msg.0 {
                 continue;
             }
@@ -522,6 +535,7 @@ pub(crate) fn receive_villain_death(
             commands.entity(entity).insert(Corpse);
 
             *villain_anim = ANIM_DEATH;
+            villain_audio.push("hit_death".into());
         }
     }
 }
@@ -530,13 +544,15 @@ pub(crate) fn receive_hero_death(
     mut commands: Commands,
     mut game_state: ResMut<GameState>,
     mut death_reader: EventReader<MessageEvent<SCHeroDeath>>,
-    player_q: Query<(Entity, &Unit), With<Player>>,
+    mut player_q: Query<(Entity, &Unit, &mut AudioActions, &mut AnimationState), With<Player>>,
 ) {
     for event in death_reader.read() {
         let death_msg = event.message();
 
         info!("hero death {death_msg:?}");
-        let (entity, unit) = player_q.single();
+        let (entity, unit, mut audio, mut anim) = player_q.single_mut();
+        audio.push("hit_death".into());
+        *anim = ANIM_DEATH;
         if unit.uid == death_msg.0 {
             game_state.state = PlayState::Death(GameOverState::Pending);
         }
