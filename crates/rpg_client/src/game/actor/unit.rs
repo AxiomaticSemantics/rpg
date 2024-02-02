@@ -388,27 +388,16 @@ pub fn action(
 
             action.state = State::Completed;
         }
-
-        if let Some(action) = &mut actions.movement_end {
-            *anim_state = AnimationState {
-                repeat: RepeatAnimation::Forever,
-                paused: true,
-                index: 3,
-            };
-
-            action.state = State::Completed;
-        }*/
+        */
     }
 }
 
 pub fn remove_healthbar(
     mut commands: Commands,
-    mut unit_q: Query<&mut HealthBar, (With<Corpse>, With<Unit>)>,
+    unit_q: Query<(Entity, &Unit, &HealthBar), (With<AudioActions>, With<Corpse>)>,
 ) {
-    for mut health_bar in &mut unit_q {
-        if health_bar.bar_entity != Entity::PLACEHOLDER {
-            commands.entity(health_bar.bar_entity).despawn_recursive();
-            health_bar.bar_entity = Entity::PLACEHOLDER;
-        }
+    for (entity, _unit, health_bar) in &unit_q {
+        commands.entity(entity).remove::<AudioActions>();
+        commands.entity(health_bar.bar_entity).despawn_recursive();
     }
 }
