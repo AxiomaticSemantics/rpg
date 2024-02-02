@@ -11,15 +11,11 @@ use bevy::{
     log::info,
     prelude::{Deref, DerefMut},
     time::{Time, Timer},
-    transform::components::Transform,
 };
 
 use lightyear::shared::NetworkTarget;
 use rpg_network_protocol::protocol::*;
-use rpg_util::{
-    item::{GroundItem, ResourceItem},
-    unit::{Corpse, Hero, Unit},
-};
+use rpg_util::unit::{Corpse, Unit};
 
 #[derive(Component, Default, Debug, Deref, DerefMut)]
 pub struct CorpseTimer(pub Timer);
@@ -48,74 +44,6 @@ pub(crate) fn upkeep(
                 SCStatUpdates(updates),
                 NetworkTarget::Only(vec![client.id]),
             );
-        }
-    }
-}
-
-pub(crate) fn attract_resource_items(
-    mut commands: Commands,
-    mut net_params: NetworkParamsRW,
-    time: Res<Time>,
-    metadata: Res<MetadataResources>,
-    mut item_q: Query<(Entity, &mut Transform, &mut GroundItem), With<ResourceItem>>,
-    mut hero_q: Query<
-        (Entity, &Transform, &mut Unit, &AccountInstance),
-        (With<Hero>, Without<GroundItem>, Without<Corpse>),
-    >,
-) {
-    // for each item, find the nearest hero in range and attract towards it
-    for (i_entity, mut i_transform, mut i_item) in &mut item_q {
-        let mut nearest = Entity::PLACEHOLDER;
-        let max_distance = 8.;
-        let mut nearest_distance = max_distance;
-
-        for (u_entity, u_transform, _, _) in &hero_q {
-            let distance = u_transform.translation.distance(i_transform.translation);
-
-            if distance < nearest_distance {
-                nearest_distance = distance;
-                nearest = u_entity;
-            }
-        }
-
-        if nearest == Entity::PLACEHOLDER {
-            continue;
-        };
-
-        let Ok((_, u_transform, mut unit, account)) = hero_q.get_mut(nearest) else {
-            info!("hero query failed");
-            continue;
-        };
-
-        let mut i_ground = i_transform.translation;
-        i_ground.y = 0.;
-
-        let pickup_radius = *unit.stats.vitals.stats["PickupRadius"].value.u32() as f32 / 100.;
-
-        let distance = u_transform.translation.distance(i_ground);
-        if distance > pickup_radius {
-            continue;
-        } else if distance < 0.25 {
-            let item = i_item.0.take().unwrap();
-            let _leveled_up = unit.apply_rewards(&metadata.0, &item);
-            // TODO adjust unit statistics
-            // TODO send rewards to client
-
-            let client = net_params
-                .context
-                .get_client_from_account_id(account.0.info.id)
-                .unwrap();
-
-            net_params.server.send_message_to_target::<Channel1, _>(
-                SCDespawnItem(item.uid),
-                NetworkTarget::Only(vec![client.id]),
-            );
-
-            //info!("hero attracted item");
-            commands.entity(i_entity).despawn_recursive();
-        } else {
-            let target_dir = (u_transform.translation - i_ground).normalize_or_zero();
-            i_transform.translation += target_dir * time.delta_seconds() * 4.;
         }
     }
 }

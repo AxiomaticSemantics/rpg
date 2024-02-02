@@ -324,7 +324,7 @@ pub(crate) fn villain_think(
         let in_range = skill_info.use_range > 0 && distance < wanted_range;
         if !in_range {
             if actions.movement.is_none() {
-                info!("move request");
+                // info!("move request");
                 actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
                 villain.state = VillainState::Tracking;
             }
@@ -343,7 +343,6 @@ pub(crate) fn villain_think(
         if think_timer.finished() && actions.attack.is_none() {
             // debug!("distance {distance} use range {}", skill_info.use_range);
 
-            info!("skill request");
             let (origin, target) =
                 get_skill_origin(&metadata.0, transform, hero_transform.translation, skill_id);
 

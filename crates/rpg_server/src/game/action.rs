@@ -96,6 +96,14 @@ pub(crate) fn action(
                         }
                     }
 
+                    net_params.server.send_message_to_target::<Channel1, _>(
+                        SCUnitAttack {
+                            uid: unit.uid,
+                            skill_id,
+                        },
+                        NetworkTarget::All,
+                    );
+
                     let duration = skill_info.use_duration_secs
                         * unit.stats.vitals.stats["Cooldown"].value.f32();
 

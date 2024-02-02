@@ -139,6 +139,7 @@ impl Plugin for NetworkClientPlugin {
                         game::receive_unit_move_end.after(game::receive_unit_move),
                     ),
                     (
+                        game::receive_unit_attack,
                         game::receive_unit_anim,
                         game::receive_combat_result,
                         game::receive_hero_death,
