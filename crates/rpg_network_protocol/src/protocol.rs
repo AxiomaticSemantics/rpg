@@ -357,6 +357,12 @@ pub struct SCDespawnCorpse(pub Uid);
 pub struct SCCombatResult(pub CombatResult);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCUnitAnim {
+    pub uid: Uid,
+    pub anim: u8,
+}
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCDamage {
     pub uid: Uid,
     pub damage: DamageResult,
@@ -427,6 +433,7 @@ pub enum Messages {
     SCDespawnCorpse(SCDespawnCorpse),
     SCCombatResult(SCCombatResult),
     SCDamage(SCDamage),
+    SCUnitANim(SCUnitAnim),
 
     // Client -> Server
 

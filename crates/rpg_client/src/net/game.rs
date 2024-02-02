@@ -461,21 +461,46 @@ pub(crate) fn receive_combat_result(
 
 pub(crate) fn receive_damage(
     mut combat_reader: EventReader<MessageEvent<SCDamage>>,
-    mut unit_q: Query<&mut Unit>,
+    mut unit_q: Query<(&mut AnimationState, &mut Unit)>,
 ) {
     for event in combat_reader.read() {
         let combat_msg = event.message();
 
-        for mut unit in &mut unit_q {
+        for (mut anim, mut unit) in &mut unit_q {
             if unit.uid != combat_msg.uid {
                 continue;
             }
+
+            *anim = ANIM_DEFEND;
 
             let hp = &mut unit.stats.vitals.stats.get_mut("Hp").unwrap();
             let hp_ref = hp.value.u32_mut();
             *hp_ref = combat_msg.damage.total;
         }
         info!("combat result {combat_msg:?}");
+    }
+}
+
+pub(crate) fn receive_unit_anim(
+    mut anim_reader: EventReader<MessageEvent<SCUnitAnim>>,
+    mut unit_q: Query<(&mut AnimationState, &Unit)>,
+) {
+    for event in anim_reader.read() {
+        let anim_msg = event.message();
+
+        for (mut anim, unit) in &mut unit_q {
+            if unit.uid != anim_msg.uid {
+                continue;
+            }
+
+            info!("combat result {anim_msg:?}");
+
+            match anim_msg.anim {
+                0 => *anim = ANIM_DEFEND,
+                1 => *anim = ANIM_DEFEND,
+                _ => {}
+            }
+        }
     }
 }
 
