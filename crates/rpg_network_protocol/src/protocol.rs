@@ -265,7 +265,6 @@ pub struct SCPlayerJoinError;
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCPlayerSpawn {
     pub position: Vec3,
-    pub direction: Vec3,
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -328,6 +327,15 @@ pub struct SCSpawnItems {
 pub struct SCDespawnItem(pub Uid);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCSpawnHero {
+    pub position: Vec3,
+    pub uid: Uid,
+    pub name: String,
+    pub class: Class,
+    pub level: u8,
+}
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCSpawnVillain {
     pub position: Vec3,
     pub direction: Vec3,
@@ -347,6 +355,12 @@ pub struct SCDespawnCorpse(pub Uid);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCCombatResult(pub CombatResult);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCUnitAnim {
+    pub uid: Uid,
+    pub anim: u8,
+}
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCDamage {
@@ -412,12 +426,14 @@ pub enum Messages {
     SCSpawnItem(SCSpawnItem),
     SCSpawnItems(SCSpawnItems),
     SCDespawnItem(SCDespawnItem),
+    SCSpawnHero(SCSpawnHero),
     SCSpawnVillain(SCSpawnVillain),
     SCHeroDeath(SCHeroDeath),
     SCVillainDeath(SCVillainDeath),
     SCDespawnCorpse(SCDespawnCorpse),
     SCCombatResult(SCCombatResult),
     SCDamage(SCDamage),
+    SCUnitANim(SCUnitAnim),
 
     // Client -> Server
 
@@ -464,11 +480,14 @@ protocolize! {
     Message = Messages,
 }
 
-pub fn protocol() -> RpgProtocol {
-    let mut protocol = RpgProtocol::default();
-    protocol.add_channel::<Channel1>(ChannelSettings {
-        mode: ChannelMode::OrderedReliable(ReliableSettings::default()),
-        direction: ChannelDirection::Bidirectional,
-    });
-    protocol
+impl RpgProtocol {
+    pub fn new() -> Self {
+        let mut protocol = RpgProtocol::default();
+        protocol.add_channel::<Channel1>(ChannelSettings {
+            mode: ChannelMode::OrderedReliable(ReliableSettings::default()),
+            direction: ChannelDirection::Bidirectional,
+        });
+
+        protocol
+    }
 }

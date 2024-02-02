@@ -25,9 +25,7 @@ use util::math::{Aabb, AabbComponent};
 
 pub(crate) fn receive_player_join(
     mut join_reader: EventReader<MessageEvent<CSPlayerJoin>>,
-    mut net_params: NetworkParamsRW,
-    game_state: Res<GameState>,
-    mut account_q: Query<&AccountInstance>,
+    net_params: NetworkParamsRO,
 ) {
     for event in join_reader.read() {
         let client_id = *event.context();
@@ -36,15 +34,13 @@ pub(crate) fn receive_player_join(
             continue;
         };
 
-        info!("play join");
+        info!("player joined");
     }
 }
 
 pub(crate) fn receive_player_leave(
     mut leave_reader: EventReader<MessageEvent<CSPlayerLeave>>,
     mut net_params: NetworkParamsRW,
-    game_state: Res<GameState>,
-    mut account_q: Query<&AccountInstance>,
 ) {
     for event in leave_reader.read() {
         let client_id = *event.context();
@@ -86,26 +82,34 @@ pub(crate) fn receive_player_loaded(
 
         let unit = character.character.unit.clone();
         let aabb = Aabb::from_min_max(Vec3::new(-0.3, 0.0, -0.2), Vec3::new(0.3, 1.2, 0.2));
+
+        net_params.server.send_message_to_target::<Channel1, _>(
+            SCPlayerSpawn {
+                position: Vec3::ZERO,
+            },
+            NetworkTarget::Only(vec![client_id]),
+        );
+
+        net_params.server.send_message_to_target::<Channel1, _>(
+            SCSpawnHero {
+                uid: unit.uid,
+                position: Vec3::ZERO,
+                name: unit.name.clone(),
+                class: unit.class,
+                level: unit.level,
+            },
+            NetworkTarget::AllExcept(vec![client_id]),
+        );
+
         commands.entity(client.entity).insert((
             AabbComponent(aabb),
-            Transform::from_translation(Vec3::ZERO).looking_to(Vec3::NEG_Z, Vec3::Y),
+            Transform::from_translation(Vec3::ZERO),
             HeroBundle {
                 unit: UnitBundle::new(Unit(unit)),
                 hero: Hero,
             },
         ));
-
-        net_params.server.send_message_to_target::<Channel1, _>(
-            SCPlayerSpawn {
-                position: Vec3::ZERO,
-                direction: Vec3::NEG_Z,
-            },
-            NetworkTarget::Only(vec![client_id]),
-        );
-
         // TODO ensure the player is spawned in a town
-
-        // TODO send message to all connected players
     }
 }
 
@@ -127,9 +131,8 @@ pub(crate) fn receive_movement(
         };
 
         let mut actions = player_q.get_mut(client.entity).unwrap();
-
         actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
-        info!("move request");
+        //info!("player move request");
     }
 }
 
@@ -148,7 +151,7 @@ pub(crate) fn receive_movement_end(
         let mut actions = player_q.get_mut(client.entity).unwrap();
         if let Some(action) = &mut actions.movement {
             action.state = State::Finalize;
-            info!("end move request");
+            //info!("end player move request");
         }
     }
 }
@@ -156,8 +159,8 @@ pub(crate) fn receive_movement_end(
 /// Rotate player
 pub(crate) fn receive_rotation(
     mut rotation_reader: EventReader<MessageEvent<CSRotPlayer>>,
-    mut net_params: NetworkParamsRW,
-    mut player_q: Query<(&mut Transform, &Unit), With<Hero>>,
+    net_params: NetworkParamsRO,
+    mut player_q: Query<&mut Actions, With<Hero>>,
 ) {
     for event in rotation_reader.read() {
         let client_id = *event.context();
@@ -166,18 +169,10 @@ pub(crate) fn receive_rotation(
             continue;
         };
 
-        let (mut transform, player) = player_q.get_mut(client.entity).unwrap();
-
         let rot_msg = event.message();
-        transform.look_to(rot_msg.0, Vec3::Y);
 
-        net_params
-            .server
-            .send_message_to_target::<Channel1, SCRotPlayer>(
-                SCRotPlayer(rot_msg.0),
-                NetworkTarget::Only(vec![client_id]),
-            )
-            .unwrap();
+        let mut actions = player_q.get_mut(client.entity).unwrap();
+        actions.request(Action::new(ActionData::LookDir(rot_msg.0), None, true));
     }
 }
 

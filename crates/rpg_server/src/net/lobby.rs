@@ -2,7 +2,7 @@ use super::server::NetworkParamsRW;
 use crate::{account::AccountInstance, lobby::LobbyManager, server_state::ServerMetadataResource};
 
 use rpg_chat::chat::MessageId;
-use rpg_lobby::lobby::{Lobby, LobbyId, LobbyMessage};
+use rpg_lobby::lobby::{Lobby, LobbyId, LobbyMessage, LobbyPlayer};
 use rpg_network_protocol::protocol::*;
 
 use bevy::{
@@ -19,6 +19,7 @@ pub(crate) fn receive_lobby_create(
     mut lobby_manager: ResMut<LobbyManager>,
     mut create_reader: EventReader<MessageEvent<CSLobbyCreate>>,
     mut net_params: NetworkParamsRW,
+    account_q: Query<&AccountInstance>,
 ) {
     for event in create_reader.read() {
         let client_id = event.context();
@@ -28,6 +29,8 @@ pub(crate) fn receive_lobby_create(
             continue;
         }
         let account_id = client.account_id.unwrap();
+        let account = account_q.get(client.entity).unwrap();
+
         let create_msg = event.message();
 
         if let Some(lobby_id) =
@@ -35,7 +38,7 @@ pub(crate) fn receive_lobby_create(
         {
             info!("lobby created");
 
-            lobby_manager.add_account(lobby_id, account_id);
+            lobby_manager.add_player(lobby_id, account_id, account.info.name.clone());
 
             net_params.server.send_message_to_target::<Channel1, _>(
                 SCLobbyCreateSuccess(Lobby {
@@ -43,7 +46,10 @@ pub(crate) fn receive_lobby_create(
                     name: create_msg.name.clone(),
                     game_mode: create_msg.game_mode,
                     messages: vec![],
-                    accounts: vec![account_id],
+                    players: vec![LobbyPlayer {
+                        account_id,
+                        account_name: account.info.name.clone(),
+                    }],
                 }),
                 NetworkTarget::Only(vec![*client_id]),
             );
@@ -60,6 +66,7 @@ pub(crate) fn receive_lobby_join(
     mut lobby_manager: ResMut<LobbyManager>,
     mut join_reader: EventReader<MessageEvent<CSLobbyJoin>>,
     mut net_params: NetworkParamsRW,
+    account_q: Query<&AccountInstance>,
 ) {
     for event in join_reader.read() {
         let client_id = event.context();
@@ -69,12 +76,16 @@ pub(crate) fn receive_lobby_join(
             continue;
         }
         let account_id = client.account_id.unwrap();
+        let account = account_q.get(client.entity).unwrap();
 
         let join_msg = event.message();
 
         if let Some(lobby) = lobby_manager.get_lobby_mut(join_msg.0) {
             info!("client joined join");
-            if lobby.add_account(account_id) {
+            if lobby.add_player(LobbyPlayer {
+                account_id,
+                account_name: account.info.name.clone(),
+            }) {
                 // TODO Handle rejections for banned accounts etc.
                 net_params.server.send_message_to_target::<Channel1, _>(
                     SCLobbyJoinSuccess(lobby.clone()),
@@ -103,7 +114,7 @@ pub(crate) fn receive_lobby_leave(
             continue;
         };
 
-        lobby.remove_account(client.account_id.unwrap());
+        lobby.remove_player(client.account_id.unwrap());
 
         info!("client left lobby");
 
@@ -112,10 +123,6 @@ pub(crate) fn receive_lobby_leave(
             SCLobbyLeaveSuccess,
             NetworkTarget::Only(vec![*client_id]),
         );
-
-        if lobby.accounts.is_empty() {
-            lobby.clear();
-        }
     }
 }
 
@@ -154,9 +161,11 @@ pub(crate) fn receive_lobby_message(
             message: lobby_msg.message.clone(),
         };
 
+        let account_ids: Vec<_> = lobby.players.iter().map(|p| p.account_id).collect();
+
         let client_ids = net_params
             .context
-            .get_client_ids_for_account_ids(&lobby.accounts);
+            .get_client_ids_for_account_ids(&account_ids);
 
         net_params.server.send_message_to_target::<Channel1, _>(
             SCLobbyMessage(LobbyMessage {

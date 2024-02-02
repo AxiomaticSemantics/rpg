@@ -1,27 +1,21 @@
-use super::{account, chat, client::Client, context::NetworkContext, game, lobby};
+use super::{account, chat, context::NetworkContext, game, lobby};
 use crate::{game::plugin::GameState, state::AppState};
 
 use bevy::{
     app::{App, FixedUpdate, Plugin, PreUpdate, Update},
     ecs::{
-        entity::Entity,
         event::EventReader,
         schedule::{common_conditions::*, Condition, IntoSystemConfigs, NextState},
-        system::{Commands, Res, ResMut, Resource, SystemParam},
+        system::{Commands, Res, ResMut, SystemParam},
     },
-    hierarchy::DespawnRecursiveExt,
     log::info,
 };
 
 use lightyear::prelude::server::*;
 use lightyear::prelude::*;
 
-use rpg_account::account::AccountId;
 use rpg_network_protocol::{protocol::*, *};
 
-use rpg_util::unit::collide_units;
-
-use std::collections::HashMap;
 use std::net::{Ipv4Addr, SocketAddr};
 
 pub(crate) struct NetworkServerPlugin {
@@ -55,7 +49,7 @@ impl Plugin for NetworkServerPlugin {
             netcode: netcode_config,
             ping: PingConfig::default(),
         };
-        let plugin_config = PluginConfig::new(config, io, protocol());
+        let plugin_config = PluginConfig::new(config, io, RpgProtocol::new());
 
         app.add_plugins(server::ServerPlugin::new(plugin_config))
             .init_resource::<NetworkContext>()
@@ -63,7 +57,6 @@ impl Plugin for NetworkServerPlugin {
             .add_systems(
                 FixedUpdate,
                 (
-                    collide_units,
                     game::receive_rotation,
                     game::receive_skill_use_direct,
                     game::receive_skill_use_targeted,

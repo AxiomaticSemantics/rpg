@@ -122,35 +122,21 @@ pub(crate) fn spawn_actor(
     match unit.kind {
         UnitKind::Hero => {
             let actor = renderables.actors[actor_key].actor.clone();
-            let actor_player_bundle = (
+            let actor_hero_bundle = (
                 GameSessionCleanup,
                 CleanupStrategy::DespawnRecursive,
-                PlayerBundle {
-                    player: Player,
-                    hero: Hero,
-                },
                 UnitBundle::new(Unit(unit)),
                 UnitStorage(storage.unwrap()),
                 PassiveTree(passive_tree.unwrap()),
                 //AabbGizmo::default(),
             );
 
-            match actor {
-                ActorHandle::Mesh(handle) => {
-                    if entity == Entity::PLACEHOLDER {
+            if entity == Entity::PLACEHOLDER {
+                match actor {
+                    ActorHandle::Mesh(handle) => {
                         commands.spawn((
-                            actor_player_bundle,
-                            ActorMeshBundle {
-                                basic: actor_basic_bundle,
-                                mesh: MaterialMeshBundle {
-                                    mesh: handle,
-                                    ..default()
-                                },
-                            },
-                        ));
-                    } else {
-                        commands.entity(entity).insert((
-                            actor_player_bundle,
+                            actor_hero_bundle,
+                            Hero,
                             ActorMeshBundle {
                                 basic: actor_basic_bundle,
                                 mesh: MaterialMeshBundle {
@@ -160,11 +146,10 @@ pub(crate) fn spawn_actor(
                             },
                         ));
                     }
-                }
-                ActorHandle::Scene(handle) => {
-                    if entity == Entity::PLACEHOLDER {
+                    ActorHandle::Scene(handle) => {
                         commands.spawn((
-                            actor_player_bundle,
+                            actor_hero_bundle,
+                            Hero,
                             ActorSceneBundle {
                                 basic: actor_basic_bundle,
                                 scene: SceneBundle {
@@ -173,9 +158,33 @@ pub(crate) fn spawn_actor(
                                 },
                             },
                         ));
-                    } else {
+                    }
+                }
+            } else {
+                match actor {
+                    ActorHandle::Mesh(handle) => {
                         commands.entity(entity).insert((
-                            actor_player_bundle,
+                            actor_hero_bundle,
+                            PlayerBundle {
+                                player: Player,
+                                hero: Hero,
+                            },
+                            ActorMeshBundle {
+                                basic: actor_basic_bundle,
+                                mesh: MaterialMeshBundle {
+                                    mesh: handle,
+                                    ..default()
+                                },
+                            },
+                        ));
+                    }
+                    ActorHandle::Scene(handle) => {
+                        commands.entity(entity).insert((
+                            actor_hero_bundle,
+                            PlayerBundle {
+                                player: Player,
+                                hero: Hero,
+                            },
                             ActorSceneBundle {
                                 basic: actor_basic_bundle,
                                 scene: SceneBundle {

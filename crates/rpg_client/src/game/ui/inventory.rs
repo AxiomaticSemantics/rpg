@@ -188,7 +188,7 @@ pub(crate) fn update_cursor_item(
     player_q: Query<&Transform, With<Player>>,
     mut cursor_ui_q: Query<&mut Style, With<CursorItemPopup>>,
     mut cursor_item_stats_q: Query<&Children, With<CursorItemStats>>,
-    mut storage_q: Query<&mut UnitStorage>,
+    mut storage_q: Query<&mut UnitStorage, With<Player>>,
     mut text_q: Query<&mut Text>,
 ) {
     let player_transform = player_q.single();

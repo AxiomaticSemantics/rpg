@@ -35,14 +35,15 @@ use bevy::{
 };
 
 use rpg_core::{
-    combat::{CombatResult, DamageResult},
-    damage::DamageValue,
-    unit::{UnitInfo, UnitKind},
+    combat::CombatResult,
+    passive_tree::PassiveSkillGraph,
+    stat::{Stat, StatId},
+    storage::UnitStorage,
+    unit::{HeroInfo, UnitInfo, UnitKind},
     value::Value,
 };
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
-    actions::AttackData,
     item::{GroundItem, GroundItemDrops},
     unit::{Corpse, Unit, Villain},
 };
@@ -93,8 +94,7 @@ pub(crate) fn receive_player_spawn(
 
         let (entity, account) = account_q.single();
 
-        let transform = Transform::from_translation(spawn_msg.position)
-            .looking_to(spawn_msg.direction, Vec3::Y);
+        let transform = Transform::from_translation(spawn_msg.position);
 
         let character_record = account
             .0
@@ -150,7 +150,7 @@ pub(crate) fn receive_player_move_end(
     for event in move_events.read() {
         let move_msg = event.message();
 
-        info!("move player end {move_msg:?}");
+        //info!("move player end {move_msg:?}");
         let (mut transform, mut anim) = player_q.single_mut();
         transform.translation = move_msg.0;
 
@@ -182,7 +182,7 @@ pub(crate) fn receive_unit_move(
                 continue;
             }
 
-            info!("move: {move_msg:?}");
+            //info!("move: {move_msg:?}");
             *anim = ANIM_WALK;
 
             transform.translation = move_msg.position;
@@ -201,7 +201,7 @@ pub(crate) fn receive_unit_move_end(
                 continue;
             }
 
-            info!("move unit end: {move_msg:?}");
+            //info!("move unit end: {move_msg:?}");
             *anim = ANIM_IDLE;
 
             transform.translation = move_msg.position;
@@ -222,7 +222,7 @@ pub(crate) fn receive_unit_rotation(
                 continue;
             }
 
-            info!("rot unit: {rot_msg:?}");
+            // info!("rot unit: {rot_msg:?}");
             transform.look_to(rot_msg.direction, Vec3::Y);
         }
     }
@@ -347,6 +347,50 @@ pub(crate) fn receive_despawn_skill(
     }
 }
 
+pub(crate) fn receive_spawn_hero(
+    mut commands: Commands,
+    mut spawn_reader: EventReader<MessageEvent<SCSpawnHero>>,
+    metadata: Res<MetadataResources>,
+    game_state: Res<GameState>,
+    renderables: Res<RenderResources>,
+) {
+    for event in spawn_reader.read() {
+        let spawn_msg = event.message();
+
+        info!("spawning hero {spawn_msg:?}");
+
+        let unit = rpg_core::unit::Unit::new(
+            spawn_msg.uid,
+            spawn_msg.class,
+            UnitKind::Hero,
+            UnitInfo::Hero(HeroInfo {
+                game_mode: game_state.mode,
+                xp_curr: Stat {
+                    id: StatId(23),
+                    value: Value::U64(0),
+                },
+            }),
+            spawn_msg.level,
+            spawn_msg.name.clone(),
+            None,
+            &metadata.rpg,
+        );
+
+        let transform = Transform::from_translation(spawn_msg.position);
+
+        // FIXME storage and skill graph are dummy data here
+        spawn_actor(
+            Entity::PLACEHOLDER,
+            &mut commands,
+            &renderables,
+            unit,
+            Some(UnitStorage::default()),
+            Some(PassiveSkillGraph::new(spawn_msg.class)),
+            Some(transform),
+        );
+    }
+}
+
 pub(crate) fn receive_spawn_villain(
     mut commands: Commands,
     mut spawn_reader: EventReader<MessageEvent<SCSpawnVillain>>,
@@ -417,21 +461,46 @@ pub(crate) fn receive_combat_result(
 
 pub(crate) fn receive_damage(
     mut combat_reader: EventReader<MessageEvent<SCDamage>>,
-    mut unit_q: Query<&mut Unit>,
+    mut unit_q: Query<(&mut AnimationState, &mut Unit)>,
 ) {
     for event in combat_reader.read() {
         let combat_msg = event.message();
 
-        for mut unit in &mut unit_q {
+        for (mut anim, mut unit) in &mut unit_q {
             if unit.uid != combat_msg.uid {
                 continue;
             }
+
+            *anim = ANIM_DEFEND;
 
             let hp = &mut unit.stats.vitals.stats.get_mut("Hp").unwrap();
             let hp_ref = hp.value.u32_mut();
             *hp_ref = combat_msg.damage.total;
         }
         info!("combat result {combat_msg:?}");
+    }
+}
+
+pub(crate) fn receive_unit_anim(
+    mut anim_reader: EventReader<MessageEvent<SCUnitAnim>>,
+    mut unit_q: Query<(&mut AnimationState, &Unit)>,
+) {
+    for event in anim_reader.read() {
+        let anim_msg = event.message();
+
+        for (mut anim, unit) in &mut unit_q {
+            if unit.uid != anim_msg.uid {
+                continue;
+            }
+
+            info!("combat result {anim_msg:?}");
+
+            match anim_msg.anim {
+                0 => *anim = ANIM_DEFEND,
+                1 => *anim = ANIM_DEFEND,
+                _ => {}
+            }
+        }
     }
 }
 

@@ -6,10 +6,8 @@ use bevy::{
     log::info,
 };
 
-use rpg_account::account::AccountId;
-use rpg_chat::chat::MessageId;
 use rpg_core::unit::HeroGameMode;
-use rpg_lobby::lobby::{LobbyId, LobbyMessage};
+use rpg_lobby::lobby::{LobbyId, LobbyMessage, LobbyPlayer};
 use rpg_network_protocol::protocol::*;
 
 use lightyear::client::events::MessageEvent;
@@ -18,7 +16,7 @@ pub(crate) struct LobbyInfo {
     pub(crate) id: LobbyId,
     pub(crate) name: String,
     pub(crate) game_mode: HeroGameMode,
-    pub(crate) accounts: Vec<AccountId>,
+    pub(crate) players: Vec<LobbyPlayer>,
     pub(crate) messages: Vec<LobbyMessage>,
 }
 
@@ -43,7 +41,7 @@ pub(crate) fn receive_join_success(
             id: join_msg.0.id,
             name: join_msg.0.name.clone(),
             game_mode: join_msg.0.game_mode,
-            accounts: join_msg.0.accounts.clone(),
+            players: join_msg.0.players.clone(),
             messages: join_msg.0.messages.clone(),
         });
 
@@ -78,7 +76,7 @@ pub(crate) fn receive_create_success(
             id: create_msg.0.id,
             name: create_msg.0.name.clone(),
             game_mode: create_msg.0.game_mode,
-            accounts: create_msg.0.accounts.clone(),
+            players: create_msg.0.players.clone(),
             messages: vec![],
         });
 

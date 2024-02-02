@@ -176,30 +176,34 @@ pub(crate) fn action(
                 transform.rotation = lerped;
             }
 
+            let direction = transform.forward();
+
             if unit.kind == UnitKind::Hero {
                 let client = net_params
                     .context
                     .get_client_from_account_id(account.as_ref().unwrap().0.info.id)
                     .unwrap();
 
-                net_params
-                    .server
-                    .send_message_to_target::<Channel1, _>(
-                        SCRotPlayer(transform.forward()),
-                        NetworkTarget::Only(vec![client.id]),
-                    )
-                    .unwrap();
+                net_params.server.send_message_to_target::<Channel1, _>(
+                    SCRotPlayer(direction),
+                    NetworkTarget::Only(vec![client.id]),
+                );
+
+                net_params.server.send_message_to_target::<Channel1, _>(
+                    SCRotUnit {
+                        uid: unit.uid,
+                        direction,
+                    },
+                    NetworkTarget::AllExcept(vec![client.id]),
+                );
             } else {
-                net_params
-                    .server
-                    .send_message_to_target::<Channel1, _>(
-                        SCRotUnit {
-                            uid: unit.uid,
-                            direction: transform.forward(),
-                        },
-                        NetworkTarget::All,
-                    )
-                    .unwrap();
+                net_params.server.send_message_to_target::<Channel1, _>(
+                    SCRotUnit {
+                        uid: unit.uid,
+                        direction,
+                    },
+                    NetworkTarget::All,
+                );
             }
 
             action.state = State::Completed;
@@ -222,24 +226,26 @@ pub(crate) fn action(
                             .get_client_from_account_id(account.as_ref().unwrap().0.info.id)
                             .unwrap();
 
-                        net_params
-                            .server
-                            .send_message_to_target::<Channel1, _>(
-                                SCMovePlayer(transform.translation),
-                                NetworkTarget::Only(vec![client.id]),
-                            )
-                            .unwrap();
+                        net_params.server.send_message_to_target::<Channel1, _>(
+                            SCMovePlayer(transform.translation),
+                            NetworkTarget::Only(vec![client.id]),
+                        );
+
+                        net_params.server.send_message_to_target::<Channel1, _>(
+                            SCMoveUnit {
+                                uid: unit.uid,
+                                position: transform.translation,
+                            },
+                            NetworkTarget::AllExcept(vec![client.id]),
+                        );
                     } else {
-                        net_params
-                            .server
-                            .send_message_to_target::<Channel1, _>(
-                                SCMoveUnit {
-                                    uid: unit.uid,
-                                    position: transform.translation,
-                                },
-                                NetworkTarget::All,
-                            )
-                            .unwrap();
+                        net_params.server.send_message_to_target::<Channel1, _>(
+                            SCMoveUnit {
+                                uid: unit.uid,
+                                position: transform.translation,
+                            },
+                            NetworkTarget::All,
+                        );
                     }
 
                     action.state = State::Active;
@@ -259,24 +265,26 @@ pub(crate) fn action(
                             .get_client_from_account_id(account.as_ref().unwrap().0.info.id)
                             .unwrap();
 
-                        net_params
-                            .server
-                            .send_message_to_target::<Channel1, _>(
-                                SCMovePlayer(transform.translation),
-                                NetworkTarget::Only(vec![client.id]),
-                            )
-                            .unwrap();
+                        net_params.server.send_message_to_target::<Channel1, _>(
+                            SCMovePlayer(transform.translation),
+                            NetworkTarget::Only(vec![client.id]),
+                        );
+
+                        net_params.server.send_message_to_target::<Channel1, _>(
+                            SCMoveUnit {
+                                uid: unit.uid,
+                                position: transform.translation,
+                            },
+                            NetworkTarget::AllExcept(vec![client.id]),
+                        );
                     } else {
-                        net_params
-                            .server
-                            .send_message_to_target::<Channel1, _>(
-                                SCMoveUnit {
-                                    uid: unit.uid,
-                                    position: transform.translation,
-                                },
-                                NetworkTarget::All,
-                            )
-                            .unwrap();
+                        net_params.server.send_message_to_target::<Channel1, _>(
+                            SCMoveUnit {
+                                uid: unit.uid,
+                                position: transform.translation,
+                            },
+                            NetworkTarget::All,
+                        );
                     }
                 }
                 State::Finalize => {
@@ -294,24 +302,26 @@ pub(crate) fn action(
                             .get_client_from_account_id(account.as_ref().unwrap().0.info.id)
                             .unwrap();
 
-                        net_params
-                            .server
-                            .send_message_to_target::<Channel1, _>(
-                                SCMovePlayerEnd(transform.translation),
-                                NetworkTarget::Only(vec![client.id]),
-                            )
-                            .unwrap();
+                        net_params.server.send_message_to_target::<Channel1, _>(
+                            SCMovePlayerEnd(transform.translation),
+                            NetworkTarget::Only(vec![client.id]),
+                        );
+
+                        net_params.server.send_message_to_target::<Channel1, _>(
+                            SCMoveUnitEnd {
+                                uid: unit.uid,
+                                position: transform.translation,
+                            },
+                            NetworkTarget::AllExcept(vec![client.id]),
+                        );
                     } else {
-                        net_params
-                            .server
-                            .send_message_to_target::<Channel1, _>(
-                                SCMoveUnitEnd {
-                                    uid: unit.uid,
-                                    position: transform.translation,
-                                },
-                                NetworkTarget::All,
-                            )
-                            .unwrap();
+                        net_params.server.send_message_to_target::<Channel1, _>(
+                            SCMoveUnitEnd {
+                                uid: unit.uid,
+                                position: transform.translation,
+                            },
+                            NetworkTarget::All,
+                        );
                     }
                     action.state = State::Completed;
                 }

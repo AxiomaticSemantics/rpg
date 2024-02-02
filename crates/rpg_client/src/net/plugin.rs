@@ -25,10 +25,7 @@ use lightyear::{
     shared::{ping::manager::PingConfig, sets::FixedUpdateSet},
     transport::io::*,
 };
-use rpg_network_protocol::{
-    protocol::{protocol, Client, *},
-    KEY, PROTOCOL_ID,
-};
+use rpg_network_protocol::{protocol::*, KEY, PROTOCOL_ID};
 
 use std::net::{Ipv4Addr, SocketAddr};
 
@@ -65,7 +62,7 @@ impl Plugin for NetworkClientPlugin {
             interpolation: InterpolationConfig::default()
                 .with_delay(InterpolationDelay::default().with_send_interval_ratio(2.0)),
         };
-        let plugin_config = PluginConfig::new(config, io, protocol(), auth);
+        let plugin_config = PluginConfig::new(config, io, RpgProtocol::new(), auth);
 
         app.add_plugins(ClientPlugin::new(plugin_config))
             .insert_resource(Time::<Fixed>::from_seconds(1.0 / 60.))
@@ -123,22 +120,26 @@ impl Plugin for NetworkClientPlugin {
                     game::receive_spawn_item,
                     game::receive_spawn_items,
                     game::receive_spawn_villain,
+                    game::receive_spawn_hero,
                     game::receive_spawn_skill,
                 ),
             )
             .add_systems(
                 FixedUpdate,
                 (
+                    game::receive_damage,
                     game::receive_stat_updates,
                     game::receive_stat_update,
-                    game::receive_player_rotation,
-                    game::receive_player_move,
-                    game::receive_player_move_end,
-                    game::receive_unit_rotation,
-                    game::receive_unit_move,
-                    game::receive_unit_move_end,
-                    game::receive_damage,
                     (
+                        game::receive_player_rotation,
+                        game::receive_player_move,
+                        game::receive_player_move_end.after(game::receive_player_move),
+                        game::receive_unit_rotation,
+                        game::receive_unit_move,
+                        game::receive_unit_move_end.after(game::receive_unit_move),
+                    ),
+                    (
+                        game::receive_unit_anim,
                         game::receive_combat_result,
                         game::receive_hero_death,
                         game::receive_villain_death,
@@ -183,6 +184,7 @@ fn connect(
     connection_timer.tick(dt);
 
     if connection_timer.just_finished() {
+        connection_timer.reset();
         net_client.connect();
     }
 }

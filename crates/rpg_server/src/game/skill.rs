@@ -409,6 +409,14 @@ pub fn handle_contacts(
                     game_state.session_stats.times_blocked += 1;
                 }*/
 
+                net_params.server.send_message_to_target::<Channel1, _>(
+                    SCUnitAnim {
+                        uid: defender.uid,
+                        anim: 1,
+                    },
+                    NetworkTarget::All,
+                );
+
                 match &instance.instance {
                     SkillInstance::Direct(_) | SkillInstance::Projectile(_) => {
                         commands.entity(s_entity).despawn_recursive();
@@ -424,6 +432,13 @@ pub fn handle_contacts(
                 } else {
                     game_state.session_stats.times_dodged += 1;
                 }*/
+                net_params.server.send_message_to_target::<Channel1, _>(
+                    SCUnitAnim {
+                        uid: defender.uid,
+                        anim: 0,
+                    },
+                    NetworkTarget::All,
+                );
             }
             CombatResult::Damage(damage) => {
                 /*if defender.kind == UnitKind::Villain {
@@ -445,16 +460,12 @@ pub fn handle_contacts(
                         NetworkTarget::Only(vec![id_info.client_id]),
                     );
                 } else if defender.kind == UnitKind::Villain {
-                    let client = net_params
-                        .context
-                        .get_client_from_account_id(a_account.as_ref().unwrap().0.info.id)
-                        .unwrap();
                     net_params.server.send_message_to_target::<Channel1, _>(
                         SCDamage {
                             uid: defender.uid,
                             damage: damage.clone(),
                         },
-                        NetworkTarget::Only(vec![client.id]),
+                        NetworkTarget::All,
                     );
                 }
 
@@ -480,11 +491,6 @@ pub fn handle_contacts(
                     /*game_state.session_stats.kills += 1;
                     game_state.session_stats.hits += 1;*/
 
-                    let client = net_params
-                        .context
-                        .get_client_from_account_id(a_account.as_ref().unwrap().0.info.id)
-                        .unwrap();
-
                     if let Some(items) = defender.handle_death(
                         &mut attacker,
                         &metadata.0,
@@ -505,23 +511,21 @@ pub fn handle_contacts(
                                 position: d_transform.translation,
                                 items: drops,
                             },
-                            NetworkTarget::Only(vec![client.id]),
+                            NetworkTarget::All,
                         );
                     }
 
+                    // TODO XP for attacker
+
                     net_params.server.send_message_to_target::<Channel1, _>(
                         SCVillainDeath(defender.uid),
-                        NetworkTarget::Only(vec![client.id]),
+                        NetworkTarget::All,
                     );
                 } else {
                     // game_state.session_stats.villain_hits += 1;
-                    let client = net_params
-                        .context
-                        .get_client_from_account_id(d_account.as_ref().unwrap().0.info.id)
-                        .unwrap();
                     net_params.server.send_message_to_target::<Channel1, _>(
                         SCHeroDeath(defender.uid),
-                        NetworkTarget::Only(vec![client.id]),
+                        NetworkTarget::All,
                     );
                 }
 
