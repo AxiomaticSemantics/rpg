@@ -13,10 +13,7 @@ use rpg_util::{
     unit::{Corpse, Hero, Unit, UnitBundle, Villain, VillainBundle},
 };
 
-use util::{
-    math::{Aabb, AabbComponent},
-    random::SharedRng,
-};
+use util::{math::AabbComponent, random::SharedRng};
 
 use lightyear::shared::NetworkTarget;
 
@@ -28,7 +25,7 @@ use bevy::{
         system::{Commands, Query, Res, ResMut},
     },
     log::info,
-    math::Vec3,
+    math::{bounding::Aabb3d, Vec3},
     prelude::{Deref, DerefMut},
     time::{Time, Timer, TimerMode},
     transform::{components::Transform, TransformBundle},
@@ -119,10 +116,10 @@ pub(crate) fn spawn(
 
     unit.add_default_skills(metadata);
 
-    let aabb = AabbComponent(Aabb::from_min_max(
-        Vec3::new(-0.3, 0.0, -0.2),
-        Vec3::new(0.3, 1.2, 0.2),
-    ));
+    let aabb = AabbComponent(Aabb3d {
+        min: Vec3::new(-0.3, 0.0, -0.2),
+        max: Vec3::new(0.3, 1.2, 0.2),
+    });
 
     let transform = Transform::from_translation(*origin);
     let unit_info = unit.info.villain();

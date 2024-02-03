@@ -57,10 +57,12 @@ pub fn collide_units(
     mut unit_q: Query<(&mut Transform, &AabbComponent), (With<Unit>, Without<Corpse>)>,
 ) {
     let mut combinations = unit_q.iter_combinations_mut();
-    while let Some([(mut t1, a1), (mut t2, a2)]) = combinations.fetch_next() {
-        while intersect_aabb((&mut t1.translation, &a1), (&mut t2.translation, &a2)) {
+    while let Some([(mut t1, a1), (t2, a2)]) = combinations.fetch_next() {
+        while intersect_aabb(
+            (t1.translation, t1.rotation, a1.0),
+            (t2.translation, t2.rotation, a2.0),
+        ) {
             let distance = t1.translation.distance(t2.translation);
-
             let offset = 0.01 * *t1.forward();
 
             if (t1.translation + offset).distance(t2.translation) > distance {

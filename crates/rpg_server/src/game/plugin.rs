@@ -14,7 +14,7 @@ use bevy::{
         system::{Commands, Res, ResMut, Resource},
     },
     log::info,
-    math::Vec3,
+    math::{bounding::Aabb3d, Vec3},
 };
 
 use lightyear::netcode::ClientId;
@@ -29,10 +29,7 @@ use rpg_util::{
     unit::collide_units,
 };
 
-use util::{
-    math::Aabb,
-    random::{Rng, SharedRng},
-};
+use util::random::{Rng, SharedRng};
 
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -60,7 +57,7 @@ pub(crate) struct GameState {
 
 #[derive(Default, Resource)]
 pub(crate) struct AabbResources {
-    pub(crate) aabbs: HashMap<Cow<'static, str>, Aabb>,
+    pub(crate) aabbs: HashMap<Cow<'static, str>, Aabb3d>,
 }
 
 impl GameState {
@@ -141,12 +138,26 @@ pub(crate) fn setup_simulation(
     // FIXME more aabbs need to be inserted, impl FromWorld and move
     aabbs.aabbs.insert(
         Cow::Owned("direct_attack".into()),
-        Aabb::from_min_max(Vec3::new(-0.1, -0.1, -0.5), Vec3::new(0.1, 0.1, 0.5)),
+        Aabb3d {
+            min: Vec3::new(-0.1, -0.1, -0.5),
+            max: Vec3::new(0.1, 0.1, 0.5),
+        },
     );
 
     aabbs.aabbs.insert(
         Cow::Owned("item_normal".into()),
-        Aabb::from_min_max(Vec3::new(-0.2, -0.2, -0.2), Vec3::new(0.2, 0.2, 0.2)),
+        Aabb3d {
+            min: Vec3::new(-0.2, -0.2, -0.2),
+            max: Vec3::new(0.2, 0.2, 0.2),
+        },
+    );
+
+    aabbs.aabbs.insert(
+        Cow::Owned("bolt_01".into()),
+        Aabb3d {
+            min: Vec3::new(-0.1, -0.1, -0.25),
+            max: Vec3::new(0.1, 0.1, 0.25),
+        },
     );
 
     for _ in 0..24 {

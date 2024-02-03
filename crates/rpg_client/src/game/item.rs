@@ -15,11 +15,7 @@ use rpg_util::{
     },
     unit::Unit,
 };
-use util::{
-    cleanup::CleanupStrategy,
-    math::{Aabb, AabbComponent},
-    random::SharedRng,
-};
+use util::{cleanup::CleanupStrategy, math::AabbComponent, random::SharedRng};
 
 use bevy::{
     ecs::{
@@ -29,7 +25,7 @@ use bevy::{
         system::{Commands, Query, Res, ResMut, Resource},
     },
     input::{mouse::MouseButton, ButtonInput},
-    math::Vec3,
+    math::{bounding::Aabb3d, Vec3},
     prelude::{default, Deref, DerefMut},
     scene::SceneBundle,
     text::Text,
@@ -189,7 +185,10 @@ fn spawn_item(
         panic!("bad handle");
     };
 
-    let aabb = AabbComponent(Aabb::from_min_max(Vec3::splat(-0.2), Vec3::splat(0.2)));
+    let aabb = AabbComponent(Aabb3d {
+        min: Vec3::splat(-0.2),
+        max: Vec3::splat(0.2),
+    });
 
     use std::f32::consts;
 

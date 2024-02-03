@@ -2,11 +2,10 @@ use bevy::{
     app::{App, Plugin, Update},
     ecs::{
         event::{Event, EventReader},
-        system::{Commands, Query, Res, ResMut, Resource},
+        system::{ResMut, Resource},
     },
     log::info,
-    math::{uvec2, UVec2, Vec3},
-    utils::default,
+    math::{uvec2, UVec2},
 };
 
 use rpg_world::zone::{Kind, SizeInfo, Zone, ZoneId};
