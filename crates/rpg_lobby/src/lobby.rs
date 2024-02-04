@@ -1,6 +1,6 @@
 use rpg_account::account::AccountId;
 use rpg_chat::chat::MessageId;
-use rpg_core::{uid::Uid, unit::HeroGameMode};
+use rpg_core::unit::HeroGameMode;
 
 use serde_derive::{Deserialize as De, Serialize as Ser};
 

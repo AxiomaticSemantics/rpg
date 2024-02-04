@@ -1,49 +1,27 @@
 use bevy::{
     ecs::component::Component,
-    math::{Vec3, Vec3A},
+    math::{
+        bounding::{Aabb3d, Bounded3d, IntersectsVolume},
+        primitives::Cuboid,
+        Quat, Vec3,
+    },
     prelude::{Deref, DerefMut},
 };
 
 #[derive(Component, Deref, DerefMut)]
-pub struct AabbComponent(pub Aabb);
+pub struct AabbComponent(pub Aabb3d);
 
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct Aabb {
-    pub center: Vec3A,
-    pub half_extents: Vec3A,
-}
+pub fn intersect_aabb(lhs: (Vec3, Quat, Aabb3d), rhs: (Vec3, Quat, Aabb3d)) -> bool {
+    let lhs_extents: Vec3 = lhs.2.max - lhs.2.min;
+    let rhs_extents: Vec3 = rhs.2.max - rhs.2.min;
 
-impl Aabb {
-    pub fn from_min_max(minimum: Vec3, maximum: Vec3) -> Self {
-        let minimum = Vec3A::from(minimum);
-        let maximum = Vec3A::from(maximum);
-        let center = 0.5 * (maximum + minimum);
-        let half_extents = 0.5 * (maximum - minimum);
-        Self {
-            center,
-            half_extents,
-        }
-    }
+    let lhs_cuboid = Cuboid::from_size(lhs_extents);
+    let rhs_cuboid = Cuboid::from_size(rhs_extents);
 
-    #[inline(always)]
-    pub fn min(&self) -> Vec3A {
-        self.center - self.half_extents
-    }
+    let lhs = lhs_cuboid.aabb_3d(lhs.0, lhs.1);
+    let rhs = rhs_cuboid.aabb_3d(rhs.0, rhs.1);
 
-    #[inline(always)]
-    pub fn max(&self) -> Vec3A {
-        self.center + self.half_extents
-    }
-}
-
-pub fn intersect_aabb(lhs: (&Vec3, &Aabb), rhs: (&Vec3, &Aabb)) -> bool {
-    let lhs_half_extents: Vec3 = lhs.1.half_extents.into();
-    let rhs_half_extents: Vec3 = rhs.1.half_extents.into();
-
-    let lhs = Aabb::from_min_max(*lhs.0 - lhs_half_extents, *lhs.0 + lhs_half_extents);
-    let rhs = Aabb::from_min_max(*rhs.0 - rhs_half_extents, *rhs.0 + rhs_half_extents);
-
-    lhs.min().cmple(rhs.max()).all() && lhs.max().cmpge(rhs.min()).all()
+    lhs.intersects(&rhs)
 }
 
 fn _calculate_normals(indices: &Vec<u32>, vertices: &[[f32; 3]], normals: &mut [[f32; 3]]) {

@@ -8,7 +8,7 @@ use crate::{
 };
 
 use rpg_core::{
-    combat::{CombatResult, DamageResult},
+    combat::CombatResult,
     item::ItemDrops,
     skill::{
         effect::*, skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData, Origin,
@@ -29,7 +29,7 @@ use rpg_util::{
 
 use util::{
     cleanup::CleanupStrategy,
-    math::{intersect_aabb, Aabb, AabbComponent},
+    math::{intersect_aabb, AabbComponent},
     random::{Rng, SharedRng},
 };
 
@@ -43,7 +43,7 @@ use bevy::{
     },
     hierarchy::DespawnRecursiveExt,
     log::{debug, info},
-    math::Vec3,
+    math::{bounding::Aabb3d, Vec3},
     time::{Time, Timer, TimerMode},
     transform::{components::Transform, TransformBundle},
 };
@@ -77,7 +77,7 @@ pub(crate) fn prepare_skill(
     skill: &Skill,
     unit: &Unit,
     unit_transform: &Transform,
-) -> (Aabb, Transform, SkillUse) {
+) -> (Aabb3d, Transform, SkillUse) {
     // TODO move to a new fn in rpg_util
     let mut origin = match &skill_info.origin {
         Origin::Direct(_) => {
@@ -135,16 +135,7 @@ pub(crate) fn prepare_skill(
             });
 
             let aabb = if info.shape == ProjectileShape::Box {
-                let aabb = if aabbs.aabbs.contains_key("bolt_01") {
-                    aabbs.aabbs["bolt_01"]
-                } else {
-                    let aabb =
-                        Aabb::from_min_max(Vec3::new(-0.1, -0.1, -0.25), Vec3::new(0.1, 0.1, 0.25));
-                    aabbs.aabbs.insert("bolt_01".into(), aabb);
-                    aabb
-                };
-
-                aabb
+                aabbs.aabbs["bolt_01"]
             } else {
                 // FIXME convert to sphere collider
                 let radius = info.size as f32 / 100. / 2.;
@@ -153,7 +144,10 @@ pub(crate) fn prepare_skill(
                 let aabb = if aabbs.aabbs.contains_key(key.as_str()) {
                     aabbs.aabbs[key.as_str()]
                 } else {
-                    let aabb = Aabb::from_min_max(Vec3::splat(-radius), Vec3::splat(radius));
+                    let aabb = Aabb3d {
+                        min: Vec3::splat(-radius),
+                        max: Vec3::splat(radius),
+                    };
 
                     aabbs.aabbs.insert(Cow::Owned(key.as_str().into()), aabb);
 
@@ -219,10 +213,10 @@ pub(crate) fn prepare_skill(
                 aabbs.aabbs[key.as_str()]
             } else {
                 // 2d shapes are on the XY plane
-                let aabb = Aabb::from_min_max(
-                    Vec3::new(-radius, -radius, 0.0),
-                    Vec3::new(radius, radius, 0.5),
-                );
+                let aabb = Aabb3d {
+                    min: Vec3::new(-radius, -radius, 0.0),
+                    max: Vec3::new(radius, radius, 0.5),
+                };
 
                 aabbs.aabbs.insert(Cow::Owned(key.as_str().into()), aabb);
 
@@ -247,7 +241,7 @@ pub(crate) fn prepare_skill(
 
 pub(crate) fn spawn_instance(
     commands: &mut Commands,
-    aabb: Aabb,
+    aabb: Aabb3d,
     transform: Transform,
     skill_use_instance: SkillUse,
     owner: Entity,
@@ -337,8 +331,12 @@ pub(crate) fn collide_skills(
 
             let collision = match &instance.instance {
                 SkillInstance::Direct(_) | SkillInstance::Projectile(_) => intersect_aabb(
-                    (&(s_transform.translation), s_aabb),
-                    (&(u_transform.translation + unit_offset), u_aabb),
+                    (s_transform.translation, s_transform.rotation, s_aabb.0),
+                    (
+                        (u_transform.translation + unit_offset),
+                        u_transform.rotation,
+                        u_aabb.0,
+                    ),
                 ),
                 SkillInstance::Area(info) => {
                     s_transform.translation.distance(u_transform.translation)

@@ -3,15 +3,13 @@ use super::{
     prop::{PropHandle, PropInfo},
 };
 
-use util::math::Aabb;
-
 use bevy::{
     asset::{AssetServer, Assets, Handle},
     ecs::{
         system::Resource,
         world::{FromWorld, World},
     },
-    math::{Vec2, Vec3},
+    math::{bounding::Aabb3d, Vec2, Vec3},
     pbr::{AlphaMode, StandardMaterial},
     render::{
         color::Color,
@@ -30,7 +28,7 @@ pub(crate) struct RenderResources {
     pub color_materials: HashMap<Cow<'static, str>, Handle<ColorMaterial>>,
     pub materials: HashMap<Cow<'static, str>, Handle<StandardMaterial>>,
     pub meshes: HashMap<Cow<'static, str>, Handle<Mesh>>,
-    pub aabbs: HashMap<Cow<'static, str>, Aabb>,
+    pub aabbs: HashMap<Cow<'static, str>, Aabb3d>,
     pub actors: HashMap<Cow<'static, str>, ActorInfo>,
     pub props: HashMap<Cow<'static, str>, PropInfo>,
 }
@@ -49,11 +47,17 @@ impl FromWorld for RenderResources {
         let mut aabbs = HashMap::new();
         aabbs.insert(
             Cow::Owned("direct_attack".into()),
-            Aabb::from_min_max(Vec3::new(-0.1, -0.1, -0.5), Vec3::new(0.1, 0.1, 0.5)),
+            Aabb3d {
+                min: Vec3::new(-0.1, -0.1, -0.5),
+                max: Vec3::new(0.1, 0.1, 0.5),
+            },
         );
         aabbs.insert(
             Cow::Owned("bolt_01".into()),
-            Aabb::from_min_max(Vec3::new(-0.1, -0.1, -0.25), Vec3::new(0.1, 0.1, 0.25)),
+            Aabb3d {
+                min: Vec3::new(-0.1, -0.1, -0.25),
+                max: Vec3::new(0.1, 0.1, 0.25),
+            },
         );
 
         let mut textures = HashMap::<&'static str, Handle<Image>>::new();

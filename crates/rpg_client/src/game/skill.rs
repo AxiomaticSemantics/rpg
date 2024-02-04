@@ -14,10 +14,7 @@ use rpg_core::{
 };
 use rpg_util::skill::*;
 
-use util::{
-    cleanup::CleanupStrategy,
-    math::{Aabb, AabbComponent},
-};
+use util::{cleanup::CleanupStrategy, math::AabbComponent};
 
 use bevy::{
     asset::{Assets, Handle},
@@ -28,7 +25,7 @@ use bevy::{
     gizmos::aabb::ShowAabbGizmo,
     hierarchy::DespawnRecursiveExt,
     log::debug,
-    math::Vec3,
+    math::{bounding::Aabb3d, Vec3},
     pbr::{MaterialMeshBundle, PbrBundle, StandardMaterial},
     render::{
         mesh::{
@@ -181,7 +178,7 @@ pub(crate) fn prepare_skill(
     skill_info: &SkillTableEntry,
     skill_id: SkillId,
 ) -> (
-    Aabb,
+    Aabb3d,
     Transform,
     SkillUse,
     Option<PropHandle>,
@@ -256,9 +253,9 @@ pub(crate) fn prepare_skill(
                     let aabb = mesh.compute_aabb().unwrap();
                     let handle = meshes.add(mesh);
 
-                    let aabb = Aabb {
-                        center: aabb.center,
-                        half_extents: aabb.half_extents,
+                    let aabb = Aabb3d {
+                        min: aabb.min().into(),
+                        max: aabb.max().into(),
                     };
 
                     renderables
@@ -339,10 +336,10 @@ pub(crate) fn prepare_skill(
                 //let aabb = mesh.compute_aabb().unwrap();
 
                 // 2d shapes are on the XY plane
-                let aabb = Aabb::from_min_max(
-                    Vec3::new(-radius, -radius, 0.0),
-                    Vec3::new(radius, radius, 0.5),
-                );
+                let aabb = Aabb3d {
+                    min: Vec3::new(-radius, -radius, 0.0),
+                    max: Vec3::new(radius, radius, 0.5),
+                };
 
                 let handle = meshes.add(mesh);
                 let weak = handle.clone_weak();
@@ -383,7 +380,7 @@ pub(crate) fn prepare_skill(
 
 pub(crate) fn spawn_instance(
     commands: &mut Commands,
-    aabb: Aabb,
+    aabb: Aabb3d,
     transform: Transform,
     skill_use_instance: SkillUse,
     prop: Option<PropHandle>,

@@ -8,7 +8,7 @@ use bevy::{
         system::{Commands, Query, Res},
     },
     log::info,
-    math::Vec3,
+    math::{bounding::Aabb3d, Vec3},
     transform::components::Transform,
 };
 
@@ -21,7 +21,7 @@ use rpg_util::{
     skill::get_skill_origin,
     unit::{Hero, HeroBundle, Unit, UnitBundle},
 };
-use util::math::{Aabb, AabbComponent};
+use util::math::AabbComponent;
 
 pub(crate) fn receive_player_join(
     mut join_reader: EventReader<MessageEvent<CSPlayerJoin>>,
@@ -81,7 +81,10 @@ pub(crate) fn receive_player_loaded(
         info!("spawning player: {:?} {id_info:?}", account.0.info);
 
         let unit = character.character.unit.clone();
-        let aabb = Aabb::from_min_max(Vec3::new(-0.3, 0.0, -0.2), Vec3::new(0.3, 1.2, 0.2));
+        let aabb = Aabb3d {
+            min: Vec3::new(-0.3, 0.0, -0.2),
+            max: Vec3::new(0.3, 1.2, 0.2),
+        };
 
         net_params.server.send_message_to_target::<Channel1, _>(
             SCPlayerSpawn {
