@@ -26,7 +26,6 @@ use rpg_network_protocol::protocol::*;
 use rpg_util::{
     item::GroundItemDrops,
     skill::{update_skill, SkillContactEvent},
-    unit::collide_units,
 };
 
 use util::random::{Rng, SharedRng};
@@ -88,6 +87,7 @@ impl Plugin for GamePlugin {
             .add_event::<SkillContactEvent>()
             .init_resource::<GameState>()
             .init_resource::<AabbResources>()
+            .init_resource::<action::MovingUnits>()
             .init_resource::<GroundItemDrops>()
             .insert_resource(SharedRng(Rng::with_seed(1234)))
             .add_systems(OnEnter(AppState::SpawnSimulation), setup_simulation)
@@ -99,7 +99,7 @@ impl Plugin for GamePlugin {
             .add_systems(
                 FixedPreUpdate,
                 (
-                    collide_units,
+                    unit::collide_units,
                     villain::remote_spawn,
                     skill::update_invulnerability,
                     unit::remove_corpses,
@@ -119,6 +119,8 @@ impl Plugin for GamePlugin {
                     villain::find_target,
                     villain::villain_think,
                     action::action,
+                    action::try_move_units,
+                    action::move_units,
                 )
                     .chain()
                     .run_if(in_state(AppState::Simulation)),
