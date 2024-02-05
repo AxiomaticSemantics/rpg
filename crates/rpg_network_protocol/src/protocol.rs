@@ -145,10 +145,10 @@ pub struct CSSkillUseTargeted {
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CSItemDrop;
+pub struct CSItemDrop(pub Uid);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CSItemPickup;
+pub struct CSItemPickup(pub Uid);
 
 // Server -> Client
 

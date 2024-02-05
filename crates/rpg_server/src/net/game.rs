@@ -7,10 +7,12 @@ use crate::{
 
 use bevy::{
     ecs::{
+        entity::Entity,
         event::EventReader,
         query::With,
         system::{Commands, Query, Res},
     },
+    hierarchy::DespawnRecursiveExt,
     log::info,
     math::Vec3,
     transform::components::Transform,
@@ -19,9 +21,11 @@ use bevy::{
 use lightyear::prelude::server::*;
 use lightyear::prelude::*;
 
+use rpg_core::storage::Storage;
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions::{Action, ActionData, Actions, AttackData, State},
+    item::{GroundItem, StorableItem, UnitStorage},
     skill::{get_skill_origin, SkillSlots, Skills},
     unit::{Hero, HeroBundle, Unit, UnitBundle},
 };
@@ -266,7 +270,7 @@ pub(crate) fn receive_skill_use_targeted(
 pub(crate) fn receive_item_drop(
     mut drop_reader: EventReader<MessageEvent<CSItemDrop>>,
     mut net_params: NetworkParamsRW,
-    mut player_q: Query<(&Transform, &Unit), With<Hero>>,
+    mut hero_q: Query<(&Transform, &Unit), With<Hero>>,
 ) {
     for event in drop_reader.read() {
         let client_id = *event.context();
@@ -278,9 +282,11 @@ pub(crate) fn receive_item_drop(
 }
 
 pub(crate) fn receive_item_pickup(
+    mut commands: Commands,
     mut pickup_reader: EventReader<MessageEvent<CSItemPickup>>,
     mut net_params: NetworkParamsRW,
-    mut player_q: Query<(&Transform, &Unit), With<Hero>>,
+    mut item_q: Query<(Entity, &mut GroundItem, &Transform), With<StorableItem>>,
+    mut hero_q: Query<(&Transform, &mut UnitStorage), With<Hero>>,
 ) {
     for event in pickup_reader.read() {
         let client_id = *event.context();
@@ -288,5 +294,30 @@ pub(crate) fn receive_item_pickup(
         if !client.is_authenticated_player() {
             continue;
         };
+
+        let pickup_msg = event.message();
+
+        let (u_transform, mut u_storage) = hero_q.get_mut(client.entity).unwrap();
+
+        for (i_entity, mut i_item, i_transform) in &mut item_q {
+            if i_item.0.as_ref().unwrap().uid != pickup_msg.0 {
+                continue;
+            }
+
+            if i_transform.translation.distance(u_transform.translation) < 0.5 {
+                let Some(slot) = u_storage.0.get_empty_slot_mut() else {
+                    break;
+                };
+                slot.item = i_item.0.take();
+
+                net_params.server.send_message_to_target::<Channel1, _>(
+                    SCDespawnItem(pickup_msg.0),
+                    NetworkTarget::All,
+                );
+
+                info!("ground item pickup");
+                commands.entity(i_entity).despawn_recursive();
+            }
+        }
     }
 }
