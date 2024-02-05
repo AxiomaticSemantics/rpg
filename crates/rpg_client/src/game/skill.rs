@@ -400,7 +400,7 @@ pub(crate) fn spawn_instance(
                     ))
                     .id()
             } else {
-                Entity::PLACEHOLDER
+                unreachable!()
             }
         }
         SkillInstance::Area(_) => {
@@ -433,7 +433,7 @@ pub(crate) fn spawn_instance(
                     ))
                     .id()
             } else {
-                Entity::PLACEHOLDER
+                unreachable!()
             }
         }
     };
