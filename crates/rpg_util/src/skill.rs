@@ -16,7 +16,7 @@ use bevy::{
 use rpg_core::{
     damage::DamageDescriptor,
     metadata::Metadata,
-    skill::{effect::*, Origin, SkillId, SkillInstance},
+    skill::{effect::*, OriginKind, Skill, SkillId, SkillInstance, SkillSlot, SkillTarget},
     uid::Uid,
     unit::UnitKind,
 };
@@ -50,6 +50,9 @@ pub struct InvulnerabilityTimer {
 
 #[derive(Default, Debug, Clone, Component, Deref, DerefMut)]
 pub struct Invulnerability(pub Vec<InvulnerabilityTimer>);
+
+#[derive(Default, Debug, Component, Deref, DerefMut)]
+pub struct Skills(pub Vec<Skill>);
 
 #[derive(Debug, Component)]
 pub struct SkillUse {
@@ -86,6 +89,18 @@ pub struct SkillUseBundle {
 impl SkillUseBundle {
     pub fn new(skill: SkillUse) -> Self {
         Self { skill }
+    }
+}
+
+/// Skill slots
+#[derive(Component, Default, Debug, Clone, PartialEq)]
+pub struct SkillSlots {
+    pub slots: Vec<SkillSlot>,
+}
+
+impl SkillSlots {
+    pub fn new(slots: Vec<SkillSlot>) -> Self {
+        Self { slots }
     }
 }
 
@@ -137,19 +152,23 @@ pub fn get_skill_origin(
     unit_transform: &Transform,
     target: Vec3,
     skill_id: SkillId,
-) -> (Vec3, Vec3) {
+) -> SkillTarget {
     let skill_meta = &metadata.skill.skills[&skill_id];
 
-    match &skill_meta.origin {
-        Origin::Direct(data) => (
-            unit_transform.translation + data.offset * *unit_transform.forward(),
-            unit_transform.translation + data.offset * *unit_transform.forward(),
-        ),
-        Origin::Remote(data) => (unit_transform.translation + data.offset, target),
-        Origin::Locked(data) => (
-            unit_transform.translation + data.offset,
-            unit_transform.translation + data.offset,
-        ),
+    match skill_meta.origin_kind {
+        OriginKind::Direct => SkillTarget {
+            origin: unit_transform.translation + skill_meta.origin * *unit_transform.forward(),
+            target,
+        },
+        OriginKind::Remote => SkillTarget {
+            origin: unit_transform.translation + skill_meta.origin,
+            target,
+        },
+
+        OriginKind::Locked => SkillTarget {
+            origin: unit_transform.translation + skill_meta.origin,
+            target: unit_transform.translation + skill_meta.origin,
+        },
     }
 }
 

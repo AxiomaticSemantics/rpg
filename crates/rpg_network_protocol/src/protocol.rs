@@ -13,7 +13,7 @@ use rpg_core::{
     class::Class,
     combat::{CombatResult, DamageResult},
     item::ItemDrops,
-    skill::SkillId,
+    skill::{Skill, SkillId, SkillSlot, SkillTarget},
     stat::StatUpdate,
     uid::Uid,
     unit::{HeroGameMode, VillainInfo},
@@ -304,8 +304,7 @@ pub struct SCStatUpdates(pub Vec<StatUpdate>);
 pub struct SCSpawnSkill {
     pub id: SkillId,
     pub uid: Uid,
-    pub origin: Vec3,
-    pub target: Vec3,
+    pub target: SkillTarget,
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -333,6 +332,8 @@ pub struct SCSpawnHero {
     pub name: String,
     pub class: Class,
     pub level: u8,
+    pub skills: Vec<Skill>,
+    pub skill_slots: Vec<SkillSlot>,
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -342,6 +343,8 @@ pub struct SCSpawnVillain {
     pub uid: Uid,
     pub level: u8,
     pub info: VillainInfo,
+    pub skills: Vec<Skill>,
+    pub skill_slots: Vec<SkillSlot>,
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]

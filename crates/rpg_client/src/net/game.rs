@@ -45,6 +45,7 @@ use rpg_core::{
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     item::{GroundItem, GroundItemDrops},
+    skill::{SkillSlots, Skills},
     unit::{Corpse, Unit, Villain},
 };
 
@@ -91,7 +92,7 @@ pub(crate) fn receive_player_spawn(
     account_q: Query<(Entity, &RpgAccount)>,
 ) {
     for event in spawn_events.read() {
-        info!("spawning");
+        info!("spawning local player");
 
         let spawn_msg = event.message();
 
@@ -104,9 +105,11 @@ pub(crate) fn receive_player_spawn(
             .get_character_from_slot(account.0.info.selected_slot.unwrap())
             .unwrap();
 
-        let (unit, storage, passive_tree) = {
+        let (unit, skills, active, storage, passive_tree) = {
             (
                 character_record.character.unit.clone(),
+                character_record.character.skills.clone(),
+                character_record.character.skill_slots.clone(),
                 character_record.character.storage.clone(),
                 character_record.character.passive_tree.clone(),
             )
@@ -117,6 +120,8 @@ pub(crate) fn receive_player_spawn(
             &mut commands,
             &renderables,
             unit,
+            Skills(skills),
+            SkillSlots::new(active),
             Some(storage),
             Some(passive_tree),
             Some(transform),
@@ -325,7 +330,6 @@ pub(crate) fn receive_spawn_skill(
 
         let (aabb, transform, instance, mesh, material, timer) = skill::prepare_skill(
             spawn_msg.uid,
-            &spawn_msg.origin,
             &spawn_msg.target,
             &mut renderables,
             &mut meshes,
@@ -380,11 +384,12 @@ pub(crate) fn receive_spawn_hero(
             }),
             spawn_msg.level,
             spawn_msg.name.clone(),
-            None,
             &metadata.rpg,
         );
 
         let transform = Transform::from_translation(spawn_msg.position);
+        let skills = Skills(spawn_msg.skills.clone());
+        let skill_slots = SkillSlots::new(spawn_msg.skill_slots.clone());
 
         // FIXME storage and skill graph are dummy data here
         spawn_actor(
@@ -392,6 +397,8 @@ pub(crate) fn receive_spawn_hero(
             &mut commands,
             &renderables,
             unit,
+            skills,
+            skill_slots,
             Some(UnitStorage::default()),
             Some(PassiveSkillGraph::new(spawn_msg.class)),
             Some(transform),
@@ -422,9 +429,11 @@ pub(crate) fn receive_spawn_villain(
             UnitInfo::Villain(spawn_msg.info.clone()),
             spawn_msg.level,
             villain_meta.name.clone(),
-            None,
             &metadata.rpg,
         );
+
+        let skills = Skills(spawn_msg.skills.clone());
+        let skill_slots = SkillSlots::new(spawn_msg.skill_slots.clone());
 
         let transform = Transform::from_translation(spawn_msg.position)
             .looking_to(spawn_msg.direction, Vec3::Y);
@@ -433,6 +442,8 @@ pub(crate) fn receive_spawn_villain(
             &mut commands,
             &renderables,
             unit,
+            skills,
+            skill_slots,
             None,
             None,
             Some(transform),

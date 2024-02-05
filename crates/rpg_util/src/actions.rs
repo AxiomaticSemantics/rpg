@@ -1,6 +1,6 @@
 use crate::unit::Unit;
 
-use rpg_core::skill::SkillId;
+use rpg_core::skill::{SkillId, SkillTarget};
 
 use bevy::{
     ecs::{
@@ -13,15 +13,14 @@ use bevy::{
 
 use std::time::Duration;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct AttackData {
     pub skill_id: SkillId,
     pub user: Vec3,
-    pub origin: Vec3,
-    pub target: Vec3,
+    pub skill_target: SkillTarget,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct KnockbackData {
     pub direction: Vec3,
     pub start: f32,
@@ -37,7 +36,7 @@ pub enum Kind {
     Attack = 0x0000_00010,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ActionData {
     Move(Vec3),
     LookDir(Vec3),

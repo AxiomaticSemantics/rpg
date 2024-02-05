@@ -111,6 +111,7 @@ impl Plugin for NetworkServerPlugin {
 }
 
 #[derive(SystemParam)]
+#[allow(dead_code)]
 pub(crate) struct NetworkParamsRO<'w> {
     pub(crate) server: Res<'w, Server>,
     pub(crate) context: Res<'w, NetworkContext>,

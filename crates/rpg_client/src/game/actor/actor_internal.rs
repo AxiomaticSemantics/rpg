@@ -12,10 +12,10 @@ use bevy::{
     asset::Handle,
     ecs::{bundle::Bundle, component::Component, entity::Entity, system::Commands},
     log::info,
-    math::Vec3,
+    math::{bounding::Aabb3d, Vec3},
     pbr::{MaterialMeshBundle, StandardMaterial},
     prelude::{Deref, DerefMut},
-    render::{mesh::Mesh, primitives::Aabb},
+    render::mesh::Mesh,
     scene::{Scene, SceneBundle},
     transform::components::Transform,
     utils::default,
@@ -31,9 +31,10 @@ use rpg_core::{
 };
 use rpg_util::{
     item::UnitStorage,
+    skill::{SkillSlots, Skills},
     unit::{Hero, Unit, UnitBundle, Villain, VillainBundle},
 };
-use util::cleanup::CleanupStrategy;
+use util::{cleanup::CleanupStrategy, math::AabbComponent};
 
 #[derive(Default, Debug, Component, Deref, DerefMut)]
 pub struct ActorKey(pub &'static str);
@@ -44,22 +45,22 @@ pub enum ActorHandle {
     Scene(Handle<Scene>),
 }
 
-#[derive(Default, Bundle)]
+#[derive(Bundle)]
 pub(crate) struct ActorBasicBundle {
-    pub aabb: Aabb,
+    pub aabb: AabbComponent,
     pub animation_state: AnimationState,
     pub actor_key: ActorKey,
     pub audio_action: AudioActions,
     pub health_bar: HealthBar,
 }
 
-#[derive(Default, Bundle)]
+#[derive(Bundle)]
 pub(crate) struct ActorSceneBundle {
     pub basic: ActorBasicBundle,
     pub scene: SceneBundle,
 }
 
-#[derive(Default, Bundle)]
+#[derive(Bundle)]
 pub(crate) struct ActorMeshBundle {
     pub basic: ActorBasicBundle,
     pub mesh: MaterialMeshBundle<StandardMaterial>,
@@ -99,11 +100,16 @@ pub(crate) fn spawn_actor(
     commands: &mut Commands,
     renderables: &RenderResources,
     unit: RpgUnit,
+    skills: Skills,
+    skill_slots: SkillSlots,
     storage: Option<RpgUnitStorage>,
     passive_tree: Option<PassiveSkillGraph>,
     transform: Option<Transform>,
 ) {
-    let body_aabb = Aabb::from_min_max(Vec3::new(-0.3, 0., -0.25), Vec3::new(0.3, 1.8, 0.25));
+    let aabb = AabbComponent(Aabb3d {
+        min: Vec3::new(-0.3, 0., -0.25),
+        max: Vec3::new(0.3, 1.8, 0.25),
+    });
 
     let bar = HealthBar::spawn_bars(commands, renderables, Transform::default());
 
@@ -115,8 +121,9 @@ pub(crate) fn spawn_actor(
     let actor_basic_bundle = ActorBasicBundle {
         health_bar: HealthBar::new(bar, 0.8),
         actor_key: ActorKey(actor_key),
-        aabb: body_aabb,
-        ..default()
+        aabb,
+        audio_action: AudioActions::default(),
+        animation_state: AnimationState::default(),
     };
 
     match unit.kind {
@@ -125,7 +132,7 @@ pub(crate) fn spawn_actor(
             let actor_hero_bundle = (
                 GameSessionCleanup,
                 CleanupStrategy::DespawnRecursive,
-                UnitBundle::new(Unit(unit)),
+                UnitBundle::new(Unit(unit), skills, skill_slots),
                 UnitStorage(storage.unwrap()),
                 PassiveTree(passive_tree.unwrap()),
                 //AabbGizmo::default(),
@@ -205,7 +212,7 @@ pub(crate) fn spawn_actor(
                 CleanupStrategy::DespawnRecursive,
                 VillainBundle {
                     villain: Villain,
-                    unit: UnitBundle::new(Unit(unit)),
+                    unit: UnitBundle::new(Unit(unit), skills, skill_slots),
                 },
             );
 

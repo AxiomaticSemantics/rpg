@@ -22,6 +22,7 @@ use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions::{ActionData, Actions, State},
     item::{GroundItem, StorableItem, UnitStorage},
+    skill::{SkillSlots, Skills},
     unit::{Corpse, Hero, Unit},
 };
 
@@ -183,6 +184,8 @@ pub fn action(
     mut unit_q: Query<
         (
             &Unit,
+            &Skills,
+            &SkillSlots,
             &mut Transform,
             &mut Actions,
             &mut AnimationState,
@@ -195,11 +198,20 @@ pub fn action(
 
     let dt = time.delta_seconds();
 
-    for (unit, mut transform, mut actions, mut anim_state, mut audio_actions) in &mut unit_q {
+    for (
+        unit,
+        skills,
+        skill_slots,
+        mut transform,
+        mut actions,
+        mut anim_state,
+        mut audio_actions,
+    ) in &mut unit_q
+    {
         // debug!("action request {:?}", action.request);
 
         if let Some(action) = &mut actions.knockback {
-            let ActionData::Knockback(knockback) = action.data else {
+            let ActionData::Knockback(knockback) = &action.data else {
                 panic!("expected knockback data");
             };
 
@@ -215,14 +227,15 @@ pub fn action(
         }
 
         if let Some(action) = &mut actions.attack {
-            let ActionData::Attack(attack) = action.data else {
+            let ActionData::Attack(attack) = &action.data else {
                 panic!("expected attack data");
             };
 
             match &mut action.state {
                 State::Pending => {
-                    let distance = (attack.user.distance(attack.target) * 100.).round() as u32;
-                    match unit.can_use_skill(&metadata.rpg, attack.skill_id, distance) {
+                    let distance =
+                        (attack.user.distance(attack.skill_target.target) * 100.).round() as u32;
+                    match unit.can_use_skill(&skills, &metadata.rpg, attack.skill_id, distance) {
                         SkillUseResult::Blocked
                         | SkillUseResult::OutOfRange
                         | SkillUseResult::InsufficientResources => {
@@ -236,7 +249,7 @@ pub fn action(
                         }
                     }
 
-                    let skill_id = unit.active_skills.primary.skill.unwrap();
+                    let skill_id = skill_slots.slots[0].skill_id.unwrap();
                     let Some(skill_info) = metadata.rpg.skill.skills.get(&skill_id) else {
                         panic!("skill metadata not found");
                     };

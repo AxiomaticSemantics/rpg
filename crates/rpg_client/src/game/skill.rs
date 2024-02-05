@@ -8,7 +8,7 @@ use super::{
 use rpg_core::{
     skill::{
         skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData, ProjectileInstance,
-        ProjectileShape, SkillId, SkillInfo, SkillInstance, TimerDescriptor,
+        ProjectileShape, SkillId, SkillInfo, SkillInstance, SkillTarget, TimerDescriptor,
     },
     uid::Uid,
 };
@@ -18,7 +18,7 @@ use util::{cleanup::CleanupStrategy, math::AabbComponent};
 
 use bevy::{
     asset::{Assets, Handle},
-    ecs::system::{Commands, Query, Res},
+    ecs::system::Commands,
     gizmos::aabb::ShowAabbGizmo,
     log::debug,
     math::{bounding::Aabb3d, Vec3},
@@ -40,8 +40,7 @@ use std::borrow::Cow;
 
 pub(crate) fn prepare_skill(
     owner: Uid,
-    origin: &Vec3,
-    target: &Vec3,
+    target: &SkillTarget,
     renderables: &mut RenderResources,
     meshes: &mut Assets<Mesh>,
     skill_info: &SkillTableEntry,
@@ -102,14 +101,15 @@ pub(crate) fn prepare_skill(
                 frame: 0,
             });
 
-            let skill_transform = Transform::from_translation(*origin).looking_at(*target, Vec3::Y);
+            let skill_transform =
+                Transform::from_translation(target.origin).looking_at(target.target, Vec3::Y);
 
             (aabb, instance, skill_transform, None, None)
         }
         SkillInfo::Projectile(info) => {
             //println!("spawn {speed} {duration} {size}");
 
-            let (mesh_handle, aabb) = if info.shape == ProjectileShape::Box {
+            let (handle, aabb) = if info.shape == ProjectileShape::Box {
                 let handle = renderables.props["bolt_01"].handle.clone();
                 let aabb = renderables.aabbs["bolt_01"];
 
@@ -119,47 +119,45 @@ pub(crate) fn prepare_skill(
                 let key = format!("orb_radius_{}", info.size);
 
                 let (handle, aabb) = if renderables.props.contains_key(key.as_str()) {
-                    let prop_handle = renderables.props[key.as_str()].handle.clone();
+                    let handle = renderables.props[key.as_str()].handle.clone();
                     let aabb = renderables.aabbs[key.as_str()];
 
-                    (prop_handle, aabb)
+                    (handle, aabb)
                 } else {
-                    let mut mesh = Mesh::try_from(Icosphere {
+                    let mesh = Mesh::try_from(Icosphere {
                         radius,
                         ..default()
                     })
                     .unwrap();
 
-                    mesh.generate_tangents().unwrap();
-                    let aabb = mesh.compute_aabb().unwrap();
                     let handle = meshes.add(mesh);
 
                     let aabb = Aabb3d {
-                        min: aabb.min().into(),
-                        max: aabb.max().into(),
+                        min: Vec3::splat(-radius),
+                        max: Vec3::splat(radius),
                     };
 
                     renderables
                         .aabbs
                         .insert(Cow::Owned(key.as_str().into()), aabb);
 
-                    let prop_handle = PropHandle::Mesh(handle);
+                    let handle = PropHandle::Mesh(handle);
                     renderables
                         .props
-                        .insert(key.into(), PropInfo::new(prop_handle.clone()));
+                        .insert(key.into(), PropInfo::new(handle.clone()));
 
-                    (prop_handle, aabb)
+                    (handle, aabb)
                 };
 
                 (handle, aabb)
             };
 
             let spawn_transform = if info.orbit.is_some() {
-                Transform::from_translation(*origin)
+                Transform::from_translation(target.origin)
             } else if info.aerial.is_some() {
-                Transform::from_translation(*origin).looking_at(*target, Vec3::Y)
+                Transform::from_translation(target.origin).looking_at(target.target, Vec3::Y)
             } else {
-                Transform::from_translation(*origin).looking_at(*target, Vec3::Y)
+                Transform::from_translation(target.origin).looking_at(target.target, Vec3::Y)
             };
 
             let instance_info = SkillInstance::Projectile(ProjectileInstance {
@@ -177,15 +175,15 @@ pub(crate) fn prepare_skill(
                 aabb,
                 instance_info,
                 spawn_transform,
-                Some(mesh_handle),
+                Some(handle),
                 Some(renderables.materials["lava"].clone_weak()),
             )
         }
         SkillInfo::Area(info) => {
             let skill_instance = SkillInstance::Area(AreaInstance { info: info.clone() });
 
-            let transform = Transform::from_translation(*origin + Vec3::new(0.0, 0.01, 0.0))
-                .looking_to(Vec3::NEG_Y, Vec3::Y);
+            let transform =
+                Transform::from_translation(target.origin).looking_to(Vec3::NEG_Y, Vec3::Y);
 
             let radius = info.radius as f32 / 100.;
             let key = format!("area_radius_{}", info.radius);
@@ -199,9 +197,6 @@ pub(crate) fn prepare_skill(
                 )
             } else {
                 // The required resource is not cached, add it
-                let mut mesh: Mesh = Circle::new(radius).into();
-                let _ = mesh.generate_tangents();
-                //let aabb = mesh.compute_aabb().unwrap();
 
                 // 2d shapes are on the XY plane
                 let aabb = Aabb3d {
@@ -209,7 +204,7 @@ pub(crate) fn prepare_skill(
                     max: Vec3::new(radius, radius, 0.5),
                 };
 
-                let handle = meshes.add(mesh);
+                let handle = meshes.add(Circle::new(radius));
                 let weak = handle.clone_weak();
                 renderables
                     .meshes
@@ -350,6 +345,7 @@ pub(crate) fn spawn_instance(
 
 // TODO determine what the client will do here..
 // TODO to avoid traffic the client should handle any interactions that would destroy a skill
+
 /*
 /// Returns `true` if the skill should be destroyed
 fn handle_effects(

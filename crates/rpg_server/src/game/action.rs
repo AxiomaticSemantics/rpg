@@ -5,6 +5,7 @@ use rpg_core::{skill::SkillUseResult, unit::UnitKind};
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions::{ActionData, Actions, State},
+    skill::{SkillSlots, Skills},
     unit::{Corpse, Unit},
 };
 
@@ -41,6 +42,8 @@ pub(crate) fn action(
         (
             Entity,
             &mut Unit,
+            &mut Skills,
+            &SkillSlots,
             &mut Transform,
             &AabbComponent,
             &mut Actions,
@@ -55,13 +58,15 @@ pub(crate) fn action(
 
     let mut want_move_units = Vec::new();
 
-    for (entity, mut unit, mut transform, _, mut actions, account) in &mut unit_q {
+    for (entity, mut unit, mut skills, skill_slots, mut transform, _, mut actions, account) in
+        &mut unit_q
+    {
         // All of the following action handlers are in a strict order
 
         // First react to any knockback events, this blocks all other actions
         // TODO this needs to be handled in the same manner as movement
         if let Some(action) = &mut actions.knockback {
-            let ActionData::Knockback(knockback) = action.data else {
+            let ActionData::Knockback(knockback) = &action.data else {
                 panic!("expected knockback data");
             };
 
@@ -78,26 +83,28 @@ pub(crate) fn action(
 
         // Next if the user is able to initiate an attack do so
         if let Some(action) = &mut actions.attack {
-            let ActionData::Attack(attack) = action.data else {
+            let ActionData::Attack(attack) = &mut action.data else {
                 panic!("expected attack data");
             };
 
             match &mut action.state {
                 State::Pending => {
-                    let distance = (attack.user.distance(attack.target) * 100.).round() as u32;
-                    let skill_id = unit.active_skills.primary.skill.unwrap();
+                    let distance =
+                        (attack.user.distance(attack.skill_target.target) * 100.).round() as u32;
+                    let skill_id = skill_slots.slots[0].skill_id.unwrap();
                     assert_eq!(skill_id, attack.skill_id);
 
                     let Some(skill_info) = metadata.0.skill.skills.get(&skill_id) else {
                         panic!("skill metadata not found");
                     };
 
-                    match unit.can_use_skill(&metadata.0, attack.skill_id, distance) {
+                    match unit.can_use_skill(&mut skills.0, &metadata.0, attack.skill_id, distance)
+                    {
                         SkillUseResult::Blocked
                         | SkillUseResult::OutOfRange
                         | SkillUseResult::InsufficientResources => {
                             action.state = State::Completed;
-                            //println!("skill use blocked {:?}", unit.skills);
+                            // debug!("skill use blocked {:?}", unit.skills);
                             continue;
                         }
                         SkillUseResult::Ok => {}
@@ -129,14 +136,16 @@ pub(crate) fn action(
                     action.state = State::Timer;
                 }
                 State::Active => {
-                    let distance = (attack.user.distance(attack.target) * 100.).round() as u32;
-                    let skill_use_result = unit.use_skill(&metadata.0, attack.skill_id, distance);
+                    let distance =
+                        (attack.user.distance(attack.skill_target.target) * 100.).round() as u32;
+                    let skill_use_result =
+                        unit.use_skill(&mut skills, &metadata.0, attack.skill_id, distance);
                     match skill_use_result {
                         SkillUseResult::Ok => {}
                         _ => panic!("This should never happen. {skill_use_result:?}"),
                     }
 
-                    let Some(skill) = unit.skills.iter().find(|s| s.id == attack.skill_id) else {
+                    let Some(skill) = skills.iter().find(|s| s.id == attack.skill_id) else {
                         panic!("skill missing");
                     };
                     let Some(skill_info) = metadata.0.skill.skills.get(&attack.skill_id) else {
@@ -169,8 +178,7 @@ pub(crate) fn action(
                         SCSpawnSkill {
                             id: skill.id,
                             uid: unit.uid,
-                            origin: attack.origin,
-                            target: attack.target,
+                            target: attack.skill_target.clone(),
                         },
                         NetworkTarget::All,
                     );

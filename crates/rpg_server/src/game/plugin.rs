@@ -139,6 +139,14 @@ pub(crate) fn setup_simulation(
 
     // FIXME more aabbs need to be inserted, impl FromWorld and move
     aabbs.aabbs.insert(
+        Cow::Owned("hero".into()),
+        Aabb3d {
+            min: Vec3::new(-0.3, 0.0, -0.25),
+            max: Vec3::new(0.3, 1.8, 0.25),
+        },
+    );
+
+    aabbs.aabbs.insert(
         Cow::Owned("direct_attack".into()),
         Aabb3d {
             min: Vec3::new(-0.1, -0.1, -0.5),
@@ -162,7 +170,7 @@ pub(crate) fn setup_simulation(
         },
     );
 
-    for _ in 0..24 {
+    for _ in 0..32 {
         let position = Vec3::new(rng.f32() * 128.0 - 64.0, 0., rng.f32() * 128.0 - 64.0);
 
         let villain_id = VillainId::sample(&mut rng);
@@ -171,6 +179,7 @@ pub(crate) fn setup_simulation(
             &mut server_metadata.0.next_uid,
             &position,
             &metadata.0,
+            aabbs.aabbs["hero"],
             villain_id,
         );
     }

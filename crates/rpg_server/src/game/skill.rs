@@ -11,8 +11,9 @@ use rpg_core::{
     combat::CombatResult,
     item::ItemDrops,
     skill::{
-        effect::*, skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData, Origin,
-        ProjectileInstance, ProjectileShape, Skill, SkillInfo, SkillInstance, TimerDescriptor,
+        effect::*, skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData,
+        OriginKind, ProjectileInstance, ProjectileShape, Skill, SkillInfo, SkillInstance,
+        SkillTarget, TimerDescriptor,
     },
     unit::UnitKind,
 };
@@ -58,11 +59,6 @@ pub(crate) struct SkillOwner {
     pub owner_kind: UnitKind,
 }
 
-pub struct SkillTarget {
-    origin: Vec3,
-    target: Vec3,
-}
-
 pub fn update_invulnerability(
     time: Res<Time>,
     mut skill_q: Query<&mut Invulnerability, With<SkillUse>>,
@@ -81,19 +77,19 @@ fn get_target_info(
     skill_meta: &SkillTableEntry,
     attack_data: &AttackData,
 ) -> SkillTarget {
-    let origin = match &skill_meta.origin {
-        Origin::Direct(_) => {
+    let origin = match &skill_meta.origin_kind {
+        OriginKind::Direct => {
             caster_transform.translation
-                + Vec3::new(0., 1.2, 0.)
+                + skill_meta.origin
                 + caster_transform.forward() * (skill_meta.use_range as f32 / 100. / 2.)
         }
-        Origin::Remote(data) => data.offset + attack_data.target,
-        Origin::Locked(_) => caster_transform.translation,
+        OriginKind::Remote => skill_meta.origin + attack_data.skill_target.target,
+        OriginKind::Locked => caster_transform.translation + skill_meta.origin,
     };
 
     SkillTarget {
         origin,
-        target: attack_data.target,
+        target: attack_data.skill_target.target,
     }
 }
 
@@ -105,8 +101,7 @@ pub(crate) fn prepare_skill(
     unit: &Unit,
     unit_transform: &Transform,
 ) -> (Aabb3d, Transform, SkillUse, Option<SkillTimer>) {
-    // TODO move to a new fn in rpg_util
-    let mut target = get_target_info(unit_transform, skill_meta, attack_data);
+    let target = get_target_info(unit_transform, skill_meta, attack_data);
 
     // debug!("{:?}", &skill_info.origin);
 
@@ -155,10 +150,9 @@ pub(crate) fn prepare_skill(
                 frame: 0,
             });
 
-            let skill_transform =
-                Transform::from_translation(target.origin).looking_at(target.target, Vec3::Y);
+            let transform = Transform::from_translation(target.origin).looking_to(Vec3::Z, Vec3::Y);
 
-            (aabb, instance, skill_transform)
+            (aabb, instance, transform)
         }
         SkillInfo::Projectile(info) => {
             // debug!("spawn {speed} {duration} {size}");
@@ -186,7 +180,7 @@ pub(crate) fn prepare_skill(
                 aabb
             };
 
-            let spawn_transform = if info.orbit.is_some() {
+            let transform = if info.orbit.is_some() {
                 let mut origin_transform =
                     Transform::from_translation(target.origin).looking_at(target.target, Vec3::Y);
                 origin_transform.translation += origin_transform.forward() * 2.;
@@ -203,14 +197,14 @@ pub(crate) fn prepare_skill(
                 info: info.clone(),
                 orbit: if info.orbit.is_some() {
                     Some(OrbitData {
-                        origin: spawn_transform.translation,
+                        origin: transform.translation,
                     })
                 } else {
                     None
                 },
             });
 
-            (aabb, instance_info, spawn_transform)
+            (aabb, instance_info, transform)
         }
         SkillInfo::Area(info) => {
             let skill_instance = SkillInstance::Area(AreaInstance { info: info.clone() });

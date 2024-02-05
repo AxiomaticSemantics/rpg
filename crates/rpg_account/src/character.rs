@@ -1,5 +1,6 @@
 use rpg_core::{
     passive_tree::PassiveSkillGraph,
+    skill::{Skill, SkillSlot},
     storage::UnitStorage,
     uid::Uid,
     unit::{HeroGameMode, Unit},
@@ -33,6 +34,8 @@ pub struct CharacterInfo {
 #[derive(Debug, Clone, Ser, De)]
 pub struct Character {
     pub unit: Unit,
+    pub skills: Vec<Skill>,
+    pub skill_slots: Vec<SkillSlot>,
     pub storage: UnitStorage,
     pub passive_tree: PassiveSkillGraph,
 }

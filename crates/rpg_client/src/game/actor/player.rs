@@ -92,16 +92,16 @@ pub fn input_actions(
     controls: Res<Controls>,
     cursor_position: Res<CursorPosition>,
     metadata: Res<MetadataResources>,
-    mut player_q: Query<(&Transform, &mut Actions, &Unit), With<Player>>,
+    mut player_q: Query<(&Transform, &mut Actions, &Unit, &SkillSlots), With<Player>>,
 ) {
     if controls.is_inhibited() {
         return;
     }
 
-    let (transform, mut actions, unit) = player_q.single_mut();
+    let (transform, mut actions, unit, skill_slots) = player_q.single_mut();
 
     if controls.mouse_primary.just_pressed || controls.gamepad_b.just_pressed {
-        let skill_id = unit.active_skills.primary.skill.unwrap();
+        let skill_id = skill_slots.slots[0].skill_id.unwrap();
 
         let skill_meta = &metadata.rpg.skill.skills[&skill_id];
 

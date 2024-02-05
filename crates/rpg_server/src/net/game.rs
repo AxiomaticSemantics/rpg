@@ -1,5 +1,9 @@
 use super::server::{NetworkParamsRO, NetworkParamsRW};
-use crate::{account::AccountInstance, assets::MetadataResources, game::plugin::GameState};
+use crate::{
+    account::AccountInstance,
+    assets::MetadataResources,
+    game::plugin::{AabbResources, GameState},
+};
 
 use bevy::{
     ecs::{
@@ -8,7 +12,7 @@ use bevy::{
         system::{Commands, Query, Res},
     },
     log::info,
-    math::{bounding::Aabb3d, Vec3},
+    math::Vec3,
     transform::components::Transform,
 };
 
@@ -18,7 +22,7 @@ use lightyear::prelude::*;
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions::{Action, ActionData, Actions, AttackData, State},
-    skill::get_skill_origin,
+    skill::{get_skill_origin, SkillSlots, Skills},
     unit::{Hero, HeroBundle, Unit, UnitBundle},
 };
 use util::math::AabbComponent;
@@ -58,6 +62,7 @@ pub(crate) fn receive_player_loaded(
     mut commands: Commands,
     mut ready_reader: EventReader<MessageEvent<CSClientReady>>,
     mut net_params: NetworkParamsRW,
+    aabbs: Res<AabbResources>,
     game_state: Res<GameState>,
     account_q: Query<&AccountInstance>,
 ) {
@@ -81,10 +86,7 @@ pub(crate) fn receive_player_loaded(
         info!("spawning player: {:?} {id_info:?}", account.0.info);
 
         let unit = character.character.unit.clone();
-        let aabb = Aabb3d {
-            min: Vec3::new(-0.3, 0.0, -0.2),
-            max: Vec3::new(0.3, 1.2, 0.2),
-        };
+        let aabb = aabbs.aabbs["hero"];
 
         net_params.server.send_message_to_target::<Channel1, _>(
             SCPlayerSpawn {
@@ -100,6 +102,8 @@ pub(crate) fn receive_player_loaded(
                 name: unit.name.clone(),
                 class: unit.class,
                 level: unit.level,
+                skills: character.character.skills.clone(),
+                skill_slots: character.character.skill_slots.clone(),
             },
             NetworkTarget::AllExcept(vec![client_id]),
         );
@@ -108,7 +112,11 @@ pub(crate) fn receive_player_loaded(
             AabbComponent(aabb),
             Transform::from_translation(Vec3::ZERO),
             HeroBundle {
-                unit: UnitBundle::new(Unit(unit)),
+                unit: UnitBundle::new(
+                    Unit(unit),
+                    Skills(character.character.skills.clone()),
+                    SkillSlots::new(character.character.skill_slots.clone()),
+                ),
                 hero: Hero,
             },
         ));
@@ -196,7 +204,7 @@ pub(crate) fn receive_skill_use_direct(
         let skill_msg = event.message();
         // info!("skill use direct: {skill_msg:?}");
 
-        let (origin, target) = get_skill_origin(
+        let skill_target = get_skill_origin(
             &metadata.0,
             &transform,
             transform.translation, // FIXMEcursor_position.ground,
@@ -208,13 +216,11 @@ pub(crate) fn receive_skill_use_direct(
                 ActionData::Attack(AttackData {
                     skill_id: skill_msg.0,
                     user: transform.translation,
-                    origin,
-                    target,
+                    skill_target,
                 }),
                 None,
                 true,
             ));
-            //
         }
     }
 }
@@ -236,7 +242,7 @@ pub(crate) fn receive_skill_use_targeted(
         let skill_msg = event.message();
         // info!("skill use targeted: {skill_msg:?}");
 
-        let (origin, target) = get_skill_origin(
+        let skill_target = get_skill_origin(
             &metadata.0,
             &transform,
             transform.translation, // FIXMEcursor_position.ground,
@@ -248,15 +254,12 @@ pub(crate) fn receive_skill_use_targeted(
                 ActionData::Attack(AttackData {
                     skill_id: skill_msg.skill_id,
                     user: transform.translation,
-                    origin,
-                    target,
+                    skill_target,
                 }),
                 None,
                 true,
             ));
-            //
         }
-        //
     }
 }
 
