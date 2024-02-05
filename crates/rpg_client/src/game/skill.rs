@@ -18,10 +18,7 @@ use util::{cleanup::CleanupStrategy, math::AabbComponent};
 
 use bevy::{
     asset::{Assets, Handle},
-    ecs::{
-        entity::Entity,
-        system::{Commands, Query, Res},
-    },
+    ecs::system::{Commands, Query, Res},
     gizmos::aabb::ShowAabbGizmo,
     log::debug,
     math::{bounding::Aabb3d, Vec3},
@@ -34,104 +31,12 @@ use bevy::{
         prelude::SpatialBundle,
     },
     scene::SceneBundle,
-    time::{Time, Timer, TimerMode},
+    time::{Timer, TimerMode},
     transform::components::Transform,
     utils::default,
 };
 
 use std::borrow::Cow;
-
-// FIXME
-// need to redo react to network messages for audio and animations
-
-/*
-        match combat_result {
-            CombatResult::Attack(attack) => match attack {
-                AttackResult::Blocked => {
-                    if defender.kind == UnitKind::Hero {
-                        game_state.session_stats.blocks += 1;
-                    } else {
-                        game_state.session_stats.times_blocked += 1;
-                    }
-
-                    d_audio.push("hit_blocked".into());
-
-                    match &instance.instance {
-                        SkillInstance::Direct(_) | SkillInstance::Projectile(_) => {
-                            commands.entity(s_entity).despawn_recursive();
-                            continue;
-                        }
-                        SkillInstance::Area(_) => {}
-                    }
-                }
-                AttackResult::Dodged => {
-                    if defender.kind == UnitKind::Hero {
-                        game_state.session_stats.dodges += 1;
-                    } else {
-                        game_state.session_stats.times_dodged += 1;
-                    }
-
-                    d_audio.push("hit_blocked".into());
-                }
-                _ => {
-                    d_audio.push("hit_soft".into());
-
-                    *d_anim_state = AnimationState {
-                        repeat: RepeatAnimation::Never,
-                        paused: false,
-                        index: 0,
-                    };
-
-                    if defender.kind == UnitKind::Villain {
-                        game_state.session_stats.hits += 1;
-                    } else {
-                        game_state.session_stats.villain_hits += 1;
-                    }
-                }
-            },
-            CombatResult::Death(_) => {
-                debug!("death");
-
-                d_audio.push("hit_death".into());
-
-                d_actions.reset();
-                *d_anim_state = AnimationState {
-                    repeat: RepeatAnimation::Never,
-                    paused: false,
-                    index: 1,
-                };
-
-                if defender.kind == UnitKind::Villain {
-                    game_state.session_stats.kills += 1;
-                    game_state.session_stats.hits += 1;
-
-                    /*
-                    if let Some(death) = defender.handle_death(
-                        &mut attacker,
-                        &metadata.rpg,
-                        &mut random.0,
-                        &mut game_state.next_uid,
-                    ) {
-                        game_state.session_stats.items_spawned += death.items.len() as u32;
-
-                        ground_drops.0.push(GroundItemDrop {
-                            source: event.defender_entity,
-                            items: death.items,
-                        });
-                    }*/
-                } else {
-                    game_state.session_stats.villain_hits += 1;
-                    game_state.state = PlayState::Death(GameOverState::Pending);
-                }
-
-                commands.entity(event.defender_entity).insert(Corpse);
-                /*commands
-                .entity(event.defender_entity)
-                .insert(CorpseTimer(Timer::from_seconds(60., TimerMode::Once)));*/
-            }
-            _ => {}
-        }
-}*/
 
 pub(crate) fn prepare_skill(
     owner: Uid,
@@ -444,7 +349,7 @@ pub(crate) fn spawn_instance(
 }
 
 // TODO determine what the client will do here..
-// TODO just delete if this is already in the server, make a note there
+// TODO to avoid traffic the client should handle any interactions that would destroy a skill
 /*
 /// Returns `true` if the skill should be destroyed
 fn handle_effects(
