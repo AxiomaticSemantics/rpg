@@ -34,11 +34,13 @@
       "use_duration_secs": 0.6
     },
     "BasicBolt": {
+      "timer": {
+        "Duration": 3
+      },
       "info": {
         "Projectile": {
           "shape": "Box",
           "speed": 300,
-          "duration": 3,
           "size": 10,
           "projectiles": 1
         }
@@ -88,11 +90,13 @@
       "use_duration_secs": 0.8
     },
     "BasicOrb": {
+      "timer": {
+        "Duration": 10
+      },
       "info": {
         "Projectile": {
           "shape": "Sphere",
           "speed": 300,
-          "duration": 15,
           "size": 30,
           "projectiles": 1,
           "orbit": {
@@ -135,13 +139,18 @@
       "use_duration_secs": 0.8
     },
     "BasicAerial": {
+      "timer": {
+        "Tickable": {
+          "duration": 10,
+          "frequency": 0.666
+        }
+      },
       "info": {
         "Projectile": {
           "shape": "Sphere",
           "speed": 500,
           "size": 100,
           "projectiles": 1,
-          "tick_rate": 0.666,
           "aerial": {
             "height": 800
           }
@@ -182,11 +191,15 @@
       "use_duration_secs": 0.8
     },
     "AreaLocked": {
+      "timer": {
+        "Tickable": { 
+	  "frequency": 0.666,
+          "duration": 3
+	}
+      },
       "info": {
         "Area": {
-          "radius": 300,
-          "duration": 3,
-          "tick_rate": 0.666
+          "radius": 300
         }
       },
       "use_range": 250,
@@ -216,11 +229,15 @@
       "use_duration_secs": 1.2
     },
     "AreaRemote": {
+      "timer": {
+	"Tickable": {
+          "frequency": 0.666,
+          "duration": 5
+	}
+      },
       "info": {
         "Area": {
-          "radius": 150,
-          "duration": 5,
-          "tick_rate": 0.666
+          "radius": 150
         }
       },
       "use_range": 800,

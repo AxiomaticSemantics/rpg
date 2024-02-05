@@ -7,8 +7,8 @@ use super::{
 
 use rpg_core::{
     skill::{
-        skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData, Origin,
-        ProjectileInstance, ProjectileShape, SkillId, SkillInfo, SkillInstance,
+        skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData, ProjectileInstance,
+        ProjectileShape, SkillId, SkillInfo, SkillInstance, TimerDescriptor,
     },
     uid::Uid,
 };
@@ -23,7 +23,6 @@ use bevy::{
         system::{Commands, Query, Res},
     },
     gizmos::aabb::ShowAabbGizmo,
-    hierarchy::DespawnRecursiveExt,
     log::debug,
     math::{bounding::Aabb3d, Vec3},
     pbr::{MaterialMeshBundle, PbrBundle, StandardMaterial},
@@ -134,45 +133,10 @@ use std::borrow::Cow;
         }
 }*/
 
-// TODO probably move this also?
-pub fn clean_skills(
-    mut commands: Commands,
-    time: Res<Time>,
-    mut skill_q: Query<(Entity, &Transform, &SkillUse)>,
-) {
-    for (entity, transform, skill_use) in &mut skill_q {
-        let despawn = match &skill_use.instance {
-            SkillInstance::Projectile(info) => match info.info.duration {
-                Some(d) => time.elapsed_seconds() - info.start_time >= d,
-                None => {
-                    if info.info.aerial.is_some() {
-                        transform.translation.y < info.info.size as f32 / 100.
-                    } else {
-                        false
-                    }
-                }
-            },
-            SkillInstance::Direct(info) => {
-                // debug!("direct skill: {info:?}");
-                info.frame >= info.info.frames
-            }
-            SkillInstance::Area(info) => {
-                // debug!("area skill: {info:?}");
-                time.elapsed_seconds() - info.start_time >= info.info.duration
-            }
-        };
-
-        if despawn {
-            commands.entity(entity).despawn_recursive();
-        }
-    }
-}
-
 pub(crate) fn prepare_skill(
     owner: Uid,
     origin: &Vec3,
     target: &Vec3,
-    time: &Time,
     renderables: &mut RenderResources,
     meshes: &mut Assets<Mesh>,
     skill_info: &SkillTableEntry,
@@ -183,6 +147,7 @@ pub(crate) fn prepare_skill(
     SkillUse,
     Option<PropHandle>,
     Option<Handle<StandardMaterial>>,
+    Option<SkillTimer>,
 ) {
     // debug!("{:?}", &skill_info.origin);
 
@@ -204,7 +169,23 @@ pub(crate) fn prepare_skill(
         .collect();
     */
 
-    let (aabb, skill_use, transform, mesh, material, tickable) = match &skill_info.info {
+    let timer = if let Some(timer) = &skill_info.timer {
+        match timer {
+            TimerDescriptor::Duration(duration) => Some(SkillTimer::Duration(Timer::from_seconds(
+                *duration,
+                TimerMode::Once,
+            ))),
+            TimerDescriptor::Tickable(tickable) => Some(SkillTimer::Tickable(Tickable {
+                timer: Timer::from_seconds(tickable.duration, TimerMode::Once),
+                ticker: Timer::from_seconds(tickable.frequency, TimerMode::Repeating),
+                can_damage: true,
+            })),
+        }
+    } else {
+        None
+    };
+
+    let (aabb, skill_use, transform, mesh, material) = match &skill_info.info {
         SkillInfo::Direct(_) => {
             let aabb = renderables.aabbs["direct_attack"];
             let SkillInfo::Direct(info) = &skill_info.info else {
@@ -218,15 +199,10 @@ pub(crate) fn prepare_skill(
 
             let skill_transform = Transform::from_translation(*origin).looking_at(*target, Vec3::Y);
 
-            (aabb, instance, skill_transform, None, None, None)
+            (aabb, instance, skill_transform, None, None)
         }
         SkillInfo::Projectile(info) => {
             //println!("spawn {speed} {duration} {size}");
-
-            let tickable = info.tick_rate.as_ref().map(|tr| Tickable {
-                timer: Timer::from_seconds(*tr, TimerMode::Repeating),
-                can_damage: true,
-            });
 
             let (mesh_handle, aabb) = if info.shape == ProjectileShape::Box {
                 let handle = renderables.props["bolt_01"].handle.clone();
@@ -273,12 +249,9 @@ pub(crate) fn prepare_skill(
                 (handle, aabb)
             };
 
-            let time = time.elapsed_seconds();
-
             let spawn_transform = if info.orbit.is_some() {
-                Transform::from_translation(*origin + Vec3::new(0., 1.2, 0.))
+                Transform::from_translation(*origin)
             } else if info.aerial.is_some() {
-                //println!("prepare aerial {attack_data:?}");
                 Transform::from_translation(*origin).looking_at(*target, Vec3::Y)
             } else {
                 Transform::from_translation(*origin).looking_at(*target, Vec3::Y)
@@ -286,7 +259,6 @@ pub(crate) fn prepare_skill(
 
             let instance_info = SkillInstance::Projectile(ProjectileInstance {
                 info: info.clone(),
-                start_time: time,
                 orbit: if info.orbit.is_some() {
                     Some(OrbitData {
                         origin: spawn_transform.translation,
@@ -302,19 +274,10 @@ pub(crate) fn prepare_skill(
                 spawn_transform,
                 Some(mesh_handle),
                 Some(renderables.materials["lava"].clone_weak()),
-                tickable,
             )
         }
         SkillInfo::Area(info) => {
-            let skill_instance = SkillInstance::Area(AreaInstance {
-                info: info.clone(),
-                start_time: time.elapsed_seconds(),
-            });
-
-            let tickable = info.tick_rate.as_ref().map(|tr| Tickable {
-                timer: Timer::from_seconds(*tr, TimerMode::Repeating),
-                can_damage: true,
-            });
+            let skill_instance = SkillInstance::Area(AreaInstance { info: info.clone() });
 
             let transform = Transform::from_translation(*origin + Vec3::new(0.0, 0.01, 0.0))
                 .looking_to(Vec3::NEG_Y, Vec3::Y);
@@ -330,7 +293,7 @@ pub(crate) fn prepare_skill(
                     renderables.aabbs[key.as_str()],
                 )
             } else {
-                // The required resource are not cached, add them into the cache
+                // The required resource is not cached, add it
                 let mut mesh: Mesh = Circle::new(radius).into();
                 let _ = mesh.generate_tangents();
                 //let aabb = mesh.compute_aabb().unwrap();
@@ -361,7 +324,6 @@ pub(crate) fn prepare_skill(
                 transform,
                 Some(PropHandle::Mesh(mesh_handle)),
                 Some(material),
-                tickable,
             )
         }
     };
@@ -372,10 +334,9 @@ pub(crate) fn prepare_skill(
         skill_info.base_damage.clone(),
         skill_use,
         vec![], // FIXME effects,
-        tickable,
     );
 
-    (aabb, transform, instance, mesh, material)
+    (aabb, transform, instance, mesh, material, timer)
 }
 
 pub(crate) fn spawn_instance(
@@ -385,6 +346,7 @@ pub(crate) fn spawn_instance(
     skill_use_instance: SkillUse,
     prop: Option<PropHandle>,
     material: Option<Handle<StandardMaterial>>,
+    timer: Option<SkillTimer>,
 ) {
     // FIXME skill timer needs to be passed in here
     let skill_use = SkillUseBundle::new(skill_use_instance);
@@ -396,41 +358,49 @@ pub(crate) fn spawn_instance(
         skill_use,
     );
 
-    match &common_bundle.3.skill.instance {
+    let entity = match &common_bundle.3.skill.instance {
         SkillInstance::Direct(_) => {
             // debug!("spawning direct skill {}", transform.translation);
 
-            commands.spawn((
-                common_bundle,
-                ShowAabbGizmo::default(),
-                SpatialBundle::from_transform(transform),
-            ));
+            commands
+                .spawn((
+                    common_bundle,
+                    ShowAabbGizmo::default(),
+                    SpatialBundle::from_transform(transform),
+                ))
+                .id()
         }
         SkillInstance::Projectile(_) => {
             // debug!("spawning projectile skill");
 
             let handle = prop.unwrap();
             if let PropHandle::Scene(handle) = handle {
-                commands.spawn((
-                    common_bundle,
-                    SceneBundle {
-                        scene: handle,
-                        transform,
-                        ..default()
-                    },
-                    ShowAabbGizmo::default(),
-                ));
+                commands
+                    .spawn((
+                        common_bundle,
+                        SceneBundle {
+                            scene: handle,
+                            transform,
+                            ..default()
+                        },
+                        ShowAabbGizmo::default(),
+                    ))
+                    .id()
             } else if let PropHandle::Mesh(handle) = handle {
-                commands.spawn((
-                    common_bundle,
-                    PbrBundle {
-                        transform,
-                        mesh: handle,
-                        material: material.unwrap(),
-                        ..default()
-                    },
-                    ShowAabbGizmo::default(),
-                ));
+                commands
+                    .spawn((
+                        common_bundle,
+                        PbrBundle {
+                            transform,
+                            mesh: handle,
+                            material: material.unwrap(),
+                            ..default()
+                        },
+                        ShowAabbGizmo::default(),
+                    ))
+                    .id()
+            } else {
+                Entity::PLACEHOLDER
             }
         }
         SkillInstance::Area(_) => {
@@ -438,28 +408,38 @@ pub(crate) fn spawn_instance(
 
             let handle = prop.unwrap();
             if let PropHandle::Scene(handle) = handle {
-                commands.spawn((
-                    common_bundle,
-                    SceneBundle {
-                        scene: handle,
-                        transform,
-                        ..default()
-                    },
-                    ShowAabbGizmo::default(),
-                ));
+                commands
+                    .spawn((
+                        common_bundle,
+                        SceneBundle {
+                            scene: handle,
+                            transform,
+                            ..default()
+                        },
+                        ShowAabbGizmo::default(),
+                    ))
+                    .id()
             } else if let PropHandle::Mesh(handle) = handle {
-                commands.spawn((
-                    common_bundle,
-                    MaterialMeshBundle {
-                        transform,
-                        mesh: handle,
-                        material: material.unwrap(),
-                        ..default()
-                    },
-                    ShowAabbGizmo::default(),
-                ));
+                commands
+                    .spawn((
+                        common_bundle,
+                        MaterialMeshBundle {
+                            transform,
+                            mesh: handle,
+                            material: material.unwrap(),
+                            ..default()
+                        },
+                        ShowAabbGizmo::default(),
+                    ))
+                    .id()
+            } else {
+                Entity::PLACEHOLDER
             }
         }
+    };
+
+    if let Some(timer) = timer {
+        commands.entity(entity).insert(timer);
     }
 }
 

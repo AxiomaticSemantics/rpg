@@ -8,7 +8,7 @@ use rpg_util::{
     unit::{Corpse, Unit},
 };
 
-use util::{math::AabbComponent, random::SharedRng};
+use util::math::AabbComponent;
 
 use lightyear::shared::NetworkTarget;
 
@@ -16,7 +16,7 @@ use bevy::{
     ecs::{
         entity::Entity,
         query::{Changed, With, Without},
-        system::{Commands, ParamSet, Query, Res, ResMut, Resource},
+        system::{Commands, Query, Res, ResMut, Resource},
     },
     log::info,
     math::Vec3,
@@ -27,6 +27,9 @@ use bevy::{
 #[derive(Default, Resource)]
 pub(crate) struct MovingUnits(pub(crate) Vec<Entity>);
 
+// TODO split this up further, rpg_util actions needs to be reworked, each action should implement
+// it's handlers
+// actions should accumulate responses and handle dispatching all network message at once
 pub(crate) fn action(
     mut commands: Commands,
     mut net_params: NetworkParamsRW,
@@ -34,7 +37,6 @@ pub(crate) fn action(
     time: Res<Time>,
     metadata: Res<MetadataResources>,
     mut aabbs: ResMut<AabbResources>,
-    mut rng: ResMut<SharedRng>,
     mut unit_q: Query<
         (
             Entity,
@@ -46,7 +48,6 @@ pub(crate) fn action(
         ),
         (Changed<Actions>, Without<Corpse>),
     >,
-    //mut move_q: Query<(Entity, &Unit, &Transform, &AabbComponent, &Actions), Without<Corpse>>,
 ) {
     use std::f32::consts;
 
@@ -58,6 +59,7 @@ pub(crate) fn action(
         // All of the following action handlers are in a strict order
 
         // First react to any knockback events, this blocks all other actions
+        // TODO this needs to be handled in the same manner as movement
         if let Some(action) = &mut actions.knockback {
             let ActionData::Knockback(knockback) = action.data else {
                 panic!("expected knockback data");
@@ -104,13 +106,21 @@ pub(crate) fn action(
                         }
                     }
 
-                    net_params.server.send_message_to_target::<Channel1, _>(
-                        SCUnitAttack {
-                            uid: unit.uid,
-                            skill_id,
-                        },
-                        NetworkTarget::All,
-                    );
+                    if net_params
+                        .server
+                        .send_message_to_target::<Channel1, _>(
+                            SCUnitAttack {
+                                uid: unit.uid,
+                                skill_id,
+                            },
+                            NetworkTarget::All,
+                        )
+                        .is_err()
+                    {
+                        // TODO remove client, despawn it
+                        action.state = State::Completed;
+                        continue;
+                    }
 
                     let duration = skill_info.use_duration_secs
                         * unit.stats.vitals.stats["Cooldown"].value.f32();
@@ -140,8 +150,8 @@ pub(crate) fn action(
                         state.session_stats.villain_attacks += 1;
                     }*/
 
-                    let (skill_aabb, skill_transform, skill_use) = skill::prepare_skill(
-                        &attack, &time, &mut rng, &mut aabbs, skill_info, skill, &unit, &transform,
+                    let (skill_aabb, skill_transform, skill_use, timer) = skill::prepare_skill(
+                        &attack, &mut aabbs, skill_info, skill, &unit, &transform,
                     );
 
                     info!("spawning skill");
@@ -151,6 +161,8 @@ pub(crate) fn action(
                         skill_transform,
                         skill_use,
                         entity,
+                        unit.kind,
+                        timer,
                     );
 
                     net_params.server.send_message_to_target::<Channel1, _>(
@@ -226,7 +238,6 @@ pub(crate) fn action(
         }
 
         if let Some(action) = &actions.movement {
-            // FIXME movement states should be set in the second loop
             if action.state == State::Pending
                 || action.state == State::Active
                 || action.state == State::Finalize
@@ -240,6 +251,7 @@ pub(crate) fn action(
     moving_units.0 = want_move_units;
 }
 
+// TODO cache info about the movement in `MoveUnits`
 pub(crate) fn try_move_units(
     mut net_params: NetworkParamsRW,
     mut moving_units: ResMut<MovingUnits>,
@@ -293,6 +305,7 @@ pub(crate) fn try_move_units(
             }
         }
         if *entity == Entity::PLACEHOLDER {
+            // FIXME changing the entity in-situ precludes handling this correctly
             // TODO The action has been denied, if not already in progress, send a message to connected clients
         }
     }

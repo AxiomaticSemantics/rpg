@@ -5,6 +5,18 @@ use crate::{damage::DamageDescriptor, metadata::Metadata, stat::StatId, value::V
 use glam::Vec3;
 use serde_derive::{Deserialize as De, Serialize as Ser};
 
+#[derive(PartialEq, Clone, Debug, Ser, De)]
+pub struct TickableDescripor {
+    pub duration: f32,
+    pub frequency: f32,
+}
+
+#[derive(PartialEq, Clone, Debug, Ser, De)]
+pub enum TimerDescriptor {
+    Duration(f32),
+    Tickable(TickableDescripor),
+}
+
 #[derive(Default, PartialEq, Clone, Debug, Ser, De)]
 pub struct DirectOrigin {
     pub offset: Vec3,
@@ -103,14 +115,12 @@ pub struct DirectInstance {
 #[derive(Ser, De, Default, Debug, Clone)]
 pub struct AreaInfo {
     pub radius: u32,
-    pub duration: f32,
     pub tick_rate: Option<f32>,
 }
 
 #[derive(Debug, Default, Clone)]
 pub struct AreaInstance {
     pub info: AreaInfo,
-    pub start_time: f32,
 }
 
 #[derive(Ser, De, Debug, Default, Clone)]
@@ -135,7 +145,6 @@ pub struct ProjectileInfo {
     pub projectiles: u32,
     pub speed: u32,
     pub size: u32,
-    pub duration: Option<f32>,
     pub orbit: Option<OrbitInfo>,
     pub aerial: Option<AerialInfo>,
     pub tick_rate: Option<f32>,
@@ -149,7 +158,6 @@ pub struct OrbitData {
 #[derive(Debug, Clone)]
 pub struct ProjectileInstance {
     pub info: ProjectileInfo,
-    pub start_time: f32,
     pub orbit: Option<OrbitData>,
 }
 

@@ -1,6 +1,6 @@
 use crate::{
     damage::DamageDescriptor,
-    skill::{effect::EffectInfo, Origin, SkillId, SkillInfo},
+    skill::{effect::EffectInfo, Origin, SkillId, SkillInfo, TimerDescriptor},
     stat::Stat,
 };
 
@@ -18,6 +18,7 @@ pub struct SkillTableEntry {
     pub effects: Option<Vec<EffectInfo>>,
     pub use_duration_secs: f32,
     pub cooldown: Option<f32>,
+    pub timer: Option<TimerDescriptor>,
 }
 
 #[derive(Default, Ser, De)]

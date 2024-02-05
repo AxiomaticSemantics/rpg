@@ -4,8 +4,9 @@ use bevy::{
         component::Component,
         entity::Entity,
         event::Event,
-        system::{Query, Res},
+        system::{Commands, Query, Res},
     },
+    hierarchy::DespawnRecursiveExt,
     math::{Quat, Vec3},
     prelude::{Deref, DerefMut},
     time::{Time, Timer},
@@ -17,19 +18,28 @@ use rpg_core::{
     metadata::Metadata,
     skill::{effect::*, Origin, SkillId, SkillInstance},
     uid::Uid,
+    unit::UnitKind,
 };
 
 #[derive(Event)]
 pub struct SkillContactEvent {
     pub entity: Entity,
     pub owner: Entity,
+    pub owner_kind: UnitKind,
     pub defender: Entity,
 }
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct Tickable {
     pub timer: Timer,
+    pub ticker: Timer,
     pub can_damage: bool,
+}
+
+#[derive(Debug, Component)]
+pub enum SkillTimer {
+    Duration(Timer),
+    Tickable(Tickable),
 }
 
 #[derive(Debug, Clone)]
@@ -48,7 +58,6 @@ pub struct SkillUse {
     pub damage: DamageDescriptor,
     pub instance: SkillInstance,
     pub effects: Vec<EffectInstance>,
-    pub tickable: Option<Tickable>,
 }
 
 impl SkillUse {
@@ -58,7 +67,6 @@ impl SkillUse {
         damage: DamageDescriptor,
         instance: SkillInstance,
         effects: Vec<EffectInstance>,
-        tickable: Option<Tickable>,
     ) -> Self {
         Self {
             owner,
@@ -66,7 +74,6 @@ impl SkillUse {
             damage,
             instance,
             effects,
-            tickable,
         }
     }
 }
@@ -79,6 +86,45 @@ pub struct SkillUseBundle {
 impl SkillUseBundle {
     pub fn new(skill: SkillUse) -> Self {
         Self { skill }
+    }
+}
+
+pub fn clean_skills(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut skill_q: Query<(Entity, &Transform, &SkillUse, Option<&SkillTimer>)>,
+) {
+    for (entity, transform, skill_use, timer) in &mut skill_q {
+        if let Some(timer) = timer {
+            if let SkillTimer::Duration(timer) = timer {
+                if timer.just_finished() {
+                    commands.entity(entity).despawn_recursive();
+                    continue;
+                }
+            }
+        }
+
+        let despawn = match &skill_use.instance {
+            SkillInstance::Projectile(info) => {
+                if info.info.aerial.is_some() {
+                    transform.translation.y < info.info.size as f32 / 100.
+                } else {
+                    false
+                }
+            }
+            SkillInstance::Direct(info) => {
+                // info!("direct skill: {info:?}");
+                info.frame >= info.info.frames
+            }
+            SkillInstance::Area(info) => {
+                // info!("area skill: {info:?}");
+                false
+            }
+        };
+
+        if despawn {
+            commands.entity(entity).despawn_recursive();
+        }
     }
 }
 
@@ -103,9 +149,25 @@ pub fn get_skill_origin(
     }
 }
 
-pub fn update_skill(time: Res<Time>, mut skill_q: Query<(&mut Transform, &mut SkillUse)>) {
+pub fn update_skill(
+    time: Res<Time>,
+    mut skill_q: Query<(&mut Transform, &mut SkillUse, Option<&mut SkillTimer>)>,
+) {
     let dt = time.delta_seconds();
-    for (mut transform, mut skill_use) in &mut skill_q {
+    for (mut transform, mut skill_use, timer) in &mut skill_q {
+        if let Some(mut timer) = timer {
+            match &mut *timer {
+                SkillTimer::Duration(ref mut timer) => {}
+                SkillTimer::Tickable(ref mut timer) => {
+                    timer.timer.tick(time.delta());
+                    if timer.timer.just_finished() {
+                        timer.can_damage = true;
+                        timer.timer.reset();
+                    }
+                }
+            }
+        }
+
         match &mut skill_use.instance {
             SkillInstance::Projectile(info) => {
                 // The skill would have been destroyed if it was expired, advance it
@@ -144,13 +206,6 @@ pub fn update_skill(time: Res<Time>, mut skill_q: Query<(&mut Transform, &mut Sk
             SkillInstance::Area(_) => {
                 transform.rotate_local_z(2. * dt);
                 //println!("update area skill");
-                if let Some(tickable) = &mut skill_use.tickable {
-                    tickable.timer.tick(time.delta());
-                    if tickable.timer.just_finished() {
-                        tickable.can_damage = true;
-                        tickable.timer.reset();
-                    }
-                }
             }
         }
     }

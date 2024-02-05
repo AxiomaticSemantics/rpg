@@ -25,7 +25,7 @@ use rpg_core::{uid::Uid, unit::HeroGameMode, villain::VillainId};
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     item::GroundItemDrops,
-    skill::{update_skill, SkillContactEvent},
+    skill::{clean_skills, update_skill, SkillContactEvent},
 };
 
 use util::random::{Rng, SharedRng};
@@ -103,7 +103,7 @@ impl Plugin for GamePlugin {
                     villain::remote_spawn,
                     skill::update_invulnerability,
                     unit::remove_corpses,
-                    skill::clean_skills,
+                    clean_skills,
                     rpg_util::actions::action_tick,
                     unit::upkeep,
                     item::spawn_ground_items,

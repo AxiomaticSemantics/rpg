@@ -30,7 +30,6 @@ use bevy::{
     log::{debug, info},
     math::Vec3,
     render::mesh::Mesh,
-    time::Time,
     transform::components::Transform,
 };
 
@@ -311,7 +310,6 @@ pub(crate) fn receive_despawn_item(
 
 pub(crate) fn receive_spawn_skill(
     mut commands: Commands,
-    time: Res<Time>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut renderables: ResMut<RenderResources>,
     metadata: Res<MetadataResources>,
@@ -325,18 +323,25 @@ pub(crate) fn receive_spawn_skill(
 
         let skill_meta = &metadata.rpg.skill.skills[&skill_id];
 
-        let (aabb, transform, instance, mesh, material) = skill::prepare_skill(
+        let (aabb, transform, instance, mesh, material, timer) = skill::prepare_skill(
             spawn_msg.uid,
             &spawn_msg.origin,
             &spawn_msg.target,
-            &time,
             &mut renderables,
             &mut meshes,
             skill_meta,
             spawn_msg.id,
         );
 
-        skill::spawn_instance(&mut commands, aabb, transform, instance, mesh, material);
+        skill::spawn_instance(
+            &mut commands,
+            aabb,
+            transform,
+            instance,
+            mesh,
+            material,
+            timer,
+        );
     }
 }
 
