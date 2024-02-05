@@ -2,6 +2,7 @@ use crate::{account::AccountInstance, assets::MetadataResources, net::server::Ne
 
 use rpg_core::{
     metadata::Metadata,
+    skill::{SkillSlot, SkillSlotId},
     uid::NextUid,
     unit::{UnitInfo, UnitKind, VillainInfo},
     villain::VillainId,
@@ -9,7 +10,7 @@ use rpg_core::{
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions::{Action, ActionData, Actions, AttackData, State},
-    skill::get_skill_origin,
+    skill::{get_skill_origin, SkillSlots, Skills},
     unit::{Corpse, Hero, Unit, UnitBundle, Villain, VillainBundle},
 };
 
@@ -99,6 +100,7 @@ pub(crate) fn spawn(
     next_uid: &mut NextUid,
     origin: &Vec3,
     metadata: &Metadata,
+    aabb: Aabb3d,
     villain_id: VillainId,
 ) {
     let villain_meta = &metadata.unit.villains[&villain_id];
@@ -109,17 +111,16 @@ pub(crate) fn spawn(
         UnitInfo::Villain(VillainInfo { id: villain_id }),
         1,
         villain_meta.name.clone(),
-        None,
         metadata,
     );
     next_uid.next();
 
-    unit.add_default_skills(metadata);
+    let mut skills = vec![];
+    unit.add_default_skills(&mut skills, metadata);
 
-    let aabb = AabbComponent(Aabb3d {
-        min: Vec3::new(-0.3, 0.0, -0.2),
-        max: Vec3::new(0.3, 1.2, 0.2),
-    });
+    let mut slots = vec![];
+    slots.push(SkillSlot::new(SkillSlotId(0), Some(skills[0].id)));
+    let skill_slots = SkillSlots::new(slots);
 
     let transform = Transform::from_translation(*origin);
     let unit_info = unit.info.villain();
@@ -131,10 +132,10 @@ pub(crate) fn spawn(
 
     // spawn
     commands.spawn((
-        aabb,
+        AabbComponent(aabb),
         VillainBundle {
             villain: Villain,
-            unit: UnitBundle::new(Unit(unit)),
+            unit: UnitBundle::new(Unit(unit), Skills(skills), skill_slots),
         },
         ThinkTimer(Timer::from_seconds(4.0, TimerMode::Repeating)),
         VillainController::new(VillainState::Idle),
@@ -147,11 +148,17 @@ pub(crate) fn remote_spawn(
     mut net_params: NetworkParamsRW,
     hero_q: Query<(Entity, &Transform, &AccountInstance), (With<Hero>, Without<Corpse>)>,
     mut villain_q: Query<
-        (&Transform, &Unit, &mut VillainController),
+        (
+            &Transform,
+            &Unit,
+            &Skills,
+            &SkillSlots,
+            &mut VillainController,
+        ),
         (With<Villain>, Without<Corpse>),
     >,
 ) {
-    for (transform, unit, mut controller) in &mut villain_q {
+    for (transform, unit, skills, skill_slots, mut controller) in &mut villain_q {
         for (hero_entity, hero_transform, account) in &hero_q {
             let distance = transform.translation.distance(hero_transform.translation);
             if distance > 16.0 {
@@ -181,6 +188,8 @@ pub(crate) fn remote_spawn(
                     info: villain_info,
                     level: unit.level,
                     uid: unit.uid,
+                    skills: skills.0.clone(),
+                    skill_slots: skill_slots.slots.clone(),
                 },
                 NetworkTarget::Only(vec![client_id]),
             );
@@ -256,6 +265,8 @@ pub(crate) fn villain_think(
         (
             &Transform,
             &Unit,
+            &Skills,
+            &SkillSlots,
             &mut VillainController,
             &mut Actions,
             &mut ThinkTimer,
@@ -265,7 +276,9 @@ pub(crate) fn villain_think(
 ) {
     // TODO each villian needs advance in it's current target or select a new target at most once
     // per turn
-    for (transform, unit, mut villain, mut actions, mut think_timer) in &mut villain_q {
+    for (transform, unit, skills, skill_slots, mut villain, mut actions, mut think_timer) in
+        &mut villain_q
+    {
         if !villain.is_activated() {
             continue;
         }
@@ -313,7 +326,7 @@ pub(crate) fn villain_think(
             ));
         }
 
-        let skill_id = unit.active_skills.primary.skill.unwrap();
+        let skill_id = skill_slots.slots[0].skill_id.unwrap();
         let skill_info = &metadata.0.skill.skills[&skill_id];
 
         let wanted_range = (skill_info.use_range as f32 * 0.5) as u32;
@@ -340,15 +353,14 @@ pub(crate) fn villain_think(
         if think_timer.finished() && actions.attack.is_none() {
             // debug!("distance {distance} use range {}", skill_info.use_range);
 
-            let (origin, target) =
+            let skill_target =
                 get_skill_origin(&metadata.0, transform, hero_transform.translation, skill_id);
 
             actions.request(Action::new(
                 ActionData::Attack(AttackData {
                     skill_id,
                     user: transform.translation,
-                    origin,
-                    target,
+                    skill_target,
                 }),
                 None,
                 true,

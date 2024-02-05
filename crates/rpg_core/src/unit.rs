@@ -5,7 +5,7 @@ use crate::{
     item::{self, Item, ItemId, Rarity},
     metadata::Metadata,
     passive_tree::PassiveSkillGraph,
-    skill::{ActiveSkills, Skill, SkillId, SkillSlotId, SkillUseResult},
+    skill::{Skill, SkillId, SkillUseResult},
     stat::{
         modifier::{Modifier, ModifierFormat, ModifierId, ModifierKind, Operation},
         stat_system::Stats,
@@ -120,8 +120,6 @@ pub struct Unit {
     pub level: u8,
     pub name: String,
     pub stats: Stats,
-    pub active_skills: ActiveSkills,
-    pub skills: Vec<Skill>,
     pub passive_skill_points: u8,
 }
 
@@ -134,17 +132,9 @@ impl Unit {
         info: UnitInfo,
         level: u8,
         name: impl Into<String>,
-        skills: Option<Vec<Skill>>,
         metadata: &Metadata,
     ) -> Self {
         let mut stats = Stats::new(metadata);
-
-        let skills = if let Some(skills) = skills {
-            skills
-        } else {
-            vec![]
-        };
-
         stats.base.assign_bonus_stats(class, metadata);
         stats.recompute(true);
 
@@ -156,23 +146,26 @@ impl Unit {
             level,
             name: name.into(),
             stats,
-            active_skills: ActiveSkills::default(),
-            skills,
             passive_skill_points: 0,
         }
     }
 
-    pub fn add_default_skills(&mut self, metadata: &Metadata) {
+    pub fn add_default_skills(&mut self, skills: &mut Vec<Skill>, metadata: &Metadata) {
         let skill_id = match &self.info {
             UnitInfo::Hero(_) => metadata.unit.hero.default_skills[&self.class],
             UnitInfo::Villain(info) => metadata.unit.villains[&info.id].skill_id,
         };
 
-        self.add_skill(metadata, skill_id, 1);
-        self.set_skill(skill_id, SkillSlotId::Primary);
+        self.add_skill(skills, metadata, skill_id, 1);
     }
 
-    pub fn add_skill(&mut self, metadata: &Metadata, skill_id: SkillId, level: u8) {
+    pub fn add_skill(
+        &mut self,
+        skills: &mut Vec<Skill>,
+        metadata: &Metadata,
+        skill_id: SkillId,
+        level: u8,
+    ) {
         let skill_info = metadata.skill.skills.get(&skill_id).unwrap();
 
         let effects = match &skill_info.effects {
@@ -180,12 +173,11 @@ impl Unit {
             None => Vec::new(),
         };
 
-        self.skills.push(Skill::new(
+        skills.push(Skill::new(
             skill_id,
             level,
             skill_info.base_damage.clone(),
             skill_info.info.clone(),
-            skill_info.origin.clone(),
             effects,
         ));
     }
@@ -446,13 +438,6 @@ impl Unit {
         }
     }
 
-    pub fn set_skill(&mut self, skill_id: SkillId, skill_slot: SkillSlotId) {
-        match skill_slot {
-            SkillSlotId::Primary => self.active_skills.primary.skill = Some(skill_id),
-            SkillSlotId::Secondary => self.active_skills.secondary.skill = Some(skill_id),
-        }
-    }
-
     pub fn handle_death(
         &mut self,
         _attacker: &Self,
@@ -520,11 +505,12 @@ impl Unit {
     // Improve this,
     pub fn can_use_skill(
         &self,
+        skills: &Vec<Skill>,
         metadata: &Metadata,
         skill_id: SkillId,
         target_distance: u32,
     ) -> SkillUseResult {
-        let Some(skill) = self.skills.iter().find(|s| s.id == skill_id) else {
+        let Some(skill) = skills.iter().find(|s| s.id == skill_id) else {
             return SkillUseResult::Error;
         };
 
@@ -561,16 +547,17 @@ impl Unit {
 
     pub fn use_skill(
         &mut self,
+        skills: &mut Vec<Skill>,
         metadata: &Metadata,
         skill_id: SkillId,
         target_distance: u32,
     ) -> SkillUseResult {
-        let request_result = self.can_use_skill(metadata, skill_id, target_distance);
+        let request_result = self.can_use_skill(skills, metadata, skill_id, target_distance);
         if request_result != SkillUseResult::Ok {
             return request_result;
         }
 
-        let Some(skill) = self.skills.iter().find(|s| s.id == skill_id) else {
+        let Some(skill) = skills.iter().find(|s| s.id == skill_id) else {
             return SkillUseResult::Error;
         };
 
@@ -617,7 +604,6 @@ pub mod generation {
             UnitInfo::Villain(VillainInfo::new(villain_id)),
             base_level,
             villain_table_entry.name.to_string(),
-            None,
             metadata,
         )
     }

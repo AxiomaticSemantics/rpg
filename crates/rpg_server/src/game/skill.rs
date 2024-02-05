@@ -11,8 +11,9 @@ use rpg_core::{
     combat::CombatResult,
     item::ItemDrops,
     skill::{
-        effect::*, skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData, Origin,
-        ProjectileInstance, ProjectileShape, Skill, SkillInfo, SkillInstance,
+        effect::*, skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData,
+        OriginKind, ProjectileInstance, ProjectileShape, Skill, SkillInfo, SkillInstance,
+        SkillTarget, TimerDescriptor,
     },
     unit::UnitKind,
 };
@@ -21,8 +22,8 @@ use rpg_util::{
     actions::{Action, ActionData, Actions, AttackData, KnockbackData as KnockbackActionData},
     item::GroundItemDrops,
     skill::{
-        Invulnerability, InvulnerabilityTimer, SkillContactEvent, SkillUse, SkillUseBundle,
-        Tickable,
+        Invulnerability, InvulnerabilityTimer, SkillContactEvent, SkillTimer, SkillUse,
+        SkillUseBundle, Tickable,
     },
     unit::{Corpse, Unit},
 };
@@ -53,7 +54,10 @@ use lightyear::shared::NetworkTarget;
 use std::borrow::Cow;
 
 #[derive(Debug, Component)]
-pub(crate) struct SkillOwner(pub(crate) Entity);
+pub(crate) struct SkillOwner {
+    pub entity: Entity,
+    pub owner_kind: UnitKind,
+}
 
 pub fn update_invulnerability(
     time: Res<Time>,
@@ -68,25 +72,36 @@ pub fn update_invulnerability(
     }
 }
 
+fn get_target_info(
+    caster_transform: &Transform,
+    skill_meta: &SkillTableEntry,
+    attack_data: &AttackData,
+) -> SkillTarget {
+    let origin = match &skill_meta.origin_kind {
+        OriginKind::Direct => {
+            caster_transform.translation
+                + skill_meta.origin
+                + caster_transform.forward() * (skill_meta.use_range as f32 / 100. / 2.)
+        }
+        OriginKind::Remote => skill_meta.origin + attack_data.skill_target.target,
+        OriginKind::Locked => caster_transform.translation + skill_meta.origin,
+    };
+
+    SkillTarget {
+        origin,
+        target: attack_data.skill_target.target,
+    }
+}
+
 pub(crate) fn prepare_skill(
     attack_data: &AttackData,
-    time: &Time,
-    random: &mut SharedRng,
     aabbs: &mut AabbResources,
-    skill_info: &SkillTableEntry,
+    skill_meta: &SkillTableEntry,
     skill: &Skill,
     unit: &Unit,
     unit_transform: &Transform,
-) -> (Aabb3d, Transform, SkillUse) {
-    // TODO move to a new fn in rpg_util
-    let mut origin = match &skill_info.origin {
-        Origin::Direct(_) => {
-            unit_transform.translation
-                + unit_transform.forward() * (skill_info.use_range as f32 / 100. / 2.)
-        }
-        Origin::Remote(data) => data.offset + attack_data.target,
-        Origin::Locked(_) => unit_transform.translation,
-    };
+) -> (Aabb3d, Transform, SkillUse, Option<SkillTimer>) {
+    let target = get_target_info(unit_transform, skill_meta, attack_data);
 
     // debug!("{:?}", &skill_info.origin);
 
@@ -107,10 +122,24 @@ pub(crate) fn prepare_skill(
         })
         .collect(); */
 
-    let (aabb, skill_use, transform, tickable) = match &skill_info.info {
-        SkillInfo::Direct(_) => {
-            origin.y = 1.2;
+    let timer = if let Some(timer) = &skill_meta.timer {
+        match timer {
+            TimerDescriptor::Duration(duration) => Some(SkillTimer::Duration(Timer::from_seconds(
+                *duration,
+                TimerMode::Once,
+            ))),
+            TimerDescriptor::Tickable(tickable) => Some(SkillTimer::Tickable(Tickable {
+                timer: Timer::from_seconds(tickable.duration, TimerMode::Once),
+                ticker: Timer::from_seconds(tickable.frequency, TimerMode::Repeating),
+                can_damage: true,
+            })),
+        }
+    } else {
+        None
+    };
 
+    let (aabb, skill_use, transform) = match &skill_meta.info {
+        SkillInfo::Direct(_) => {
             let aabb = aabbs.aabbs["direct_attack"];
             let SkillInfo::Direct(info) = &skill.info else {
                 panic!("Expected direct attack")
@@ -121,18 +150,12 @@ pub(crate) fn prepare_skill(
                 frame: 0,
             });
 
-            let skill_transform =
-                Transform::from_translation(origin).looking_to(*unit_transform.forward(), Vec3::Y);
+            let transform = Transform::from_translation(target.origin).looking_to(Vec3::Z, Vec3::Y);
 
-            (aabb, instance, skill_transform, None)
+            (aabb, instance, transform)
         }
         SkillInfo::Projectile(info) => {
             // debug!("spawn {speed} {duration} {size}");
-
-            let tickable = info.tick_rate.as_ref().map(|tr| Tickable {
-                timer: Timer::from_seconds(*tr, TimerMode::Repeating),
-                can_damage: true,
-            });
 
             let aabb = if info.shape == ProjectileShape::Box {
                 aabbs.aabbs["bolt_01"]
@@ -157,53 +180,36 @@ pub(crate) fn prepare_skill(
                 aabb
             };
 
-            let time = time.elapsed_seconds();
-            let forward = *unit_transform.forward();
+            let transform = if info.orbit.is_some() {
+                let mut origin_transform =
+                    Transform::from_translation(target.origin).looking_at(target.target, Vec3::Y);
+                origin_transform.translation += origin_transform.forward() * 2.;
 
-            let spawn_transform = if info.orbit.is_some() {
-                let mut rot_transform = *unit_transform;
-                rot_transform.translation += Vec3::new(0., 1.2, 0.);
-                rot_transform.rotate_local_y(std::f32::consts::TAU * (0.5 - random.f32()));
-
-                Transform::from_translation(
-                    rot_transform.translation + rot_transform.forward() * 2.,
-                )
+                origin_transform
             } else if info.aerial.is_some() {
                 //println!("prepare aerial {attack_data:?}");
-                Transform::from_translation(origin).looking_at(attack_data.target, Vec3::Y)
+                Transform::from_translation(target.origin).looking_at(target.target, Vec3::Y)
             } else {
-                Transform::from_translation(
-                    unit_transform.translation + Vec3::new(0., 1.2, 0.) + forward * 0.25,
-                )
-                .looking_to(forward, Vec3::Y)
+                Transform::from_translation(target.origin).looking_to(target.target, Vec3::Y)
             };
 
             let instance_info = SkillInstance::Projectile(ProjectileInstance {
                 info: info.clone(),
-                start_time: time,
                 orbit: if info.orbit.is_some() {
                     Some(OrbitData {
-                        origin: spawn_transform.translation,
+                        origin: transform.translation,
                     })
                 } else {
                     None
                 },
             });
 
-            (aabb, instance_info, spawn_transform, tickable)
+            (aabb, instance_info, transform)
         }
         SkillInfo::Area(info) => {
-            let skill_instance = SkillInstance::Area(AreaInstance {
-                info: info.clone(),
-                start_time: time.elapsed_seconds(),
-            });
+            let skill_instance = SkillInstance::Area(AreaInstance { info: info.clone() });
 
-            let tickable = info.tick_rate.as_ref().map(|tr| Tickable {
-                timer: Timer::from_seconds(*tr, TimerMode::Repeating),
-                can_damage: true,
-            });
-
-            let transform = Transform::from_translation(origin + Vec3::new(0.0, 0.01, 0.0))
+            let transform = Transform::from_translation(target.origin + Vec3::new(0.0, 0.01, 0.0))
                 .looking_to(Vec3::NEG_Y, Vec3::Y);
 
             let radius = info.radius as f32 / 100.;
@@ -223,7 +229,7 @@ pub(crate) fn prepare_skill(
                 aabb
             };
 
-            (aabb, skill_instance, transform, tickable)
+            (aabb, skill_instance, transform)
         }
     };
 
@@ -233,10 +239,9 @@ pub(crate) fn prepare_skill(
         skill.damage.clone(),
         skill_use,
         vec![], // FIXME effects,
-        tickable,
     );
 
-    (aabb, transform, instance)
+    (aabb, transform, instance, timer)
 }
 
 pub(crate) fn spawn_instance(
@@ -245,50 +250,28 @@ pub(crate) fn spawn_instance(
     transform: Transform,
     skill_use_instance: SkillUse,
     owner: Entity,
+    owner_kind: UnitKind,
+    timer: Option<SkillTimer>,
 ) {
     let skill_use = SkillUseBundle::new(skill_use_instance);
 
-    commands.spawn((
-        GameSessionCleanup,
-        CleanupStrategy::DespawnRecursive,
-        AabbComponent(aabb),
-        Invulnerability::default(),
-        skill_use,
-        SkillOwner(owner),
-        TransformBundle::from(transform),
-    ));
-}
-
-pub(crate) fn clean_skills(
-    mut commands: Commands,
-    time: Res<Time>,
-    mut skill_q: Query<(Entity, &Transform, &SkillUse)>,
-) {
-    for (entity, transform, skill_use) in &mut skill_q {
-        let despawn = match &skill_use.instance {
-            SkillInstance::Projectile(info) => match info.info.duration {
-                Some(d) => time.elapsed_seconds() - info.start_time >= d,
-                None => {
-                    if info.info.aerial.is_some() {
-                        transform.translation.y < info.info.size as f32 / 100.
-                    } else {
-                        false
-                    }
-                }
+    let entity = commands
+        .spawn((
+            GameSessionCleanup,
+            CleanupStrategy::DespawnRecursive,
+            AabbComponent(aabb),
+            Invulnerability::default(),
+            skill_use,
+            SkillOwner {
+                entity: owner,
+                owner_kind,
             },
-            SkillInstance::Direct(info) => {
-                // info!("direct skill: {info:?}");
-                info.frame >= info.info.frames
-            }
-            SkillInstance::Area(info) => {
-                // info!("area skill: {info:?}");
-                time.elapsed_seconds() - info.start_time >= info.info.duration
-            }
-        };
+            TransformBundle::from(transform),
+        ))
+        .id();
 
-        if despawn {
-            commands.entity(entity).despawn_recursive();
-        }
+    if let Some(timer) = timer {
+        commands.entity(entity).insert(timer);
     }
 }
 
@@ -301,18 +284,19 @@ pub(crate) fn collide_skills(
         &Invulnerability,
         &SkillUse,
         &SkillOwner,
+        Option<&mut SkillTimer>,
     )>,
-    owner_q: Query<&Unit>,
+    // owner_q: Query<&Unit>,
     unit_q: Query<(Entity, &Transform, &AabbComponent, &Unit), Without<Corpse>>,
 ) {
-    for (s_entity, s_transform, s_aabb, invulnerability, instance, owner) in &skill_q {
-        if let Some(tickable) = &instance.tickable {
+    for (s_entity, s_transform, s_aabb, invulnerability, instance, owner, mut timer) in &skill_q {
+        if let Some(SkillTimer::Tickable(tickable)) = &mut timer {
             if !tickable.can_damage {
                 continue;
             }
         }
 
-        let owner_kind = owner_q.get(owner.0).unwrap().kind;
+        let owner_kind = owner.owner_kind;
         for (u_entity, u_transform, u_aabb, unit) in &unit_q {
             if !unit.is_alive()
                 || unit.uid == instance.owner
@@ -348,7 +332,8 @@ pub(crate) fn collide_skills(
             if collision {
                 skill_events.send(SkillContactEvent {
                     entity: s_entity,
-                    owner: owner.0,
+                    owner: owner.entity,
+                    owner_kind: owner.owner_kind,
                     defender: u_entity,
                 });
             }
@@ -366,7 +351,13 @@ pub fn handle_contacts(
     mut ground_drops: ResMut<GroundItemDrops>,
     mut rng: ResMut<SharedRng>,
     mut skill_events: EventReader<SkillContactEvent>,
-    mut skill_q: Query<(Entity, &mut Transform, &mut Invulnerability, &mut SkillUse)>,
+    mut skill_q: Query<(
+        Entity,
+        &mut Transform,
+        &mut Invulnerability,
+        &mut SkillUse,
+        Option<&mut SkillTimer>,
+    )>,
     mut unit_q: Query<
         (
             Entity,
@@ -391,7 +382,7 @@ pub fn handle_contacts(
             continue;
         }
 
-        let (s_entity, mut s_transform, mut invulnerability, mut instance) =
+        let (s_entity, mut s_transform, mut invulnerability, mut instance, timer) =
             skill_q.get_mut(event.entity).unwrap();
         let combat_result =
             defender.handle_attack(&attacker, &metadata.0, &mut rng.0, &instance.damage);
@@ -535,8 +526,10 @@ pub fn handle_contacts(
             _ => {}
         }
 
-        if let Some(tickable) = &mut instance.tickable {
-            tickable.can_damage = false;
+        if let Some(mut timer) = timer {
+            if let SkillTimer::Tickable(ref mut tickable) = &mut *timer {
+                tickable.can_damage = false;
+            }
         }
 
         if defender.is_alive()

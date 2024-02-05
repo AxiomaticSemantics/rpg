@@ -8,15 +8,12 @@
         }
       },
       "use_range": 200,
-      "origin": {
-        "Direct": {
-          "offset": [
-            0,
-            0,
-            -1
-          ]
-        }
-      },
+      "origin": [
+        0,
+        1.2,
+        -1
+      ],
+      "origin_kind": "Direct",
       "base_damage": {
         "kind": "Physical",
         "value": {
@@ -34,25 +31,24 @@
       "use_duration_secs": 0.6
     },
     "BasicBolt": {
+      "timer": {
+        "Duration": 3
+      },
       "info": {
         "Projectile": {
           "shape": "Box",
           "speed": 300,
-          "duration": 3,
           "size": 10,
           "projectiles": 1
         }
       },
       "use_range": 800,
-      "origin": {
-        "Remote": {
-          "offset": [
-            0,
-            0,
-            -0.25
-          ]
-        }
-      },
+      "origin_kind": "Remote",
+      "origin": [
+        0,
+        1.2,
+        -0.25
+      ],
       "base_damage": {
         "kind": "Physical",
         "value": {
@@ -88,11 +84,13 @@
       "use_duration_secs": 0.8
     },
     "BasicOrb": {
+      "timer": {
+        "Duration": 10
+      },
       "info": {
         "Projectile": {
           "shape": "Sphere",
           "speed": 300,
-          "duration": 15,
           "size": 30,
           "projectiles": 1,
           "orbit": {
@@ -101,15 +99,12 @@
         }
       },
       "use_range": 800,
-      "origin": {
-        "Remote": {
-          "offset": [
-            0,
-            0,
-            0
-          ]
-        }
-      },
+      "origin_kind": "Remote",
+      "origin": [
+        0,
+        1.2,
+        0
+      ],
       "base_damage": {
         "kind": "Physical",
         "value": {
@@ -135,28 +130,27 @@
       "use_duration_secs": 0.8
     },
     "BasicAerial": {
+      "timer": {
+        "Tickable": {
+          "duration": 10,
+          "frequency": 0.666
+        }
+      },
       "info": {
         "Projectile": {
           "shape": "Sphere",
           "speed": 500,
           "size": 100,
-          "projectiles": 1,
-          "tick_rate": 0.666,
-          "aerial": {
-            "height": 800
-          }
+          "projectiles": 1
         }
       },
       "use_range": 800,
-      "origin": {
-        "Remote": {
-          "offset": [
-            0,
-            8,
-            0
-          ]
-        }
-      },
+      "origin_kind": "Remote",
+      "origin": [
+        0,
+        8,
+        0
+      ],
       "base_damage": {
         "kind": "Physical",
         "value": {
@@ -182,23 +176,24 @@
       "use_duration_secs": 0.8
     },
     "AreaLocked": {
+      "timer": {
+        "Tickable": {
+          "frequency": 0.666,
+          "duration": 3
+        }
+      },
       "info": {
         "Area": {
-          "radius": 300,
-          "duration": 3,
-          "tick_rate": 0.666
+          "radius": 300
         }
       },
       "use_range": 250,
-      "origin": {
-        "Locked": {
-          "offset": [
-            0,
-            0,
-            0
-          ]
-        }
-      },
+      "origin_kind": "Locked",
+      "origin": [
+        0,
+        0.1,
+        0
+      ],
       "base_damage": {
         "kind": "Physical",
         "value": {
@@ -216,23 +211,24 @@
       "use_duration_secs": 1.2
     },
     "AreaRemote": {
+      "timer": {
+        "Tickable": {
+          "frequency": 0.666,
+          "duration": 5
+        }
+      },
       "info": {
         "Area": {
-          "radius": 150,
-          "duration": 5,
-          "tick_rate": 0.666
+          "radius": 150
         }
       },
       "use_range": 800,
-      "origin": {
-        "Remote": {
-          "offset": [
-            0,
-            0.01,
-            0
-          ]
-        }
-      },
+      "origin_kind": "Remote",
+      "origin": [
+        0,
+        0.1,
+        0
+      ],
       "base_damage": {
         "kind": "Physical",
         "value": {

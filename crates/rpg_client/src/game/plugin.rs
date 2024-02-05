@@ -9,12 +9,16 @@ use super::{
     environment,
     item::{self, CursorItem},
     metadata::MetadataResources,
-    passive_tree, skill, state_saver, ui, world,
+    passive_tree, state_saver, ui, world,
 };
 
 use rpg_core::unit::HeroGameMode;
 use rpg_network_protocol::protocol::*;
-use rpg_util::{actions, item::GroundItemDrops, skill::update_skill};
+use rpg_util::{
+    actions,
+    item::GroundItemDrops,
+    skill::{clean_skills, update_skill},
+};
 
 use util::{
     cleanup::CleanupStrategy,
@@ -276,7 +280,7 @@ impl Plugin for GamePlugin {
                     environment::day_night_cycle,
                     // TODO decide if this will be needed againvillain::spawner,
                     unit::remove_healthbar,
-                    skill::clean_skills,
+                    clean_skills,
                     actions::action_tick,
                 )
                     .run_if(in_state(AppState::Game).and_then(is_game)),

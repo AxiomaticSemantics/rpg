@@ -29,6 +29,7 @@ use rpg_account::{
 };
 use rpg_core::{
     passive_tree::PassiveSkillGraph,
+    skill::{SkillSlot, SkillSlotId},
     storage::UnitStorage,
     unit::{HeroInfo, Unit as RpgUnit, UnitInfo, UnitKind},
 };
@@ -275,10 +276,11 @@ pub(crate) fn receive_character_create(
                     unit_info,
                     1,
                     create_msg.name.clone(),
-                    None,
                     &metadata.0,
                 );
-                unit.add_default_skills(&metadata.0);
+                let mut skills = Vec::new();
+                unit.add_default_skills(&mut skills, &metadata.0);
+                let skill_slots = vec![SkillSlot::new(SkillSlotId(0), Some(skills[0].id))];
 
                 server_metadata.0.next_uid.next();
 
@@ -293,6 +295,8 @@ pub(crate) fn receive_character_create(
                     info: character_info,
                     character: Character {
                         unit,
+                        skills,
+                        skill_slots,
                         passive_tree: PassiveSkillGraph::new(create_msg.class),
                         storage: UnitStorage::default(),
                     },
@@ -431,6 +435,8 @@ pub(crate) fn receive_game_join(
                 class: character.character.unit.class,
                 level: character.character.unit.level,
                 name: character.character.unit.name.clone(),
+                skills: character.character.skills.clone(),
+                skill_slots: character.character.skill_slots.clone(),
             },
             NetworkTarget::AllExcept(vec![client_id]),
         );

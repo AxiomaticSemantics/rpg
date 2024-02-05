@@ -5,66 +5,49 @@ use crate::{damage::DamageDescriptor, metadata::Metadata, stat::StatId, value::V
 use glam::Vec3;
 use serde_derive::{Deserialize as De, Serialize as Ser};
 
-#[derive(Default, PartialEq, Clone, Debug, Ser, De)]
-pub struct DirectOrigin {
-    pub offset: Vec3,
+#[derive(PartialEq, Clone, Debug, Ser, De)]
+pub struct TickableDescripor {
+    pub duration: f32,
+    pub frequency: f32,
 }
 
-#[derive(Default, PartialEq, Clone, Debug, Ser, De)]
-pub struct RemoteOrigin {
-    pub offset: Vec3,
+#[derive(PartialEq, Clone, Debug, Ser, De)]
+pub enum TimerDescriptor {
+    Duration(f32),
+    Tickable(TickableDescripor),
 }
 
-#[derive(Default, PartialEq, Clone, Debug, Ser, De)]
-pub struct LockedOrigin {
-    pub offset: Vec3,
+#[derive(Default, PartialEq, Clone, Copy, Debug, Ser, De)]
+pub struct SkillSlotId(pub u8);
+
+/// A skill slot
+#[derive(Default, Debug, Copy, Clone, PartialEq, Ser, De)]
+pub struct SkillSlot {
+    pub id: SkillSlotId,
+    pub skill_id: Option<SkillId>,
+}
+
+impl SkillSlot {
+    pub fn new(id: SkillSlotId, skill_id: Option<SkillId>) -> Self {
+        Self { id, skill_id }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Ser, De)]
+pub struct SkillTarget {
+    pub origin: Vec3,
+    pub target: Vec3,
 }
 
 /// Where a skill originates from/
 #[derive(Ser, De, Debug, Clone, PartialEq)]
-pub enum Origin {
+pub enum OriginKind {
     /// The skill should be spawned from the owner's location
-    Direct(DirectOrigin),
+    Direct,
     /// The skill should be spawned in a remote location
-    Remote(RemoteOrigin),
+    Remote,
     /// The skill should be locked to the owner's location
-    Locked(LockedOrigin),
-}
-
-impl Origin {
-    pub fn is_direct(&self) -> bool {
-        matches!(self, Self::Direct(_))
-    }
-
-    pub fn is_remote(&self) -> bool {
-        matches!(self, Self::Remote(_))
-    }
-
-    pub fn is_locked(&self) -> bool {
-        matches!(self, Self::Locked(_))
-    }
-}
-
-/// Skill slot identifiers
-#[derive(Ser, De, Default, Debug, Copy, Clone, PartialEq, Eq)]
-pub enum SkillSlotId {
-    #[default]
-    Primary,
-    Secondary,
-}
-
-/// A skill slot
-#[derive(Ser, De, Default, Debug, Copy, Clone, PartialEq, Eq)]
-pub struct SkillSlot {
-    pub id: SkillSlotId,
-    pub skill: Option<SkillId>,
-}
-
-/// Skill slots
-#[derive(Ser, De, Default, Debug, Copy, Clone, PartialEq, Eq)]
-pub struct ActiveSkills {
-    pub primary: SkillSlot,
-    pub secondary: SkillSlot,
+    Locked,
 }
 
 /// Skill identifiers
@@ -88,7 +71,7 @@ pub enum SkillUseResult {
     Blocked,
 }
 
-#[derive(Ser, De, Default, Debug, Clone)]
+#[derive(Ser, De, Default, PartialEq, Debug, Clone)]
 pub struct DirectInfo {
     pub range: u32,
     pub frames: u32,
@@ -100,28 +83,23 @@ pub struct DirectInstance {
     pub frame: u32,
 }
 
-#[derive(Ser, De, Default, Debug, Clone)]
+#[derive(Ser, De, Default, PartialEq, Debug, Clone)]
 pub struct AreaInfo {
     pub radius: u32,
-    pub duration: f32,
-    pub tick_rate: Option<f32>,
 }
 
 #[derive(Debug, Default, Clone)]
 pub struct AreaInstance {
     pub info: AreaInfo,
-    pub start_time: f32,
 }
 
-#[derive(Ser, De, Debug, Default, Clone)]
+#[derive(Ser, De, Debug, Default, PartialEq, Clone)]
 pub struct OrbitInfo {
     pub range: u32,
 }
 
-#[derive(Ser, De, Debug, Default, Clone)]
-pub struct AerialInfo {
-    pub height: u32,
-}
+#[derive(Ser, De, Debug, Default, PartialEq, Clone)]
+pub struct AerialInfo {}
 
 #[derive(Copy, Clone, Debug, PartialEq, Ser, De)]
 pub enum ProjectileShape {
@@ -129,16 +107,14 @@ pub enum ProjectileShape {
     Box,
 }
 
-#[derive(Ser, De, Debug, Clone)]
+#[derive(Ser, De, Debug, Clone, PartialEq)]
 pub struct ProjectileInfo {
     pub shape: ProjectileShape,
     pub projectiles: u32,
     pub speed: u32,
     pub size: u32,
-    pub duration: Option<f32>,
     pub orbit: Option<OrbitInfo>,
     pub aerial: Option<AerialInfo>,
-    pub tick_rate: Option<f32>,
 }
 
 #[derive(Debug, Clone)]
@@ -149,11 +125,10 @@ pub struct OrbitData {
 #[derive(Debug, Clone)]
 pub struct ProjectileInstance {
     pub info: ProjectileInfo,
-    pub start_time: f32,
     pub orbit: Option<OrbitData>,
 }
 
-#[derive(Ser, De, Debug, Clone)]
+#[derive(Ser, De, Debug, Clone, PartialEq)]
 pub enum SkillInfo {
     Direct(DirectInfo),
     Projectile(ProjectileInfo),
@@ -174,13 +149,12 @@ pub struct SkillCost {
     pub mp: Option<Value>,
 }
 
-#[derive(Ser, De, Debug, Clone)]
+#[derive(Ser, De, Debug, Clone, PartialEq)]
 pub struct Skill {
     pub id: SkillId,
     pub level: u8,
     pub damage: DamageDescriptor,
     pub info: SkillInfo,
-    pub origin: Origin,
     pub effects: Vec<EffectInfo>,
 }
 
@@ -190,7 +164,6 @@ impl Skill {
         level: u8,
         damage: DamageDescriptor,
         info: SkillInfo,
-        origin: Origin,
         effects: Vec<EffectInfo>,
     ) -> Self {
         Self {
@@ -198,7 +171,6 @@ impl Skill {
             level,
             damage,
             info,
-            origin,
             effects,
         }
     }
