@@ -91,13 +91,17 @@ impl SkillUseBundle {
 
 pub fn clean_skills(
     mut commands: Commands,
-    time: Res<Time>,
     mut skill_q: Query<(Entity, &Transform, &SkillUse, Option<&SkillTimer>)>,
 ) {
     for (entity, transform, skill_use, timer) in &mut skill_q {
         if let Some(timer) = timer {
             if let SkillTimer::Duration(timer) = timer {
                 if timer.just_finished() {
+                    commands.entity(entity).despawn_recursive();
+                    continue;
+                }
+            } else if let SkillTimer::Tickable(tickable) = timer {
+                if tickable.timer.just_finished() {
                     commands.entity(entity).despawn_recursive();
                     continue;
                 }
@@ -156,14 +160,14 @@ pub fn update_skill(
     let dt = time.delta_seconds();
     for (mut transform, mut skill_use, timer) in &mut skill_q {
         if let Some(mut timer) = timer {
-            match &mut *timer {
-                SkillTimer::Duration(ref mut timer) => {}
-                SkillTimer::Tickable(ref mut timer) => {
-                    timer.timer.tick(time.delta());
-                    if timer.timer.just_finished() {
-                        timer.can_damage = true;
-                        timer.timer.reset();
-                    }
+            if let SkillTimer::Duration(ref mut timer) = &mut *timer {
+                timer.tick(time.delta());
+            } else if let SkillTimer::Tickable(ref mut tickable) = &mut *timer {
+                tickable.timer.tick(time.delta());
+                tickable.ticker.tick(time.delta());
+                if tickable.ticker.just_finished() {
+                    tickable.can_damage = true;
+                    tickable.ticker.reset();
                 }
             }
         }
