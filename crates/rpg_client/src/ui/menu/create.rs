@@ -5,7 +5,7 @@ use crate::{
 
 use ui_util::{style::UiTheme, widgets::EditText};
 
-use rpg_core::{class::Class, unit::HeroGameMode};
+use rpg_core::{class::Class, game_mode::GameMode};
 use rpg_network_protocol::protocol::*;
 
 use bevy::{
@@ -27,7 +27,7 @@ use bevy::{
 };
 
 #[derive(Component)]
-pub struct CreateMode(pub HeroGameMode);
+pub struct CreateMode(pub GameMode);
 
 #[derive(Component)]
 pub struct CreatePlayerName;
@@ -198,7 +198,7 @@ pub fn spawn(
                             })
                             .with_children(|p| {
                                 p.spawn((
-                                    CreateMode(HeroGameMode::Normal),
+                                    CreateMode(GameMode::Normal),
                                     Interaction::None,
                                     ImageBundle {
                                         image: UiImage {
@@ -264,14 +264,14 @@ pub fn set_game_mode(
     };
 
     if interaction == &Interaction::Pressed {
-        if game_mode.0 == HeroGameMode::Normal {
+        if game_mode.0 == GameMode::Normal {
             info!("setting hardcore mode");
             ui_image.texture = textures.icons["checkmark"].clone_weak();
-            game_mode.0 = HeroGameMode::Hardcore;
+            game_mode.0 = GameMode::Hardcore;
         } else {
             info!("setting normal mode");
             ui_image.texture = textures.icons["transparent"].clone_weak();
-            game_mode.0 = HeroGameMode::Normal;
+            game_mode.0 = GameMode::Normal;
         }
     }
 }

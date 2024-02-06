@@ -158,7 +158,7 @@ pub fn get_skill_origin(
     match skill_meta.origin_kind {
         OriginKind::Direct => SkillTarget {
             origin: unit_transform.translation + skill_meta.origin * *unit_transform.forward(),
-            target,
+            target: unit_transform.translation + skill_meta.origin * *unit_transform.forward(),
         },
         OriginKind::Remote => SkillTarget {
             origin: unit_transform.translation + skill_meta.origin,

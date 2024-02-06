@@ -6,20 +6,22 @@ use bevy::{
         system::{Commands, Query},
     },
     hierarchy::DespawnRecursiveExt,
+    log::debug,
 };
 
-/// A marker `Component` to signify how an entity should be despawned.
+/// A marker `Component` to signify how an entity should be despawned
 #[derive(Clone, Copy, Component)]
 pub enum CleanupStrategy {
     Despawn,
     DespawnRecursive,
 }
 
+/// A generic cleanup system used to reduce boilerplating
 pub fn cleanup<C: Component>(
     mut commands: Commands,
     query: Query<(Entity, &CleanupStrategy), (With<C>, With<CleanupStrategy>)>,
 ) {
-    println!("cleanup for {}", std::any::type_name::<C>());
+    debug!("running cleanup for {}", std::any::type_name::<C>());
 
     for (e, strategy) in &query {
         match strategy {

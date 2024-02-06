@@ -9,7 +9,7 @@ use crate::{
         },
         health_bar::{HealthBar, HealthBarFrame, HealthBarRect},
         metadata::MetadataResources,
-        plugin::{GameCamera, GameState},
+        plugin::GameCamera,
     },
 };
 
@@ -21,7 +21,7 @@ use rpg_core::{
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions::{ActionData, Actions, State},
-    item::{GroundItem, StorableItem, UnitStorage},
+    item::{GroundItem, StorableItem},
     skill::{SkillSlots, Skills},
     unit::{Corpse, Hero, Unit},
 };
@@ -148,7 +148,9 @@ pub fn pick_storable_items(
         ),
     >,
 ) {
-    let u_transform = hero_q.single_mut();
+    let Ok(u_transform) = hero_q.get_single_mut() else {
+        return;
+    };
 
     for (i_transform, i_item) in &mut item_q {
         let mut i_ground = i_transform.translation;

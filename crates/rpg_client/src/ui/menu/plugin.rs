@@ -27,6 +27,7 @@ use bevy::{
         system::{Commands, ParamSet, Query, Res, ResMut},
     },
     hierarchy::BuildChildren,
+    log::info,
     render::{camera::Camera, color::Color},
     text::TextStyle,
     ui::{
@@ -107,6 +108,7 @@ fn display_menu(
         camera.is_active = true;
     }
 
+    info!("displaying main menu");
     menu_set.p0().single_mut().display = Display::Flex;
     menu_set.p1().single_mut().display = Display::Flex;
 }

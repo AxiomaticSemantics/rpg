@@ -6,6 +6,7 @@ pub mod combat;
 pub mod class;
 pub mod damage;
 pub mod effect;
+pub mod game_mode;
 
 pub mod item;
 pub mod passive_tree;

@@ -12,11 +12,12 @@ use rpg_chat::chat::{ChannelId, Message as ChatMessage};
 use rpg_core::{
     class::Class,
     combat::{CombatResult, DamageResult},
+    game_mode::GameMode,
     item::ItemDrops,
     skill::{Skill, SkillId, SkillSlot, SkillTarget},
     stat::StatUpdate,
     uid::Uid,
-    unit::{HeroGameMode, VillainInfo},
+    unit::VillainInfo,
 };
 use rpg_lobby::lobby::{Lobby, LobbyId, LobbyMessage};
 use rpg_world::zone::ZoneId;
@@ -61,12 +62,12 @@ pub struct CSCreateCharacter {
     pub name: String,
     pub slot: CharacterSlot,
     pub class: Class,
-    pub game_mode: HeroGameMode,
+    pub game_mode: GameMode,
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSLobbyCreate {
-    pub game_mode: HeroGameMode,
+    pub game_mode: GameMode,
     pub name: String,
 }
 
@@ -84,13 +85,13 @@ pub struct CSLobbyMessage {
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSCreateGame {
-    pub game_mode: HeroGameMode,
+    pub game_mode: GameMode,
     pub slot: CharacterSlot,
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSJoinGame {
-    pub game_mode: HeroGameMode,
+    pub game_mode: GameMode,
     pub slot: CharacterSlot,
 }
 

@@ -1,4 +1,7 @@
-use crate::character::{CharacterRecord, CharacterSlot};
+use crate::{
+    account_statistics::AccountStatistics,
+    character::{CharacterRecord, CharacterSlot},
+};
 
 use rpg_core::uid::Uid;
 
@@ -15,6 +18,7 @@ pub struct AdminAccount {
 #[derive(Default, Debug, Clone, PartialEq, Ser, De)]
 pub struct Account {
     pub info: AccountInfo,
+    pub statistics: AccountStatistics,
     pub characters: Vec<CharacterRecord>,
 }
 

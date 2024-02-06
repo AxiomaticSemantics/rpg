@@ -18,7 +18,7 @@ use rpg_account::{
     account::{Account, AccountInfo},
     character::{CharacterInfo, CharacterSlot},
 };
-use rpg_core::{class::Class, uid::Uid, unit::HeroGameMode};
+use rpg_core::{class::Class, game_mode::GameMode, uid::Uid};
 use rpg_lobby::lobby::LobbyId;
 use rpg_network_protocol::protocol::*;
 

@@ -1,6 +1,6 @@
 use rpg_account::account::AccountId;
 use rpg_chat::chat::MessageId;
-use rpg_core::unit::HeroGameMode;
+use rpg_core::game_mode::GameMode;
 
 use serde_derive::{Deserialize as De, Serialize as Ser};
 
@@ -25,13 +25,13 @@ pub struct LobbyMessage {
 pub struct Lobby {
     pub id: LobbyId,
     pub name: String,
-    pub game_mode: HeroGameMode,
+    pub game_mode: GameMode,
     pub players: Vec<LobbyPlayer>,
     pub messages: Vec<LobbyMessage>,
 }
 
 impl Lobby {
-    pub fn new(id: LobbyId, name: String, game_mode: HeroGameMode) -> Self {
+    pub fn new(id: LobbyId, name: String, game_mode: GameMode) -> Self {
         Self {
             id,
             name,

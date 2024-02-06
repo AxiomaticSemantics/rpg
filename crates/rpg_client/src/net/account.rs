@@ -119,15 +119,9 @@ pub(crate) fn receive_character_create_success(
             .find(|c| c.info.slot == create_msg.0.info.slot);
 
         if let Some(character_record) = character_record {
-            character_record.character = create_msg.0.character.clone();
-            character_record.info = create_msg.0.info.clone();
+            *character_record = create_msg.0.clone();
         } else {
-            let character_record = CharacterRecord {
-                info: create_msg.0.info.clone(),
-                character: create_msg.0.character.clone(),
-            };
-
-            account.0.characters.push(character_record);
+            account.0.characters.push(create_msg.0.clone());
         }
 
         style_set.p0().single_mut().display = Display::None;

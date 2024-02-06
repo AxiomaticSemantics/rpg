@@ -1,16 +1,13 @@
 use crate::{
     class::Class,
-    combat::{CombatResult, DamageResult},
+    combat::{CombatResult, DamageResult, HeroDeathResult, VillainDeathResult},
     damage::{DamageDescriptor, DamageKind, DamageValue, DamageValueDescriptor},
-    item::{self, Item, ItemId, Rarity},
+    game_mode::GameMode,
+    item::{self, Item},
     metadata::Metadata,
     passive_tree::PassiveSkillGraph,
     skill::{Skill, SkillId, SkillUseResult},
-    stat::{
-        modifier::{Modifier, ModifierFormat, ModifierId, ModifierKind, Operation},
-        stat_system::Stats,
-        Stat, StatId, StatModifier,
-    },
+    stat::{modifier::Operation, stat_system::Stats, Stat},
     storage::{StorageIndex, UnitStorage, STORAGE_INVENTORY, STORAGE_STASH},
     uid::{NextUid, Uid},
     value::{Value, ValueKind},
@@ -27,21 +24,27 @@ pub enum UnitKind {
     Villain,
 }
 
-#[derive(Debug, Default, PartialEq, PartialOrd, Copy, Clone, Ser, De)]
-pub enum HeroGameMode {
-    #[default]
-    Normal,
-    Hardcore,
+#[derive(Debug, Clone, PartialEq, Ser, De)]
+pub struct LevelReward {
+    pub level: u8,
+    pub passive_points: u8,
+}
+
+#[derive(Debug, Clone, PartialEq, Ser, De)]
+pub struct HeroReward {
+    pub xp_gained: Value,
+    pub xp_total: Value,
+    pub level: Option<LevelReward>,
 }
 
 #[derive(Ser, De, Clone, Debug, PartialEq)]
 pub struct HeroInfo {
-    pub game_mode: HeroGameMode,
+    pub game_mode: GameMode,
     pub xp_curr: Stat,
 }
 
 impl HeroInfo {
-    pub fn new(metadata: &Metadata, game_mode: HeroGameMode) -> Self {
+    pub fn new(metadata: &Metadata, game_mode: GameMode) -> Self {
         Self {
             game_mode,
             xp_curr: Stat::new(metadata.stat.stats["Xp"].id, Value::zero(ValueKind::U64)),
@@ -189,7 +192,7 @@ impl Unit {
 
     pub fn handle_attack(
         &mut self,
-        attacker: &Self,
+        attacker: &mut Self,
         metadata: &Metadata,
         rng: &mut Rng,
         damage: &DamageDescriptor,
@@ -258,7 +261,21 @@ impl Unit {
         if self.is_alive() {
             CombatResult::Damage(damage)
         } else {
-            CombatResult::Death(damage)
+            if self.kind == UnitKind::Villain {
+                let villain_info = self.info.villain();
+                let villain_meta = &metadata.unit.villains.get(&villain_info.id).unwrap();
+
+                let reward =
+                    attacker.reward_experience(metadata, Value::U64(villain_meta.xp_reward));
+
+                let death_result = VillainDeathResult { damage, reward };
+
+                CombatResult::VillainDeath(death_result)
+            } else {
+                let death_result = HeroDeathResult { damage };
+
+                CombatResult::HeroDeath(death_result)
+            }
         }
     }
 
@@ -304,6 +321,7 @@ impl Unit {
         self.stats.recompute(false);
     }
 
+    /*
     // TODO add Reward type
     pub fn apply_rewards(&mut self, metadata: &Metadata, item: &Item) -> bool {
         assert!(self.is_alive());
@@ -358,7 +376,7 @@ impl Unit {
         }
 
         gained_level
-    }
+    }*/
 
     fn apply_item_modifiers(&mut self, metadata: &Metadata, item: &Item) -> Option<()> {
         for modifier in &item.modifiers {
@@ -404,25 +422,44 @@ impl Unit {
     }
 
     // TODO add a flag to signify max level gained
-    pub fn reward_experience(&mut self, metadata: &Metadata, value: Value) -> bool {
-        if self.kind == UnitKind::Hero {
-            let hero_info = self.info.hero_mut();
-            let curr_level_info = metadata.level.levels.get(&self.level).unwrap();
-
-            hero_info.xp_curr.value += value;
-            if *hero_info.xp_curr.value.u64() > curr_level_info.xp_end {
-                if metadata.level.levels.len() > self.level as usize {
-                    let new_level_info = metadata.level.levels.get(&(self.level + 1)).unwrap();
-                    self.level = new_level_info.level;
-                    self.passive_skill_points += 1;
-
-                    return true;
-                }
-                *hero_info.xp_curr.value.u64_mut() = curr_level_info.xp_end;
-            }
+    fn reward_experience(&mut self, metadata: &Metadata, value: Value) -> Option<HeroReward> {
+        if self.kind != UnitKind::Hero {
+            return None;
         }
 
-        false
+        let hero_info = self.info.hero_mut();
+        let curr_level_info = metadata.level.levels.get(&self.level).unwrap();
+
+        let xp_prev = hero_info.xp_curr.value;
+
+        hero_info.xp_curr.value += value;
+        if hero_info.xp_curr.value > curr_level_info.xp_end {
+            if metadata.level.levels.len() > self.level as usize {
+                let new_level_info = metadata.level.levels.get(&(self.level + 1)).unwrap();
+                self.level = new_level_info.level;
+                self.passive_skill_points += 1;
+
+                return Some(HeroReward {
+                    xp_gained: hero_info.xp_curr.value - xp_prev,
+                    xp_total: hero_info.xp_curr.value,
+                    level: Some(LevelReward {
+                        level: self.level,
+                        passive_points: self.passive_skill_points,
+                    }),
+                });
+            }
+
+            // Hero is already at max level
+            *hero_info.xp_curr.value.u64_mut() = curr_level_info.xp_end;
+
+            return None;
+        }
+
+        Some(HeroReward {
+            xp_gained: hero_info.xp_curr.value - xp_prev,
+            xp_total: hero_info.xp_curr.value,
+            level: None,
+        })
     }
 
     pub fn can_run(&self) -> bool {
@@ -448,43 +485,11 @@ impl Unit {
         match self.kind {
             UnitKind::Villain => {
                 let villain_info = self.info.villain();
-                let villain_info = metadata.unit.villains.get(&villain_info.id).unwrap();
+                let villain_meta = metadata.unit.villains.get(&villain_info.id).unwrap();
+                let items =
+                    item::generation::roll_item_drops(metadata, villain_meta, rng, next_uid);
 
-                let xp = Value::U64(villain_info.xp_reward);
-
-                let modifier_meta = &metadata
-                    .modifier
-                    .modifiers
-                    .values()
-                    .find(|m| m.id == ModifierId(64512))
-                    .unwrap();
-
-                let xp_modifier = StatModifier::new(
-                    StatId(23),
-                    Modifier::new(
-                        modifier_meta.id,
-                        xp,
-                        Operation::Add,
-                        ModifierKind::Normal,
-                        ModifierFormat::Flat,
-                    ),
-                );
-                let xp_item = Item::new(
-                    next_uid.get(),
-                    ItemId(32768),
-                    1,
-                    Rarity::Normal,
-                    vec![xp_modifier],
-                    false,
-                    false,
-                );
-                next_uid.next();
-
-                let mut items =
-                    item::generation::roll_item_drops(metadata, villain_info, rng, next_uid);
-                items.push(xp_item);
-
-                println!("generated {} item(s)", items.len());
+                // println!("generated {} item(s)", items.len());
 
                 Some(items)
             }

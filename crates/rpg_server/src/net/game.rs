@@ -2,7 +2,11 @@ use super::server::{NetworkParamsRO, NetworkParamsRW};
 use crate::{
     account::AccountInstance,
     assets::MetadataResources,
-    game::plugin::{AabbResources, GameState},
+    game::{
+        plugin::{AabbResources, GameState},
+        skill::SkillOwner,
+    },
+    state::AppState,
 };
 
 use bevy::{
@@ -10,7 +14,8 @@ use bevy::{
         entity::Entity,
         event::EventReader,
         query::With,
-        system::{Commands, Query, Res},
+        schedule::NextState,
+        system::{Commands, Query, Res, ResMut},
     },
     hierarchy::DespawnRecursiveExt,
     log::info,
@@ -26,7 +31,7 @@ use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions::{Action, ActionData, Actions, AttackData, State},
     item::{GroundItem, StorableItem, UnitStorage},
-    skill::{get_skill_origin, SkillSlots, Skills},
+    skill::{get_skill_origin, SkillSlots, SkillUse, Skills},
     unit::{Hero, HeroBundle, Unit, UnitBundle},
 };
 use util::math::AabbComponent;
@@ -47,8 +52,12 @@ pub(crate) fn receive_player_join(
 }
 
 pub(crate) fn receive_player_leave(
+    mut commands: Commands,
+    mut state: ResMut<NextState<AppState>>,
     mut leave_reader: EventReader<MessageEvent<CSPlayerLeave>>,
+    mut game_state: ResMut<GameState>,
     mut net_params: NetworkParamsRW,
+    skill_q: Query<(Entity, &SkillOwner), With<SkillUse>>,
 ) {
     for event in leave_reader.read() {
         let client_id = *event.context();
@@ -56,6 +65,24 @@ pub(crate) fn receive_player_leave(
         if !client.is_authenticated_player() {
             continue;
         };
+
+        game_state.players.retain(|p| p.client_id != client_id);
+
+        commands
+            .entity(client.entity)
+            .remove::<(HeroBundle, Transform, AabbComponent)>();
+
+        // despawn any active skills that the player has cast
+        for (entity, owner) in &skill_q {
+            if owner.entity == client.entity {
+                commands.entity(entity).despawn_recursive();
+            }
+        }
+
+        if game_state.players.is_empty() {
+            info!("no players remain, ending game");
+            state.set(AppState::CleanupSimulation);
+        }
 
         info!("player leave");
     }
@@ -249,7 +276,7 @@ pub(crate) fn receive_skill_use_targeted(
         let skill_target = get_skill_origin(
             &metadata.0,
             &transform,
-            transform.translation, // FIXMEcursor_position.ground,
+            skill_msg.target, // FIXMEcursor_position.ground,
             skill_msg.skill_id,
         );
 
