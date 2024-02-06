@@ -5,7 +5,7 @@ pub(crate) enum AppState {
     #[default]
     Loading,
     Lobby,
-    Chat,
     SpawnSimulation,
     Simulation,
+    CleanupSimulation,
 }

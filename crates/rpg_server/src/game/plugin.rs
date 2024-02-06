@@ -21,7 +21,7 @@ use lightyear::netcode::ClientId;
 use lightyear::shared::NetworkTarget;
 
 use rpg_account::{account::AccountId, character::CharacterSlot};
-use rpg_core::{uid::Uid, unit::HeroGameMode, villain::VillainId};
+use rpg_core::{game_mode::GameMode, uid::Uid, villain::VillainId};
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     item::GroundItemDrops,
@@ -35,7 +35,7 @@ use std::collections::HashMap;
 
 #[derive(Default, Debug)]
 pub(crate) struct GameOptions {
-    pub(crate) mode: HeroGameMode,
+    pub(crate) mode: GameMode,
     pub(crate) max_players: u8,
 }
 
@@ -92,6 +92,10 @@ impl Plugin for GamePlugin {
             .insert_resource(SharedRng(Rng::with_seed(1234)))
             .add_systems(OnEnter(AppState::SpawnSimulation), setup_simulation)
             .add_systems(OnEnter(AppState::Simulation), join_clients)
+            .add_systems(
+                OnEnter(AppState::CleanupSimulation),
+                util::cleanup::cleanup::<GameSessionCleanup>,
+            )
             .add_systems(
                 Update,
                 transition_to_game.run_if(in_state(AppState::SpawnSimulation)),

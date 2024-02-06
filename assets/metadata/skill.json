@@ -85,7 +85,10 @@
     },
     "BasicOrb": {
       "timer": {
-        "Duration": 10
+        "Tickable": {
+	  "duration": 10,
+	  "frequency": 0.5
+	}
       },
       "info": {
         "Projectile": {
@@ -108,14 +111,14 @@
       "base_damage": {
         "kind": "Physical",
         "value": {
-          "Flat": 12
+          "Flat": 10
         }
       },
       "base_cost": [
         {
           "id": 12,
           "value": {
-            "U32": 1
+            "U32": 4
           }
         }
       ],
@@ -139,7 +142,7 @@
       "info": {
         "Projectile": {
           "shape": "Sphere",
-          "speed": 500,
+          "speed": 600,
           "size": 100,
           "projectiles": 1
         }
@@ -148,7 +151,7 @@
       "origin_kind": "Remote",
       "origin": [
         0,
-        8,
+        10,
         0
       ],
       "base_damage": {

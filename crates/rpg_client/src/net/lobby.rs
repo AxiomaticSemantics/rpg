@@ -1,12 +1,12 @@
 use bevy::{
     ecs::{
         event::EventReader,
-        system::{Res, ResMut, Resource},
+        system::{ResMut, Resource},
     },
     log::info,
 };
 
-use rpg_core::unit::HeroGameMode;
+use rpg_core::game_mode::GameMode;
 use rpg_lobby::lobby::{LobbyId, LobbyMessage, LobbyPlayer};
 use rpg_network_protocol::protocol::*;
 
@@ -15,7 +15,7 @@ use lightyear::client::events::MessageEvent;
 pub(crate) struct LobbyInfo {
     pub(crate) id: LobbyId,
     pub(crate) name: String,
-    pub(crate) game_mode: HeroGameMode,
+    pub(crate) game_mode: GameMode,
     pub(crate) players: Vec<LobbyPlayer>,
     pub(crate) messages: Vec<LobbyMessage>,
 }

@@ -9,7 +9,7 @@ use crate::{
         },
         health_bar::{HealthBar, HealthBarFrame, HealthBarRect},
         metadata::MetadataResources,
-        plugin::{GameCamera, GameState},
+        plugin::GameCamera,
     },
 };
 
@@ -21,7 +21,7 @@ use rpg_core::{
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions::{ActionData, Actions, State},
-    item::{GroundItem, StorableItem, UnitStorage},
+    item::{GroundItem, StorableItem},
     skill::{SkillSlots, Skills},
     unit::{Corpse, Hero, Unit},
 };
@@ -134,13 +134,12 @@ pub fn update_health_bars(
 
 // TODO move this to somewhere else
 pub fn pick_storable_items(
-    mut commands: Commands,
     mouse_input: Res<ButtonInput<MouseButton>>,
     key_input: Res<ButtonInput<KeyCode>>,
-    mut game_state: ResMut<GameState>,
-    mut item_q: Query<(Entity, &Transform, &mut GroundItem), With<StorableItem>>,
+    mut net_client: ResMut<Client>,
+    mut item_q: Query<(&Transform, &GroundItem), With<StorableItem>>,
     mut hero_q: Query<
-        (&Transform, &mut UnitStorage, &mut AudioActions),
+        &Transform,
         (
             With<Hero>,
             With<Player>,
@@ -149,11 +148,11 @@ pub fn pick_storable_items(
         ),
     >,
 ) {
-    let Ok((u_transform, mut u_storage, mut u_audio)) = hero_q.get_single_mut() else {
+    let Ok(u_transform) = hero_q.get_single_mut() else {
         return;
     };
 
-    for (i_entity, i_transform, mut i_item) in &mut item_q {
+    for (i_transform, i_item) in &mut item_q {
         let mut i_ground = i_transform.translation;
         i_ground.y = 0.;
 
@@ -163,15 +162,14 @@ pub fn pick_storable_items(
                 || mouse_input.just_pressed(MouseButton::Left))
             && distance < 0.5
         {
-            let Some(slot) = u_storage.get_empty_slot_mut() else {
-                return;
-            };
-            slot.item = i_item.0.take();
+            net_client.send_message::<Channel1, _>(CSItemPickup(i_item.as_ref().unwrap().uid));
 
+            /* FIXME move to message handler
             u_audio.push("item_pickup".into());
-
             commands.entity(i_entity).despawn_recursive();
-            return;
+            */
+
+            break;
         }
     }
 }

@@ -1,9 +1,12 @@
+use crate::character_statistics::CharacterStatistics;
+
 use rpg_core::{
+    game_mode::GameMode,
     passive_tree::PassiveSkillGraph,
     skill::{Skill, SkillSlot},
     storage::UnitStorage,
     uid::Uid,
-    unit::{HeroGameMode, Unit},
+    unit::Unit,
 };
 
 use serde_derive::{Deserialize as De, Serialize as Ser};
@@ -14,6 +17,7 @@ pub struct CharacterSlot(pub usize);
 #[derive(Debug, Clone, PartialEq, Ser, De)]
 pub struct CharacterRecord {
     pub info: CharacterInfo,
+    pub statistics: CharacterStatistics,
     pub character: Character,
 }
 
@@ -28,7 +32,7 @@ pub struct CharacterInfo {
     pub name: String,
     pub slot: CharacterSlot,
     pub uid: Uid,
-    pub game_mode: HeroGameMode,
+    pub game_mode: GameMode,
 }
 
 #[derive(Debug, Clone, Ser, De)]

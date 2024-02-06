@@ -465,10 +465,15 @@ pub(crate) fn receive_combat_result(
                 *anim = ANIM_DEFEND;
                 audio.push("hit_soft".into());
             }
-            CombatResult::Death(_) => {
+            CombatResult::HeroDeath(_) => {
                 player.stats.vitals.set("Hp", Value::U32(0));
                 audio.push("hit_death".into());
                 *anim = ANIM_DEATH;
+            }
+            CombatResult::VillainDeath(death) => {
+                if let Some(reward) = &death.reward {
+                    player.info.hero_mut().xp_curr.value = reward.xp_total;
+                }
             }
             CombatResult::Blocked | CombatResult::Dodged => {
                 audio.push("hit_blocked".into());
@@ -605,9 +610,12 @@ pub(crate) fn receive_hero_death(
         audio.push("hit_death".into());
         *anim = ANIM_DEATH;
         if unit.uid == death_msg.0 {
-            game_state.state = PlayState::Death(GameOverState::Pending);
+            //
         }
+
         commands.entity(entity).insert(Corpse);
+        death_reader.clear();
+        return;
     }
 }
 

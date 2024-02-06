@@ -12,7 +12,8 @@ use super::{
     passive_tree, state_saver, ui, world,
 };
 
-use rpg_core::unit::HeroGameMode;
+use rpg_account::character_statistics::CharacterStatistics;
+use rpg_core::game_mode::GameMode;
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions,
@@ -33,9 +34,7 @@ use bevy::{
         component::Component,
         entity::Entity,
         query::{With, Without},
-        schedule::{
-            common_conditions::*, Condition, IntoSystemConfigs, NextState, OnEnter, OnExit,
-        },
+        schedule::{common_conditions::*, Condition, IntoSystemConfigs, NextState, OnEnter},
         system::{Commands, Query, Res, ResMut, Resource},
     },
     gizmos::config::{GizmoConfig, GizmoConfigGroup},
@@ -63,45 +62,7 @@ pub struct GameCamera {
     pub max_y: f32,
 }
 
-#[derive(Debug, Default)]
-pub struct SessionStats {
-    pub kills: u32,
-    pub times_hit: u32,
-    pub attacks: u32,
-    pub hits: u32,
-    pub dodges: u32,
-    pub times_dodged: u32,
-    pub blocks: u32,
-    pub times_blocked: u32,
-    pub chains: u32,
-    pub times_chained: u32,
-    pub pierced: u32,
-    pub times_pierced: u32,
-    pub knockbacks: u32,
-    pub knockback_distance: f32,
-    pub times_knockbacked: u32,
-    pub distance_knockbacked: f32,
-    pub distance_travelled: f32,
-    pub items_looted: u32,
-
-    // Various stats
-    pub hp_consumed: u32,
-    pub hp_generated: u32,
-    pub ep_consumed: u32,
-    pub ep_generated: u32,
-    pub mp_consumed: u32,
-    pub mp_generated: u32,
-    pub damage_dealt: u64,
-    pub damage_received: u64,
-    pub patk_damage_dealt: u64,
-    pub matk_damage_dealt: u64,
-    pub tatk_damage_dealt: u64,
-    pub patk_damage_received: u64,
-    pub matk_damage_received: u64,
-    pub tatk_damage_received: u64,
-}
-
-pub(crate) fn build_stats_string(stats: &SessionStats) -> String {
+pub(crate) fn build_character_stats_string(stats: &CharacterStatistics) -> String {
     format!(
         "Player Stats:\n\nKills: {} Attacks: {} Hits: {}\nBlocks: {} Dodges: {}\n\nTimes Hit: {} Times Blocked: {} Times Dodged: {}\n\nItems Looted: {}",
         stats.kills,
@@ -130,7 +91,6 @@ pub enum PlayState {
     #[default]
     Loading,
     Game,
-    Death(GameOverState),
 }
 
 impl PlayState {
@@ -140,10 +100,6 @@ impl PlayState {
 
     pub fn game(&self) -> bool {
         matches!(self, Self::Game)
-    }
-
-    pub fn death(&self) -> bool {
-        matches!(self, Self::Death(_))
     }
 }
 
@@ -158,7 +114,7 @@ pub enum GameOverState {
 #[derive(Debug, Resource, Default)]
 pub struct GameState {
     pub state: PlayState,
-    pub mode: HeroGameMode,
+    pub mode: GameMode,
 }
 
 pub struct GamePlugin;
@@ -226,6 +182,9 @@ impl Plugin for GamePlugin {
                             unit::unit_audio,
                             actor::animation::animator,
                             ui::menu::toggle_menu,
+                            ui::menu::exit_button,
+                            ui::menu::cancel_button,
+                            ui::menu::restart_button,
                         )
                             .after(player::update_camera),
                     ),
@@ -242,16 +201,6 @@ impl Plugin for GamePlugin {
                     .run_if(in_state(AppState::Game).and_then(is_game)),
             )
             .add_systems(
-                Update,
-                (
-                    ui::menu::toggle_menu,
-                    ui::menu::exit_button,
-                    ui::menu::cancel_button,
-                )
-                    .chain()
-                    .run_if(in_state(AppState::Game).and_then(is_death)),
-            )
-            .add_systems(
                 PostUpdate,
                 (
                     player::update_debug_lines,
@@ -263,16 +212,6 @@ impl Plugin for GamePlugin {
                     ui::hud::update,
                 )
                     .run_if(in_state(AppState::Game).and_then(is_game)),
-            )
-            // This system is special and transitions from Game to GameOver when the player dies
-            .add_systems(
-                PostUpdate,
-                (
-                    ui::hud::update,
-                    // FIXME remove ui::game_over::game_over_transition,
-                )
-                    .chain()
-                    .run_if(in_state(AppState::Game).and_then(is_death)),
             )
             .add_systems(
                 PreUpdate,
@@ -286,24 +225,6 @@ impl Plugin for GamePlugin {
                     .run_if(in_state(AppState::Game).and_then(is_game)),
             )
             .add_systems(OnEnter(AppState::Game), set_playing)
-            // GameOver
-            .add_systems(
-                OnExit(AppState::GameOver),
-                (
-                    util::cleanup::cleanup::<GameSessionCleanup>,
-                    environment::cleanup,
-                    cleanup,
-                ),
-            )
-            .add_systems(
-                Update,
-                (
-                    actor::animation::animator,
-                    ui::game_over::exit_button,
-                    ui::game_over::restart_button,
-                )
-                    .run_if(in_state(AppState::GameOver)),
-            )
             // GameCleanup
             .add_systems(
                 OnEnter(AppState::GameCleanup),
@@ -366,10 +287,6 @@ fn is_loading(game_state: Res<GameState>) -> bool {
 
 fn is_game(game_state: Res<GameState>) -> bool {
     game_state.state.game()
-}
-
-fn is_death(game_state: Res<GameState>) -> bool {
-    game_state.state.death()
 }
 
 pub(crate) fn load_assets(mut commands: Commands) {
@@ -451,15 +368,5 @@ fn cleanup(mut game_state: ResMut<GameState>, mut controls: ResMut<Controls>) {
 
     controls.reset();
 
-    match game_state.state {
-        PlayState::Death(GameOverState::Restart) => {
-            game_state.state = PlayState::default();
-        }
-        PlayState::Death(GameOverState::Exit) => {
-            *game_state = GameState::default();
-        }
-        _ => {
-            panic!("Should not get here. {game_state:?}");
-        }
-    }
+    *game_state = GameState::default();
 }

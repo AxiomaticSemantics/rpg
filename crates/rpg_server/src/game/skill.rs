@@ -3,8 +3,7 @@ use super::{
     unit::CorpseTimer,
 };
 use crate::{
-    account::AccountInstance, assets::MetadataResources, net::server::NetworkParamsRW,
-    server_state::ServerMetadataResource,
+    assets::MetadataResources, net::server::NetworkParamsRW, server_state::ServerMetadataResource,
 };
 
 use rpg_core::{
@@ -12,10 +11,11 @@ use rpg_core::{
     item::ItemDrops,
     skill::{
         effect::*, skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData,
-        OriginKind, ProjectileInstance, ProjectileShape, Skill, SkillInfo, SkillInstance,
-        SkillTarget, TimerDescriptor,
+        ProjectileInstance, ProjectileShape, Skill, SkillInfo, SkillInstance, TimerDescriptor,
     },
+    stat::{StatChange, StatId, StatUpdate},
     unit::UnitKind,
+    value::Value,
 };
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
@@ -72,6 +72,7 @@ pub fn update_invulnerability(
     }
 }
 
+/*
 fn get_target_info(
     caster_transform: &Transform,
     skill_meta: &SkillTableEntry,
@@ -91,7 +92,7 @@ fn get_target_info(
         origin,
         target: attack_data.skill_target.target,
     }
-}
+}*/
 
 pub(crate) fn prepare_skill(
     attack_data: &AttackData,
@@ -101,7 +102,7 @@ pub(crate) fn prepare_skill(
     unit: &Unit,
     unit_transform: &Transform,
 ) -> (Aabb3d, Transform, SkillUse, Option<SkillTimer>) {
-    let target = get_target_info(unit_transform, skill_meta, attack_data);
+    //let target = get_target_info(unit_transform, skill_meta, attack_data);
 
     // debug!("{:?}", &skill_info.origin);
 
@@ -150,7 +151,8 @@ pub(crate) fn prepare_skill(
                 frame: 0,
             });
 
-            let transform = Transform::from_translation(target.origin).looking_to(Vec3::Z, Vec3::Y);
+            let transform = Transform::from_translation(attack_data.skill_target.origin)
+                .looking_to(attack_data.skill_target.target, Vec3::Y);
 
             (aabb, instance, transform)
         }
@@ -180,18 +182,8 @@ pub(crate) fn prepare_skill(
                 aabb
             };
 
-            let transform = if info.orbit.is_some() {
-                let mut origin_transform =
-                    Transform::from_translation(target.origin).looking_at(target.target, Vec3::Y);
-                origin_transform.translation += origin_transform.forward() * 2.;
-
-                origin_transform
-            } else if info.aerial.is_some() {
-                //println!("prepare aerial {attack_data:?}");
-                Transform::from_translation(target.origin).looking_at(target.target, Vec3::Y)
-            } else {
-                Transform::from_translation(target.origin).looking_to(target.target, Vec3::Y)
-            };
+            let transform = Transform::from_translation(attack_data.skill_target.origin)
+                .looking_at(attack_data.skill_target.target, Vec3::Y);
 
             let instance_info = SkillInstance::Projectile(ProjectileInstance {
                 info: info.clone(),
@@ -209,7 +201,7 @@ pub(crate) fn prepare_skill(
         SkillInfo::Area(info) => {
             let skill_instance = SkillInstance::Area(AreaInstance { info: info.clone() });
 
-            let transform = Transform::from_translation(target.origin + Vec3::new(0.0, 0.01, 0.0))
+            let transform = Transform::from_translation(attack_data.skill_target.origin)
                 .looking_to(Vec3::NEG_Y, Vec3::Y);
 
             let radius = info.radius as f32 / 100.;
@@ -286,7 +278,6 @@ pub(crate) fn collide_skills(
         &SkillOwner,
         Option<&mut SkillTimer>,
     )>,
-    // owner_q: Query<&Unit>,
     unit_q: Query<(Entity, &Transform, &AabbComponent, &Unit), Without<Corpse>>,
 ) {
     for (s_entity, s_transform, s_aabb, invulnerability, instance, owner, mut timer) in &skill_q {
@@ -328,8 +319,8 @@ pub(crate) fn collide_skills(
                 }
             };
 
-            //info!("collide {instance:?} {collision}");
             if collision {
+                // info!("collide {instance:?} {collision}");
                 skill_events.send(SkillContactEvent {
                     entity: s_entity,
                     owner: owner.entity,
@@ -359,20 +350,13 @@ pub fn handle_contacts(
         Option<&mut SkillTimer>,
     )>,
     mut unit_q: Query<
-        (
-            Entity,
-            &mut Unit,
-            &mut Actions,
-            &Transform,
-            Option<&AccountInstance>,
-            Option<&Corpse>,
-        ),
+        (Entity, &mut Unit, &mut Actions, &Transform, Option<&Corpse>),
         Without<SkillUse>,
     >,
 ) {
     for event in skill_events.read() {
         let Ok(
-            [(_, mut attacker, _, _, a_account, _), (d_entity, mut defender, mut d_actions, d_transform, d_account, d_corpse)],
+            [(_, mut attacker, _, _, _), (d_entity, mut defender, mut d_actions, d_transform, d_corpse)],
         ) = unit_q.get_many_mut([event.owner, event.defender])
         else {
             panic!("Unable to query attacker and/or defender unit(s)");
@@ -385,7 +369,7 @@ pub fn handle_contacts(
         let (s_entity, mut s_transform, mut invulnerability, mut instance, timer) =
             skill_q.get_mut(event.entity).unwrap();
         let combat_result =
-            defender.handle_attack(&attacker, &metadata.0, &mut rng.0, &instance.damage);
+            defender.handle_attack(&mut attacker, &metadata.0, &mut rng.0, &instance.damage);
 
         info!("{combat_result:?}");
 
@@ -437,13 +421,8 @@ pub fn handle_contacts(
                 }*/
 
                 if defender.kind == UnitKind::Hero {
-                    // TODO should probably move the lookup out of game state?
                     let id_info = game_state.get_id_info_from_uid(defender.uid).unwrap();
 
-                    /*let client = net_params
-                    .context
-                    .get_client_from_account_id(d_account.as_ref().unwrap().0.info.id)
-                    .unwrap();*/
                     net_params.server.send_message_to_target::<Channel1, _>(
                         SCCombatResult(combat_result.clone()),
                         NetworkTarget::Only(vec![id_info.client_id]),
@@ -471,59 +450,73 @@ pub fn handle_contacts(
                     }
                 }
             }
-            CombatResult::Death(damage) => {
-                debug!("death");
+            CombatResult::HeroDeath(_) => {
+                debug!("hero death");
 
                 d_actions.reset();
 
-                if defender.kind == UnitKind::Villain {
-                    /*game_state.session_stats.kills += 1;
-                    game_state.session_stats.hits += 1;*/
+                // game_state.session_stats.villain_hits += 1;
 
-                    if let Some(items) = defender.handle_death(
-                        &mut attacker,
-                        &metadata.0,
-                        &mut rng.0,
-                        &mut server_metadata.0.next_uid,
-                    ) {
-                        //game_state.session_stats.items_spawned += death.items.len() as u32;
+                net_params.server.send_message_to_target::<Channel1, _>(
+                    SCHeroDeath(defender.uid),
+                    NetworkTarget::All,
+                );
 
-                        let drops = ItemDrops {
-                            source: defender.uid,
-                            items: items.clone(),
-                        };
+                commands.entity(event.defender).insert((
+                    Corpse,
+                    CorpseTimer(Timer::from_seconds(600., TimerMode::Once)),
+                ));
+            }
+            CombatResult::VillainDeath(death) => {
+                debug!("villain death");
 
-                        ground_drops.0.push(drops.clone());
+                d_actions.reset();
 
-                        net_params.server.send_message_to_target::<Channel1, _>(
-                            SCSpawnItems {
-                                position: d_transform.translation,
-                                items: drops,
-                            },
-                            NetworkTarget::All,
-                        );
-                    }
+                /*game_state.session_stats.kills += 1;
+                game_state.session_stats.hits += 1;*/
 
-                    // TODO XP for attacker
+                if let Some(items) = defender.handle_death(
+                    &mut attacker,
+                    &metadata.0,
+                    &mut rng.0,
+                    &mut server_metadata.0.next_uid,
+                ) {
+                    //game_state.session_stats.items_spawned += death.items.len() as u32;
+
+                    let drops = ItemDrops {
+                        source: defender.uid,
+                        items: items.clone(),
+                    };
+
+                    ground_drops.0.push(drops.clone());
 
                     net_params.server.send_message_to_target::<Channel1, _>(
-                        SCVillainDeath(defender.uid),
-                        NetworkTarget::All,
-                    );
-                } else {
-                    // game_state.session_stats.villain_hits += 1;
-                    net_params.server.send_message_to_target::<Channel1, _>(
-                        SCHeroDeath(defender.uid),
+                        SCSpawnItems {
+                            position: d_transform.translation,
+                            items: drops,
+                        },
                         NetworkTarget::All,
                     );
                 }
+
+                let id_info = game_state.get_id_info_from_uid(attacker.uid).unwrap();
+
+                net_params.server.send_message_to_target::<Channel1, _>(
+                    SCCombatResult(combat_result.clone()),
+                    NetworkTarget::Only(vec![id_info.client_id]),
+                );
+
+                net_params.server.send_message_to_target::<Channel1, _>(
+                    SCVillainDeath(defender.uid),
+                    NetworkTarget::All,
+                );
 
                 commands.entity(event.defender).insert((
                     Corpse,
                     CorpseTimer(Timer::from_seconds(60., TimerMode::Once)),
                 ));
             }
-            _ => {}
+            _ => debug!("combat error"),
         }
 
         if let Some(mut timer) = timer {
@@ -532,8 +525,7 @@ pub fn handle_contacts(
             }
         }
 
-        if defender.is_alive()
-            && !instance.effects.is_empty()
+        if !instance.effects.is_empty()
             && handle_effects(
                 &time,
                 &mut rng.0,
@@ -556,7 +548,7 @@ fn handle_effects(
     skill_transform: &mut Transform,
     defender_actions: &mut Actions,
 ) -> bool {
-    //println!("info {:?}", skill_use.effects);
+    // debug!("info {:?}", skill_use.effects);
 
     if let Some(effect) = &mut skill_use.effects.iter_mut().find(|e| e.info.is_knockback()) {
         let EffectInfo::Knockback(info) = &effect.info else {
@@ -591,7 +583,7 @@ fn handle_effects(
                 panic!("expected pierce data");
             };
 
-            //println!("pierce {} {}", info.pierces, data.count);
+            // debug!("pierce {} {}", info.pierces, data.count);
             data.count += 1;
 
             data.count > info.pierces
@@ -613,7 +605,7 @@ fn handle_effects(
                 panic!("expected chain data");
             };
 
-            //println!("chain {}", info.chains);
+            // debug!("chain {}", info.chains);
             data.count += 1;
 
             skill_transform.rotate_y(0.5 - rng.f32());

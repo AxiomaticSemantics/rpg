@@ -25,7 +25,9 @@ use lightyear::prelude::NetworkTarget;
 
 use rpg_account::{
     account::{Account, AccountInfo, AdminAccount, AdminAccountInfo},
+    account_statistics::AccountStatistics,
     character::{Character, CharacterInfo, CharacterRecord},
+    character_statistics::CharacterStatistics,
 };
 use rpg_core::{
     passive_tree::PassiveSkillGraph,
@@ -95,6 +97,7 @@ pub(crate) fn receive_account_create(
                     id: server_metadata.0.next_account_id,
                     selected_slot: None,
                 },
+                statistics: AccountStatistics::default(),
                 characters: vec![],
             };
 
@@ -293,6 +296,7 @@ pub(crate) fn receive_character_create(
 
                 let character = CharacterRecord {
                     info: character_info,
+                    statistics: CharacterStatistics::default(),
                     character: Character {
                         unit,
                         skills,
