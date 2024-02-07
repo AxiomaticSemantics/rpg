@@ -1,12 +1,9 @@
 use super::plugin::{AabbResources, GameSessionCleanup};
 use crate::assets::MetadataResources;
 
-use rpg_core::{
-    item::{Item, ItemKind},
-    metadata::Metadata,
-};
+use rpg_core::{item::Item, metadata::Metadata};
 use rpg_util::{
-    item::{GroundItem, GroundItemBundle, GroundItemDrops, ResourceItem, StorableItem},
+    item::{GroundItem, GroundItemBundle, GroundItemDrops, StorableItem},
     unit::Unit,
 };
 
@@ -58,25 +55,14 @@ fn spawn_item(
 
     let transform = Transform::from_xyz(position.x, 0.8, position.z);
 
-    let id = commands
-        .spawn((
-            GameSessionCleanup,
-            CleanupStrategy::DespawnRecursive,
-            transform,
-            GroundItemBundle {
-                item: GroundItem(Some(item)),
-            },
-            aabb,
-        ))
-        .id();
-
-    // Insert item kind marker
-    match item_info.kind {
-        ItemKind::Resource => {
-            commands.entity(id).insert(ResourceItem);
-        }
-        _ => {
-            commands.entity(id).insert(StorableItem);
-        }
-    }
+    commands.spawn((
+        GameSessionCleanup,
+        CleanupStrategy::DespawnRecursive,
+        transform,
+        GroundItemBundle {
+            item: GroundItem(Some(item)),
+        },
+        StorableItem,
+        aabb,
+    ));
 }

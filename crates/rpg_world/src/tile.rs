@@ -1,6 +1,6 @@
 use crate::edge::{Edge, EdgeFlags};
 
-use glam::UVec2;
+use bevy_math::{uvec2, UVec2};
 
 #[derive(Debug)]
 pub enum TileFlags {
@@ -83,6 +83,15 @@ impl Tile {
 
     pub fn position(&self) -> UVec2 {
         UVec2::new((self.index % 4) as u32, (self.index / 4) as u32)
+    }
+
+    pub fn get_edge_offset(&self, edge: Edge) -> UVec2 {
+        match edge {
+            Edge::Bottom => uvec2(2, 4),
+            Edge::Top => uvec2(2, 0),
+            Edge::Left => uvec2(0, 2),
+            Edge::Right => uvec2(4, 2),
+        }
     }
 
     pub fn index(position: UVec2) -> u8 {

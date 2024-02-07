@@ -38,6 +38,7 @@ use bevy::{
         system::{Commands, Query, Res, ResMut, Resource},
     },
     gizmos::config::{GizmoConfig, GizmoConfigGroup},
+    hierarchy::DespawnRecursiveExt,
     log::{debug, info},
     math::Vec3,
     pbr::{AmbientLight, DirectionalLightShadowMap},
@@ -101,14 +102,6 @@ impl PlayState {
     pub fn game(&self) -> bool {
         matches!(self, Self::Game)
     }
-}
-
-#[derive(Debug, Default, PartialEq)]
-pub enum GameOverState {
-    #[default]
-    Pending,
-    Restart,
-    Exit,
 }
 
 #[derive(Debug, Resource, Default)]
@@ -217,7 +210,6 @@ impl Plugin for GamePlugin {
                 PreUpdate,
                 (
                     environment::day_night_cycle,
-                    // TODO decide if this will be needed againvillain::spawner,
                     unit::remove_healthbar,
                     clean_skills,
                     actions::action_tick,
@@ -309,10 +301,10 @@ fn setup_audio(mut commands: Commands) {
     ));
 }
 
-fn setup(mut commands: Commands, mut camera_2d_q: Query<&mut Camera, With<OutOfGameCamera>>) {
+fn setup(mut commands: Commands, camera_q: Query<Entity, With<OutOfGameCamera>>) {
     info!("spawning world");
 
-    camera_2d_q.single_mut().is_active = false;
+    commands.entity(camera_q.single()).despawn_recursive();
 
     /* FIXME update this
     commands.insert_resource(GizmoConfig {
@@ -359,8 +351,6 @@ fn setup(mut commands: Commands, mut camera_2d_q: Query<&mut Camera, With<OutOfG
             ),
         },*/
     ));
-
-    info!("spawning complete");
 }
 
 fn cleanup(mut game_state: ResMut<GameState>, mut controls: ResMut<Controls>) {

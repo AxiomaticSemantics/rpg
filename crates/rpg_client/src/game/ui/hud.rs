@@ -1,8 +1,10 @@
 #![allow(clippy::too_many_arguments)]
 
-use crate::assets::TextureAssets;
+use crate::{
+    assets::TextureAssets,
+    game::{actor::player::Player, metadata::MetadataResources, plugin::GameSessionCleanup},
+};
 
-use crate::game::{actor::player::Player, metadata::MetadataResources, plugin::GameSessionCleanup};
 use rpg_util::unit::Unit;
 use ui_util::style::UiTheme;
 use util::cleanup::CleanupStrategy;
@@ -15,16 +17,16 @@ use bevy::{
     },
     hierarchy::BuildChildren,
     render::color::Color,
-    text::prelude::*,
-    ui::prelude::*,
-    utils::prelude::default,
+    text::Text,
+    ui::{
+        node_bundles::NodeBundle, AlignContent, AlignItems, AlignSelf, Display, FlexDirection,
+        JustifyContent, Style, UiRect, Val,
+    },
+    utils::default,
 };
 
 #[derive(Component)]
 pub struct HudRoot;
-
-#[derive(Component)]
-pub struct ReturnToMenu;
 
 #[derive(Component)]
 pub struct Health;
@@ -202,7 +204,6 @@ pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, _textures: R
                             align_items: AlignItems::Center,
                             align_content: AlignContent::SpaceEvenly,
                             justify_content: JustifyContent::Center,
-                            //width: Val::Percent(100.),
                             ..default()
                         },
                         ..default()
@@ -221,7 +222,6 @@ pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, _textures: R
                             ..default()
                         })
                         .with_children(|p| {
-                            //ui_util::widgets::build_bar_label(p, &ui_theme, HealthText);
                             ui_util::widgets::build_horizontal_bar(
                                 p,
                                 &ui_theme,
@@ -244,7 +244,6 @@ pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, _textures: R
                             ..default()
                         })
                         .with_children(|p| {
-                            //ui_util::widgets::build_bar_label(p, &ui_theme, StaminaText);
                             ui_util::widgets::build_horizontal_bar(
                                 p,
                                 &ui_theme,
@@ -267,7 +266,6 @@ pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, _textures: R
                             ..default()
                         })
                         .with_children(|p| {
-                            //ui_util::widgets::build_bar_label(p, &ui_theme, ManaText);
                             ui_util::widgets::build_horizontal_bar(
                                 p,
                                 &ui_theme,
@@ -300,7 +298,6 @@ pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, _textures: R
                             ..default()
                         })
                         .with_children(|p| {
-                            //ui_util::widgets::build_bar_label(p, &ui_theme, XpText);
                             ui_util::widgets::build_horizontal_bar(
                                 p,
                                 &ui_theme,

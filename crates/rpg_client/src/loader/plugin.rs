@@ -30,7 +30,7 @@ use bevy::{
         schedule::{common_conditions::in_state, IntoSystemConfigs, NextState, OnEnter},
         system::{Commands, NonSend, Query, ResMut},
     },
-    log::{warn, LogPlugin},
+    log::{info, warn, LogPlugin},
     render::{
         camera::{Camera, ClearColorConfig},
         color::Color,
@@ -97,8 +97,7 @@ impl Plugin for LoaderPlugin {
                     })
                     .set(WindowPlugin {
                         primary_window: Some(Window {
-                            resolution: WindowResolution::new(1280., 720.)
-                                .with_scale_factor_override(1.),
+                            resolution: WindowResolution::new(1280., 720.),
                             title: "Untitled RPG".into(),
                             resizable: false,
                             ..default()
@@ -119,14 +118,12 @@ impl Plugin for LoaderPlugin {
             .init_resource::<UiTheme>()
             .init_resource::<Lobby>()
             .init_resource::<Chat>()
-            // External plugins
             .add_plugins(NetworkClientPlugin {
                 config: generate_network_config(&cli),
             })
             .add_plugins(TweeningPlugin)
             .add_plugins(UiUtilPlugin)
             //.add_plugins(ConsolePlugin)
-            // Internal plugins
             .add_plugins(AudioManagerPlugin)
             .add_plugins(SplashScreenPlugin)
             .add_plugins(MenuPlugin)
@@ -150,7 +147,7 @@ impl Plugin for LoaderPlugin {
 }
 
 fn transition_splash(mut commands: Commands, mut state: ResMut<NextState<AppState>>) {
-    println!("transition to `AppState::Splash`");
+    info!("transition to `AppState::Splash`");
 
     commands.spawn((
         OutOfGameCamera,
@@ -167,7 +164,7 @@ fn transition_splash(mut commands: Commands, mut state: ResMut<NextState<AppStat
 }
 
 fn transition_game_asset_load(mut state: ResMut<NextState<AppState>>) {
-    println!("transition to `AppState::LoadGameAssets`");
+    info!("transition to `AppState::LoadGameAssets`");
     state.set(AppState::LoadGameAssets);
 }
 

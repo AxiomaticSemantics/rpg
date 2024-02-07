@@ -1,7 +1,6 @@
 use crate::{
     assets::TextureAssets,
     net::account::RpgAccount,
-    state::AppState,
     ui::{
         chat::ChatRoot,
         lobby::LobbyRoot,
@@ -18,19 +17,15 @@ use rpg_account::{
     account::{Account, AccountInfo},
     character::{CharacterInfo, CharacterSlot},
 };
-use rpg_core::{class::Class, game_mode::GameMode, uid::Uid};
 use rpg_lobby::lobby::LobbyId;
 use rpg_network_protocol::protocol::*;
-
-use lightyear::prelude::*;
 
 use bevy::{
     ecs::{
         change_detection::{DetectChanges, Ref},
         component::Component,
-        entity::Entity,
         query::{Changed, With},
-        system::{Commands, ParamSet, Query, Res, ResMut, Resource},
+        system::{ParamSet, Query, Res, ResMut, Resource},
     },
     hierarchy::{BuildChildren, ChildBuilder},
     log::*,
@@ -509,12 +504,6 @@ pub fn spawn_list(
     slot_style.width = Val::Px(256.);
     slot_style.height = Val::Px(48.);
 
-    let account_slot_node_bundle = NodeBundle {
-        style: slot_style.clone(),
-        background_color: ui_theme.button_theme.normal_background_color,
-        ..default()
-    };
-
     builder
         .spawn((
             AccountListRoot,
@@ -724,13 +713,13 @@ pub fn lobby_create_button(
     selected_character: Res<SelectedCharacter>,
     mut net_client: ResMut<Client>,
     mut style_set: ParamSet<(
-        Query<(&mut Style, &Interaction), (Changed<Interaction>, With<LobbyCreateButton>)>,
+        Query<&Interaction, (Changed<Interaction>, With<LobbyCreateButton>)>,
         Query<&mut Style, With<LobbyRoot>>,
         Query<&mut Style, With<AccountListRoot>>,
     )>,
 ) {
     let mut interaction = style_set.p0();
-    if let Ok((style, Interaction::Pressed)) = interaction.get_single_mut() {
+    if let Ok(Interaction::Pressed) = interaction.get_single_mut() {
         let Some(selected_character) = &selected_character.0 else {
             info!("no character selected");
             return;
@@ -752,26 +741,15 @@ pub fn lobby_create_button(
 }
 
 pub fn lobby_join_button(
-    selected_character: Res<SelectedCharacter>,
     mut net_client: ResMut<Client>,
     mut style_set: ParamSet<(
-        Query<(&mut Style, &Interaction), (Changed<Interaction>, With<LobbyJoinButton>)>,
+        Query<&Interaction, (Changed<Interaction>, With<LobbyJoinButton>)>,
         Query<&mut Style, With<LobbyRoot>>,
         Query<&mut Style, With<AccountListRoot>>,
     )>,
 ) {
     let mut interaction = style_set.p0();
-    if let Ok((style, Interaction::Pressed)) = interaction.get_single_mut() {
-        let Some(selected_character) = &selected_character.0 else {
-            info!("no character selected");
-            return;
-        };
-
-        let Some(character_info) = &selected_character.info else {
-            info!("no character info");
-            return;
-        };
-
+    if let Ok(Interaction::Pressed) = interaction.get_single_mut() {
         style_set.p1().single_mut().display = Display::Flex;
         style_set.p2().single_mut().display = Display::None;
 
@@ -781,16 +759,15 @@ pub fn lobby_join_button(
 }
 
 pub fn list_create_character_button(
-    mut net_client: ResMut<Client>,
     selected_character: Res<SelectedCharacter>,
     mut style_set: ParamSet<(
+        Query<&Interaction, (Changed<Interaction>, With<ListCreateCharacterButton>)>,
         Query<&mut Style, With<CreateRoot>>,
         Query<&mut Style, With<AccountListRoot>>,
-        Query<(&mut Style, &Interaction), (Changed<Interaction>, With<ListCreateCharacterButton>)>,
     )>,
 ) {
-    let mut interaction = style_set.p2();
-    if let Ok((style, Interaction::Pressed)) = interaction.get_single_mut() {
+    let mut interaction = style_set.p0();
+    if let Ok(Interaction::Pressed) = interaction.get_single_mut() {
         let Some(selected_character) = &selected_character.0 else {
             info!("no character slot selected");
             return;
@@ -801,8 +778,8 @@ pub fn list_create_character_button(
             return;
         }
 
-        style_set.p0().single_mut().display = Display::Flex;
-        style_set.p1().single_mut().display = Display::None;
+        style_set.p1().single_mut().display = Display::Flex;
+        style_set.p2().single_mut().display = Display::None;
     }
 }
 
@@ -810,14 +787,14 @@ pub fn list_join_game_button(
     mut net_client: ResMut<Client>,
     selected_character: Res<SelectedCharacter>,
     mut style_set: ParamSet<(
+        Query<&Interaction, (Changed<Interaction>, With<ListJoinGameButton>)>,
         Query<&mut Style, With<MainRoot>>,
         Query<&mut Style, With<AccountListRoot>>,
-        Query<(&Style, &Interaction), (Changed<Interaction>, With<ListJoinGameButton>)>,
     )>,
     account_q: Query<&RpgAccount>,
 ) {
-    let mut interaction = style_set.p2();
-    if let Ok((style, Interaction::Pressed)) = interaction.get_single_mut() {
+    let mut interaction = style_set.p0();
+    if let Ok(Interaction::Pressed) = interaction.get_single_mut() {
         let Some(selected_character) = &selected_character.0 else {
             info!("no character selected");
             return;
@@ -838,8 +815,8 @@ pub fn list_join_game_button(
             })
             .unwrap();
 
-        style_set.p0().single_mut().display = Display::None;
         style_set.p1().single_mut().display = Display::None;
+        style_set.p2().single_mut().display = Display::None;
     }
 }
 
@@ -847,10 +824,6 @@ pub fn list_create_game_button(
     mut net_client: ResMut<Client>,
     selected_character: Res<SelectedCharacter>,
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<ListCreateGameButton>)>,
-    mut menu_set: ParamSet<(
-        Query<&mut Style, With<MainRoot>>,
-        Query<&mut Style, With<AccountListRoot>>,
-    )>,
     account_q: Query<&RpgAccount>,
 ) {
     let interaction = interaction_q.get_single();
@@ -898,14 +871,9 @@ pub fn list_cancel_button(
 pub fn list_select_slot(
     ui_theme: Res<UiTheme>,
     mut selected_character: ResMut<SelectedCharacter>,
-    mut slot_q: Query<(
-        &mut Style,
-        &mut BackgroundColor,
-        Ref<Interaction>,
-        &AccountCharacter,
-    )>,
+    mut slot_q: Query<(&mut BackgroundColor, Ref<Interaction>, &AccountCharacter)>,
 ) {
-    for (mut style, mut bg_color, interaction, slot_character) in &mut slot_q {
+    for (mut bg_color, interaction, slot_character) in &mut slot_q {
         match *interaction {
             Interaction::Pressed => {
                 if !interaction.is_changed() {
@@ -951,16 +919,13 @@ pub fn update_character_list(
     mut slot_q: Query<(&mut Text, &mut AccountCharacter)>,
 ) {
     if let Ok(account) = account_q.get_single() {
-        info!("account changed, updating character slots");
-
+        info!("account {:?}", account.0.info);
         for character in account.0.characters.iter() {
-            info!("character info: {:?}", character.info);
+            // debug!("character info: {:?}", character.info);
 
             for (mut text, mut slot_character) in &mut slot_q {
                 if slot_character.slot == character.info.slot {
                     slot_character.info = Some(character.info.clone());
-
-                    info!("slot match, updating");
 
                     let slot_string = format!(
                         "{} ({:?})\nLevel {} {}",

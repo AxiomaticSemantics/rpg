@@ -10,8 +10,9 @@ pub struct ItemId(pub u16);
 
 #[derive(Debug, Clone, Copy, PartialEq, Ser, De)]
 pub enum ItemKind {
-    Resource,
     Gem,
+    Potion,
+    Currency,
 }
 
 #[derive(Default, Copy, Clone, Debug, PartialEq, Ser, De)]
@@ -37,14 +38,23 @@ pub struct GemInfo {
 }
 
 #[derive(Debug, Clone, Ser, De)]
-pub struct ResourceInfo {
+pub struct PotionInfo {
     pub id: StatId,
+}
+
+#[derive(Debug, Clone, Copy, Ser, De)]
+pub struct CurrencyId(pub u16);
+
+#[derive(Debug, Clone, Ser, De)]
+pub struct CurrencyInfo {
+    pub id: CurrencyId,
 }
 
 #[derive(Debug, Clone, Ser, De)]
 pub enum ItemInfo {
-    Resource(ResourceInfo),
     Gem(GemInfo),
+    Potion(PotionInfo),
+    Currency(CurrencyInfo),
 }
 
 #[derive(Debug, Clone, PartialEq, Ser, De)]
@@ -60,6 +70,7 @@ pub struct Item {
     pub level: u8,
     pub rarity: Rarity,
     pub modifiers: Vec<StatModifier>,
+    pub revealed: bool,
     pub storable: bool,
     pub socketable: bool,
 }
@@ -71,6 +82,7 @@ impl Item {
         level: u8,
         rarity: Rarity,
         modifiers: Vec<StatModifier>,
+        revealed: bool,
         storable: bool,
         socketable: bool,
     ) -> Self {
@@ -80,6 +92,7 @@ impl Item {
             level,
             rarity,
             modifiers,
+            revealed,
             storable,
             socketable,
         }
@@ -109,13 +122,9 @@ pub mod generation {
         next_uid: &mut NextUid,
     ) -> Vec<Item> {
         let mut drops = Vec::new();
-        for i in 0..villain_info.drop_chances {
+        for _ in 0..villain_info.drop_chances {
             let drop_roll = rng.f32();
             if drop_roll < villain_info.drop_chance {
-                println!(
-                    "Rolled: {drop_roll} {} {}",
-                    villain_info.drop_chances, villain_info.drop_chance
-                );
                 let item = super::generation::generate(rng, metadata, 1, next_uid);
                 drops.push(item);
             }
@@ -127,12 +136,11 @@ pub mod generation {
     pub fn generate(rng: &mut Rng, metadata: &Metadata, level: u8, next_uid: &mut NextUid) -> Item {
         assert!(level > 0, "Level must be non-zero");
 
-        let uid = next_uid.get();
-
         let kind_roll = rng.f32();
         let kind = match kind_roll {
             v if v <= metadata.item.drop_info.base.gem => ItemKind::Gem,
-            v if v <= metadata.item.drop_info.base.resource => ItemKind::Resource,
+            v if v <= metadata.item.drop_info.base.potion => ItemKind::Potion,
+            v if v <= metadata.item.drop_info.base.currency => ItemKind::Currency,
             _ => panic!("Unexpected rng output"),
         };
 
@@ -154,9 +162,14 @@ pub mod generation {
                 true,
                 true,
             ),
-            ItemKind::Resource => (
-                rng.u16(metadata.item.resource_ids.begin.0..=metadata.item.resource_ids.end.0),
+            ItemKind::Potion => (
+                rng.u16(metadata.item.potion_ids.begin.0..=metadata.item.potion_ids.end.0),
                 false,
+                false,
+            ),
+            ItemKind::Currency => (
+                rng.u16(metadata.item.currency_ids.begin.0..=metadata.item.currency_ids.end.0),
+                true,
                 false,
             ),
         };
@@ -164,8 +177,8 @@ pub mod generation {
         let entry = metadata.item.items.get(&ItemId(item_table_id)).unwrap();
         let mut modifiers = vec![];
 
-        match &entry.info {
-            ItemInfo::Resource(info) => {
+        let is_revealed = match &entry.info {
+            ItemInfo::Potion(info) => {
                 let modifier_meta = &metadata
                     .modifier
                     .modifiers
@@ -188,10 +201,10 @@ pub mod generation {
                     }
 
                     ValueKind::U64 => {
-                        Value::U64(rng.u64(modifier_meta.min.u64()..=modifier_meta.max.u64()))
+                        Value::sample(rng, *modifier_meta.min.u64()..=*modifier_meta.max.u64())
                     }
-                    ValueKind::F32 => Value::F32(OrderedFloat(rng.f32())),
-                    ValueKind::F64 => Value::F64(OrderedFloat(rng.f64())),
+                    // Only integer primitives are used
+                    _ => unreachable!(),
                 };
 
                 let modifier = Modifier::new(
@@ -203,7 +216,10 @@ pub mod generation {
                 );
 
                 modifiers.push(StatModifier::new(modifier_meta.stat_id, modifier));
+
+                true
             }
+            ItemInfo::Currency(_) => true,
             ItemInfo::Gem(_) => {
                 let rarity_info = &metadata.item.drop_info.rarity;
 
@@ -256,8 +272,14 @@ pub mod generation {
                         ValueKind::U64 => {
                             Value::U64(rng.u64(modifier_meta.min.u64()..=modifier_meta.max.u64()))
                         }
-                        ValueKind::F32 => Value::F32(OrderedFloat(rng.f32())),
-                        ValueKind::F64 => Value::F64(OrderedFloat(rng.f64())),
+                        ValueKind::F32 => Value::F32(OrderedFloat(
+                            modifier_meta.min.f32()
+                                + (modifier_meta.max.f32() - modifier_meta.min.f32()) * rng.f32(),
+                        )),
+                        ValueKind::F64 => Value::F64(OrderedFloat(
+                            modifier_meta.min.f64()
+                                + (modifier_meta.max.f64() - modifier_meta.min.f64()) * rng.f64(),
+                        )),
                     };
 
                     let modifier = Modifier::new(
@@ -277,15 +299,18 @@ pub mod generation {
                 }
 
                 assert!(!modifiers.is_empty());
+
+                false
             }
-        }
+        };
 
         let item = Item {
-            uid,
+            uid: next_uid.get(),
             id: ItemId(item_table_id),
             level,
             rarity,
             modifiers,
+            revealed: is_revealed,
             storable,
             socketable,
         };

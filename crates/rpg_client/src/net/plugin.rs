@@ -6,7 +6,7 @@ use bevy::{
     ecs::{
         event::EventReader,
         schedule::{common_conditions::*, Condition, IntoSystemConfigs},
-        system::{Commands, Res, ResMut, Resource},
+        system::{Res, ResMut, Resource},
         world::{FromWorld, World},
     },
     prelude::{Deref, DerefMut},
@@ -67,7 +67,7 @@ impl Plugin for NetworkClientPlugin {
         app.add_plugins(ClientPlugin::new(plugin_config))
             .insert_resource(Time::<Fixed>::from_seconds(1.0 / 60.))
             .init_resource::<ConnectionTimer>()
-            .add_systems(Startup, setup)
+            .add_systems(Startup, connect)
             .add_systems(
                 Update,
                 (
@@ -188,10 +188,6 @@ fn connect(
         connection_timer.reset();
         net_client.connect();
     }
-}
-
-fn setup(mut commands: Commands) {
-    commands.spawn(account::RpgAccount::default());
 }
 
 fn receive_server_hello(

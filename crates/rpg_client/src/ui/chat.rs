@@ -1,12 +1,4 @@
-use crate::{
-    assets::TextureAssets,
-    game::plugin::GameState,
-    state::AppState,
-    ui::menu::{
-        account::{AccountListRoot, SelectedCharacter},
-        main::MainRoot,
-    },
-};
+use crate::{assets::TextureAssets, game::plugin::GameState};
 
 use ui_util::{
     style::{UiRoot, UiTheme},
@@ -20,7 +12,7 @@ use bevy::{
     ecs::{
         component::Component,
         query::{Changed, With},
-        system::{ParamSet, Query, Res, ResMut, Resource},
+        system::{ParamSet, Query, Res, ResMut},
     },
     hierarchy::{BuildChildren, ChildBuilder},
     log::info,
@@ -149,7 +141,7 @@ pub fn spawn(
                                 ..default()
                             });
 
-                            let mut button_style = Style {
+                            let button_style = Style {
                                 align_items: AlignItems::Center,
                                 justify_content: JustifyContent::Center,
                                 min_width: Val::Px(28.),

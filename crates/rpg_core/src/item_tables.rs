@@ -22,7 +22,8 @@ pub struct DropRarity {
 #[derive(De)]
 pub struct BaseDropInfo {
     pub gem: f32,
-    pub resource: f32,
+    pub currency: f32,
+    pub potion: f32,
 }
 
 #[derive(De)]
@@ -38,18 +39,24 @@ pub struct GemDropInfo {
 }
 
 #[derive(De)]
-pub struct ResourceDropInfo {
-    pub xp: f32,
+pub struct PotionDropInfo {
     pub hp: f32,
     pub ep: f32,
     pub mp: f32,
 }
 
 #[derive(De)]
+pub struct CurrencyDropInfo {
+    pub scroll: f32,
+    pub orb: f32,
+}
+
+#[derive(De)]
 pub struct DropInfo {
     pub rarity: DropRarity,
     pub base: BaseDropInfo,
-    pub resource: ResourceDropInfo,
+    pub currency: CurrencyDropInfo,
+    pub potion: PotionDropInfo,
 }
 
 #[derive(De)]
@@ -63,6 +70,9 @@ pub struct ItemTableEntry {
 pub struct ItemTable {
     pub drop_info: DropInfo,
     pub gem_ids: IdInfo,
-    pub resource_ids: IdInfo,
+    pub currency_ids: IdInfo,
+    pub scroll_ids: IdInfo,
+    pub orb_ids: IdInfo,
+    pub potion_ids: IdInfo,
     pub items: HashMap<ItemId, ItemTableEntry>,
 }

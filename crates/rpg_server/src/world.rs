@@ -5,12 +5,15 @@ use bevy::{
         system::{ResMut, Resource},
     },
     log::info,
-    math::{uvec2, UVec2},
+    math::uvec2,
 };
 
-use rpg_world::zone::{Kind, SizeInfo, Zone, ZoneId};
+use rpg_world::{
+    zone::{Kind, SizeInfo, Zone, ZoneId},
+    zone_path::ZonePath,
+};
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 
 #[derive(Event)]
 pub(crate) struct LoadZone(pub(crate) ZoneId);
@@ -58,7 +61,7 @@ fn spawn_world(mut rpg_world: ResMut<RpgWorld>, mut load_zone: EventReader<LoadZ
             1234,
             SizeInfo::new(uvec2(8, 8), uvec2(8, 8), uvec2(4, 4)),
             Kind::Overworld,
-            VecDeque::new(),
+            ZonePath::generate(),
         );
 
         let zone = RpgZone {

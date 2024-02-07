@@ -178,7 +178,7 @@ pub fn spawn(
                                 ..default()
                             });
 
-                            let mut button_style = Style {
+                            let button_style = Style {
                                 align_items: AlignItems::Center,
                                 justify_content: JustifyContent::Center,
                                 min_width: Val::Px(28.),

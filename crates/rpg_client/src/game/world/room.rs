@@ -4,7 +4,7 @@ use crate::game::{assets::RenderResources, prop};
 
 use bevy::{
     ecs::system::Commands,
-    math::{uvec2, Quat, Vec3},
+    math::{Quat, Vec3},
 };
 
 use rpg_world::{
@@ -55,13 +55,7 @@ impl RoomSpawn for Room {
                     _ => Some(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
                 };
 
-                let pos = world_offset
-                    + match edge {
-                        Edge::Top => (tile_offset + uvec2(2, 0)).as_vec2(),
-                        Edge::Bottom => (tile_offset + uvec2(2, 4)).as_vec2(),
-                        Edge::Left => (tile_offset + uvec2(0, 2)).as_vec2(),
-                        Edge::Right => (tile_offset + uvec2(4, 2)).as_vec2(),
-                    };
+                let pos = world_offset + (tile_offset + tile.get_edge_offset(edge)).as_vec2();
 
                 count += 1;
                 //println!("spawn wall at {x} {y}");

@@ -1,10 +1,11 @@
 use crate::{
     assets::TextureAssets,
     loader::plugin::OutOfGameCamera,
+    net::account::RpgAccount,
     state::AppState,
     ui::{
         chat::{self},
-        lobby::{self},
+        lobby::{self, LobbyRoot},
         menu::{self, main::MainRoot},
     },
 };
@@ -20,7 +21,7 @@ use util::cleanup::{self, CleanupStrategy};
 
 use bevy::{
     app::{App, Plugin, Update},
-    core_pipeline::core_2d::Camera2d,
+    core_pipeline::core_2d::Camera2dBundle,
     ecs::{
         query::With,
         schedule::{common_conditions::in_state, IntoSystemConfigs, NextState, OnEnter},
@@ -28,11 +29,13 @@ use bevy::{
     },
     hierarchy::BuildChildren,
     log::info,
-    render::{camera::Camera, color::Color},
-    text::TextStyle,
+    render::{
+        camera::{Camera, ClearColorConfig},
+        color::Color,
+    },
     ui::{
         node_bundles::{ButtonBundle, NodeBundle},
-        AlignItems, AlignSelf, Display, JustifyContent, Style, UiRect,
+        AlignItems, AlignSelf, Display, JustifyContent, Style, TargetCamera, UiRect,
     },
     utils::default,
 };
@@ -97,20 +100,44 @@ impl Plugin for MenuPlugin {
 }
 
 fn display_menu(
+    mut commands: Commands,
     mut menu_set: ParamSet<(
         Query<&mut Style, With<UiRoot>>,
         Query<&mut Style, With<MainRoot>>,
+        Query<&mut Style, With<LobbyRoot>>,
     )>,
-    mut camera_q: Query<&mut Camera, (With<Camera2d>, With<OutOfGameCamera>)>,
+    account_q: Query<&RpgAccount>,
+    camera_q: Query<(), With<OutOfGameCamera>>,
+    mut ui_root_q: Query<&mut UiRoot>,
 ) {
-    let mut camera = camera_q.single_mut();
-    if !camera.is_active {
-        camera.is_active = true;
+    let mut ui_root = ui_root_q.single_mut();
+
+    if let Err(_) = camera_q.get_single() {
+        let id = commands
+            .spawn((
+                OutOfGameCamera,
+                Camera2dBundle {
+                    camera: Camera {
+                        clear_color: ClearColorConfig::Custom(Color::BLACK),
+                        ..default()
+                    },
+                    ..default()
+                },
+            ))
+            .id();
+
+        ui_root.0 = Some(TargetCamera(id));
     }
 
-    info!("displaying main menu");
+    info!("displaying menu");
+
+    let account = account_q.get_single();
     menu_set.p0().single_mut().display = Display::Flex;
-    menu_set.p1().single_mut().display = Display::Flex;
+    if let Ok(RpgAccount(_)) = account {
+        menu_set.p2().single_mut().display = Display::Flex;
+    } else {
+        menu_set.p1().single_mut().display = Display::Flex;
+    }
 }
 
 fn spawn(
@@ -124,25 +151,12 @@ fn spawn(
         Query<(&mut Text, &mut HistoryIndex), With<ConsoleHistoryItem>>,
     )>,*/
 ) {
-    println!("spawning main menu");
-
     /*
     let message = "spawning main menu".to_string();
 
     if console.ui_root.is_some() {
         console.update_history(message.clone(), false);
     }*/
-
-    let text_style = TextStyle {
-        font: ui_theme.font.clone(),
-        font_size: ui_theme.font_size_regular,
-        color: ui_theme.button_theme.normal_text_color,
-    };
-
-    let text_node_style = Style {
-        margin: UiRect::all(ui_theme.margin),
-        ..default()
-    };
 
     let button_bundle = ButtonBundle {
         style: Style {
@@ -152,7 +166,6 @@ fn spawn(
             align_items: AlignItems::Center,
             ..default()
         },
-
         background_color: Color::NONE.into(),
         ..default()
     };
@@ -171,7 +184,7 @@ fn spawn(
                 style: ui_container_style,
                 ..default()
             },
-            UiRoot,
+            UiRoot(None),
         ))
         .with_children(|p| {
             menu::main::spawn(

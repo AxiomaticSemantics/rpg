@@ -9,9 +9,9 @@ use crate::game::{
 use rpg_core::skill::SkillInfo;
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
-    actions::{Action, ActionData, Actions, AttackData},
+    actions::{Action, ActionData, Actions},
     skill::*,
-    unit::{Hero, Unit, Villain},
+    unit::{Hero, Villain},
 };
 
 use bevy::{
@@ -78,11 +78,12 @@ pub fn update_debug_lines(
 pub fn update_debug_gizmos(zone: Res<Zone>, mut gizmos: Gizmos) {
     gizmos.linestrip(
         zone.zone
-            .curves
+            .path
+            .0
             .front()
             .unwrap()
-            .iter()
-            .map(|v| Vec3::new(-64. + v.x * 4. + 2., 0., -64. + v.z * 4. + 2.)),
+            .iter_positions(256)
+            .map(|v| Vec3::new(-64. + v.x * 4. + 2., 0., -64. + v.y * 4. + 2.)),
         Color::RED,
     );
 }
@@ -92,13 +93,13 @@ pub fn input_actions(
     controls: Res<Controls>,
     cursor_position: Res<CursorPosition>,
     metadata: Res<MetadataResources>,
-    mut player_q: Query<(&Transform, &mut Actions, &Unit, &SkillSlots), With<Player>>,
+    mut player_q: Query<(&Transform, &mut Actions, &SkillSlots), With<Player>>,
 ) {
     if controls.is_inhibited() {
         return;
     }
 
-    let (transform, mut actions, unit, skill_slots) = player_q.single_mut();
+    let (transform, mut actions, skill_slots) = player_q.single_mut();
 
     if controls.mouse_primary.just_pressed || controls.gamepad_b.just_pressed {
         let skill_id = skill_slots.slots[0].skill_id.unwrap();
@@ -109,13 +110,13 @@ pub fn input_actions(
             SkillInfo::Direct(_) => {
                 net_client.send_message::<Channel1, _>(CSSkillUseDirect(skill_id))
             }
-            SkillInfo::Projectile(info) => {
+            SkillInfo::Projectile(_) => {
                 net_client.send_message::<Channel1, _>(CSSkillUseTargeted {
                     skill_id,
                     target: cursor_position.ground,
                 })
             }
-            SkillInfo::Area(info) => net_client.send_message::<Channel1, _>(CSSkillUseTargeted {
+            SkillInfo::Area(_) => net_client.send_message::<Channel1, _>(CSSkillUseTargeted {
                 skill_id,
                 target: cursor_position.ground,
             }),

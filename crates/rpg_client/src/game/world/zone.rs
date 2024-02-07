@@ -6,6 +6,7 @@ use rpg_world::{
     edge::{Edge, EdgeFlags},
     room::Room,
     zone::{self, Connection, ConnectionKind, Kind, SizeInfo, ZoneId},
+    zone_path::ZonePath,
 };
 use util::cleanup::CleanupStrategy;
 
@@ -38,7 +39,7 @@ pub struct ZoneDebugOptions {
     pub tile_edge_debug: bool,
 }
 
-#[derive(Resource, Debug)]
+#[derive(Resource)]
 pub struct Zone {
     pub zone: zone::Zone,
     pub debug_options: Option<ZoneDebugOptions>,
@@ -50,39 +51,11 @@ pub fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let mut curves: VecDeque<Vec<_>> = VecDeque::new();
-
-    let main_curve_points = [
-        Vec3::new(-0.5, 0., 0.),
-        Vec3::new(0.0, 0., 0.5),
-        Vec3::new(0.25, 0., 2.25),
-        Vec3::new(4.25, 0., 8.75),
-        Vec3::new(8.75, 0., 6.25),
-        Vec3::new(12.25, 0., 13.75),
-        Vec3::new(16.5, 0., 20.5),
-        Vec3::new(26.5, 0., 14.5),
-        Vec3::new(22.5, 0., 26.5),
-        Vec3::new(32.0, 0., 32.0),
-        Vec3::new(32.0, 0., 32.5),
-    ];
-    let main_curve = CubicCardinalSpline::new(0.5, main_curve_points).to_curve();
-
-    let secondary_curve_points = [
-        Vec3::new(4.5, 0., 31.5),
-        Vec3::new(4.5, 0., 30.5),
-        Vec3::new(7.9, 0., 22.0),
-        Vec3::new(14.0, 0., 13.0),
-        Vec3::new(19.2, 0., 6.0),
-        Vec3::new(22.0, 0., 4.0),
-        Vec3::new(23.0, 0., 4.0),
-    ];
-    let secondary_curve = CubicCardinalSpline::new(0.5, secondary_curve_points).to_curve();
-    curves.push_back(main_curve.iter_positions(256).collect());
-    curves.push_back(secondary_curve.iter_positions(256).collect());
+    let path = ZonePath::generate();
 
     //println!("curve {curve:?}");
     let size_info = SizeInfo::new(uvec2(8, 8), uvec2(4, 4), uvec2(4, 4));
-    let mut zone = zone::Zone::new(ZoneId(0), 1234, size_info, Kind::Overworld, curves);
+    let mut zone = zone::Zone::new(ZoneId(0), 1234, size_info, Kind::Overworld, path);
     zone.create_rooms();
     zone.set_tile_path();
 

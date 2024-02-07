@@ -12,38 +12,34 @@ use bevy::{
         event::EventReader,
         query::With,
         schedule::NextState,
-        system::{ParamSet, Query, Res, ResMut},
+        system::{Commands, ParamSet, Query, ResMut},
     },
     log::info,
     ui::{Display, Style},
 };
 
-use rpg_account::{
-    account::{Account, AccountInfo},
-    character::{Character, CharacterInfo, CharacterRecord},
-};
+use rpg_account::account::Account;
 use rpg_network_protocol::protocol::*;
 
 use lightyear::client::events::MessageEvent;
 
-#[derive(Default, Component)]
+#[derive(Component)]
 pub(crate) struct RpgAccount(pub(crate) Account);
 
 pub(crate) fn receive_account_create_success(
+    mut commands: Commands,
     mut style_set: ParamSet<(
         Query<&mut Style, With<AccountCreateRoot>>,
         Query<&mut Style, With<AccountListRoot>>,
     )>,
     mut account_events: EventReader<MessageEvent<SCCreateAccountSuccess>>,
-    mut account_q: Query<&mut RpgAccount>,
 ) {
     for event in account_events.read() {
         info!("account creation success");
 
         let account_msg = event.message();
 
-        let mut account = account_q.single_mut();
-        account.0 = account_msg.0.clone();
+        commands.spawn(RpgAccount(account_msg.0.clone()));
 
         style_set.p0().single_mut().display = Display::None;
         style_set.p1().single_mut().display = Display::Flex;
@@ -65,19 +61,19 @@ pub(crate) fn receive_account_create_error(
 }
 
 pub(crate) fn receive_account_login_success(
+    mut commands: Commands,
     mut style_set: ParamSet<(
         Query<&mut Style, With<AccountLoginRoot>>,
         Query<&mut Style, With<AccountListRoot>>,
     )>,
     mut login_reader: EventReader<MessageEvent<SCLoginAccountSuccess>>,
-    mut account_q: Query<&mut RpgAccount>,
 ) {
     for event in login_reader.read() {
         info!("login success");
 
         let account_msg = event.message();
-        let mut account = account_q.single_mut();
-        account.0 = account_msg.0.clone();
+
+        commands.spawn(RpgAccount(account_msg.0.clone()));
 
         style_set.p0().single_mut().display = Display::None;
         style_set.p1().single_mut().display = Display::Flex;

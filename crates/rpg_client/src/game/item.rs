@@ -7,12 +7,9 @@ use audio_manager::plugin::AudioActions;
 use rpg_core::{
     item::{Item, ItemInfo, ItemKind},
     metadata::Metadata,
-    storage::UnitStorage as RpgUnitStorage,
 };
 use rpg_util::{
-    item::{
-        GroundItem, GroundItemBundle, GroundItemDrops, ResourceItem, StorableItem, StorageSlot,
-    },
+    item::{GroundItem, GroundItemBundle, GroundItemDrops, StorableItem, StorageSlot},
     unit::Unit,
 };
 use util::{cleanup::CleanupStrategy, math::AabbComponent, random::SharedRng};
@@ -24,8 +21,8 @@ use bevy::{
         query::With,
         system::{Commands, Query, Res, ResMut, Resource},
     },
-    input::{mouse::MouseButton, ButtonInput},
-    math::{bounding::Aabb3d, Vec3},
+    input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
+    math::Vec3,
     prelude::{default, Deref, DerefMut},
     scene::SceneBundle,
     text::Text,
@@ -48,13 +45,17 @@ pub struct GroundItemHover;
 pub struct GroundItemStats;
 
 pub(crate) fn hover_ground_item(
-    input: Res<ButtonInput<MouseButton>>,
+    input: Res<ButtonInput<KeyCode>>,
     cursor_position: Res<CursorPosition>,
     metadata: Res<MetadataResources>,
     ground_item_q: Query<(&Transform, &GroundItem)>,
     mut ground_hover_q: Query<&mut Style, With<GroundItemHover>>,
     mut ground_item_ui_q: Query<&mut Text, With<GroundItemStats>>,
 ) {
+    if !(input.pressed(KeyCode::ShiftLeft) || input.pressed(KeyCode::ShiftRight)) {
+        return;
+    }
+
     let mut style = ground_hover_q.single_mut();
     for (transform, item) in &ground_item_q {
         let item = item.as_ref().unwrap();
@@ -63,10 +64,6 @@ pub(crate) fn hover_ground_item(
         item_ground_pos.y = 0.;
         let distance = item_ground_pos.distance(cursor_position.ground);
         if distance < 0.25 {
-            /* TODO decide if this is handled here or not
-            input.just_pressed(MouseButton::Left) { // pick item }
-            */
-
             let mut text = ground_item_ui_q.single_mut();
             text.sections[0].value = make_item_stat_string(item, &metadata.rpg);
 
@@ -79,6 +76,7 @@ pub(crate) fn hover_ground_item(
         }
     }
 
+    // No item is hovered
     if style.display != Display::None {
         style.display = Display::None;
     }
@@ -118,7 +116,8 @@ pub(crate) fn spawn_ground_items(
                 let item_info = &metadata.rpg.item.items[&item.id];
                 match item_info.kind {
                     ItemKind::Gem => source_audio.push("item_drop_gem".into()),
-                    ItemKind::Resource => source_audio.push("item_drop_potion".into()),
+                    ItemKind::Potion => source_audio.push("item_drop_potion".into()),
+                    ItemKind::Currency => source_audio.push("item_drop_potion".into()),
                 }
 
                 spawn_item(
@@ -134,10 +133,11 @@ pub(crate) fn spawn_ground_items(
     }
 }
 
+// TODO this needs to be driven by prop metadata
 pub(crate) fn get_prop_key(metadata: &Metadata, item_info: &ItemInfo) -> Cow<'static, str> {
     match &item_info {
         ItemInfo::Gem(_) => Cow::Borrowed("fragment_xp"),
-        ItemInfo::Resource(info) => {
+        ItemInfo::Potion(info) => {
             let (id_str, descriptor) = &metadata
                 .stat
                 .stats
@@ -145,15 +145,16 @@ pub(crate) fn get_prop_key(metadata: &Metadata, item_info: &ItemInfo) -> Cow<'st
                 .find(|d| d.1.id == info.id)
                 .unwrap();
 
-            println!("id {id_str} {:?}", descriptor);
+            // debug!("id {id_str} {:?}", descriptor);
             match descriptor.id {
                 _ if id_str == &"Hp" => Cow::Borrowed("potion_hp"),
                 _ if id_str == &"Ep" => Cow::Borrowed("potion_ep"),
                 _ if id_str == &"Mp" => Cow::Borrowed("potion_mp"),
-                _ if id_str == &"Xp" => Cow::Borrowed("fragment_xp"), // FIXME need a mesh for this
+                _ if id_str == &"Xp" => Cow::Borrowed("fragment_xp"),
                 _ => unreachable!("Should not get here. {id_str}"),
             }
         }
+        ItemInfo::Currency(_) => Cow::Borrowed("fragment_xp"),
     }
 }
 
@@ -185,10 +186,7 @@ fn spawn_item(
         panic!("bad handle");
     };
 
-    let aabb = AabbComponent(Aabb3d {
-        min: Vec3::splat(-0.2),
-        max: Vec3::splat(0.2),
-    });
+    let aabb = AabbComponent(renderables.aabbs["item"]);
 
     use std::f32::consts;
 
@@ -197,29 +195,18 @@ fn spawn_item(
     let mut transform = Transform::from_xyz(position.x, 0.8, position.z);
     transform.rotate_y(dir);
 
-    let id = commands
-        .spawn((
-            GameSessionCleanup,
-            CleanupStrategy::DespawnRecursive,
-            SceneBundle {
-                scene: handle.clone_weak(),
-                transform,
-                ..default()
-            },
-            GroundItemBundle {
-                item: GroundItem(Some(item)),
-            },
-            aabb,
-        ))
-        .id();
-
-    // Insert item kind marker
-    match item_info.kind {
-        ItemKind::Resource => {
-            commands.entity(id).insert(ResourceItem);
-        }
-        _ => {
-            commands.entity(id).insert(StorableItem);
-        }
-    }
+    commands.spawn((
+        GameSessionCleanup,
+        CleanupStrategy::DespawnRecursive,
+        SceneBundle {
+            scene: handle.clone_weak(),
+            transform,
+            ..default()
+        },
+        GroundItemBundle {
+            item: GroundItem(Some(item)),
+        },
+        StorableItem,
+        aabb,
+    ));
 }

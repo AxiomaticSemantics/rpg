@@ -8,7 +8,7 @@ use crate::game::{
     controls::Controls,
     item::{self, CursorItem, GroundItemHover, GroundItemStats},
     metadata::MetadataResources,
-    plugin::{GameSessionCleanup, GameState},
+    plugin::GameSessionCleanup,
     prop::PropHandle,
 };
 
@@ -317,12 +317,7 @@ pub(crate) fn update(
     }
 }
 
-pub(crate) fn setup(
-    mut commands: Commands,
-    game_state: Res<GameState>,
-    ui_theme: Res<UiTheme>,
-    textures: Res<TextureAssets>,
-) {
+pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, textures: Res<TextureAssets>) {
     let vertical_spacing = NodeBundle {
         style: ui_theme.vertical_spacer.clone(),
         ..default()

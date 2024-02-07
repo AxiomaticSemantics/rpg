@@ -11,13 +11,13 @@ use bevy::{
     text::{Font, TextStyle},
     ui::{
         widget::Button, AlignItems, AlignSelf, BackgroundColor, BorderColor, FlexDirection,
-        Interaction, JustifyContent, PositionType, Style, UiRect, Val,
+        Interaction, JustifyContent, PositionType, Style, TargetCamera, UiRect, Val,
     },
     utils::default,
 };
 
 #[derive(Component)]
-pub struct UiRoot;
+pub struct UiRoot(pub Option<TargetCamera>);
 
 #[derive(Debug, Default)]
 pub struct ButtonTheme {

@@ -1,6 +1,5 @@
 use bevy::{
     ecs::{
-        component::Component,
         event::EventReader,
         system::{Query, Resource},
     },

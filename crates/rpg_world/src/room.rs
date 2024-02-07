@@ -1,6 +1,6 @@
 use crate::{tile::Tile, zone::Zone};
 
-use glam::UVec2;
+use bevy_math::UVec2;
 
 #[derive(Debug)]
 pub struct Room {
