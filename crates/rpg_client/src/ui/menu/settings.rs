@@ -3,11 +3,15 @@ use crate::ui::menu::main::MainRoot;
 use ui_util::style::UiTheme;
 
 use bevy::{
-    ecs::prelude::*,
+    ecs::{
+        component::Component,
+        query::{Changed, With},
+        system::{ParamSet, Query},
+    },
     hierarchy::{BuildChildren, ChildBuilder},
     ui::{
         node_bundles::{ButtonBundle, NodeBundle, TextBundle},
-        BorderColor, Display, Interaction, Style,
+        Display, Interaction, Style,
     },
     utils::default,
 };

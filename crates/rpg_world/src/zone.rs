@@ -2,19 +2,17 @@ use crate::{
     edge::{Edge, EdgeFlags},
     room::Room,
     tile::Tile,
+    zone_path::ZonePath,
 };
 
 use fastrand::Rng;
 
-use glam::{uvec2, UVec2, Vec2, Vec3};
+use bevy_math::{uvec2, UVec2, Vec2, Vec3};
 use serde_derive::{Deserialize as De, Serialize as Ser};
-
-use std::collections::VecDeque;
 
 #[derive(Ser, De, Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub struct ZoneId(pub u16);
 
-#[derive(Debug)]
 pub struct Zone {
     pub id: ZoneId,
     pub size_info: SizeInfo,
@@ -22,26 +20,20 @@ pub struct Zone {
     pub connections: Vec<Connection>,
     pub room_route: Vec<UVec2>,
     pub tile_route: Vec<UVec2>,
-    pub curves: VecDeque<Vec<Vec3>>,
+    pub path: ZonePath,
     pub rooms: Vec<Room>,
     pub rng: Rng,
 }
 
 impl Zone {
-    pub fn new(
-        id: ZoneId,
-        seed: u64,
-        size_info: SizeInfo,
-        kind: Kind,
-        curves: VecDeque<Vec<Vec3>>,
-    ) -> Self {
+    pub fn new(id: ZoneId, seed: u64, size_info: SizeInfo, kind: Kind, path: ZonePath) -> Self {
         let mut room_route = vec![];
         let mut tile_route = vec![];
 
-        for &position in curves.front().unwrap().iter() {
+        for position in path.0.front().unwrap().iter_positions(256).into_iter() {
             let tile_position = uvec2(
                 ((position.x).floor() as u32).clamp(0, 31),
-                ((position.z).floor() as u32).clamp(0, 31),
+                ((position.y).floor() as u32).clamp(0, 31),
             );
 
             let room_position = tile_position / size_info.room_size.x;
@@ -69,7 +61,8 @@ impl Zone {
             }
         }
 
-        for &position in curves.back().unwrap().iter() {
+        /*
+        for &position in path.back().unwrap().iter() {
             let tile_position = uvec2(
                 ((position.x).floor() as u32).clamp(0, 31),
                 ((position.z).floor() as u32).clamp(0, 31),
@@ -98,7 +91,7 @@ impl Zone {
                 }
                 tile_route.push(tile_position);
             }
-        }
+        }*/
 
         let room_size_vec = size_info.extent;
 
@@ -120,7 +113,7 @@ impl Zone {
             connections,
             room_route,
             tile_route,
-            curves,
+            path,
             rooms,
             rng: Rng::with_seed(seed),
         }

@@ -99,12 +99,12 @@ pub(crate) fn spawn_actor(
     entity: Entity,
     commands: &mut Commands,
     renderables: &RenderResources,
+    transform: Transform,
     unit: RpgUnit,
     skills: Skills,
     skill_slots: SkillSlots,
     storage: Option<RpgUnitStorage>,
     passive_tree: Option<PassiveSkillGraph>,
-    transform: Option<Transform>,
 ) {
     let aabb = AabbComponent(Aabb3d {
         min: Vec3::new(-0.3, 0., -0.25),
@@ -148,6 +148,7 @@ pub(crate) fn spawn_actor(
                                 basic: actor_basic_bundle,
                                 mesh: MaterialMeshBundle {
                                     mesh: handle,
+                                    transform,
                                     ..default()
                                 },
                             },
@@ -161,6 +162,7 @@ pub(crate) fn spawn_actor(
                                 basic: actor_basic_bundle,
                                 scene: SceneBundle {
                                     scene: handle,
+                                    transform,
                                     ..default()
                                 },
                             },
@@ -180,6 +182,7 @@ pub(crate) fn spawn_actor(
                                 basic: actor_basic_bundle,
                                 mesh: MaterialMeshBundle {
                                     mesh: handle,
+                                    transform,
                                     ..default()
                                 },
                             },
@@ -196,6 +199,7 @@ pub(crate) fn spawn_actor(
                                 basic: actor_basic_bundle,
                                 scene: SceneBundle {
                                     scene: handle,
+                                    transform,
                                     ..default()
                                 },
                             },
@@ -223,6 +227,7 @@ pub(crate) fn spawn_actor(
                         ActorMeshBundle {
                             basic: actor_basic_bundle,
                             mesh: MaterialMeshBundle {
+                                transform,
                                 mesh: handle,
                                 ..default()
                             },
@@ -236,7 +241,7 @@ pub(crate) fn spawn_actor(
                             basic: actor_basic_bundle,
                             scene: SceneBundle {
                                 scene: handle,
-                                transform: transform.unwrap(),
+                                transform,
                                 ..default()
                             },
                         },

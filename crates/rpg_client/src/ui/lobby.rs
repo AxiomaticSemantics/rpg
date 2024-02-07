@@ -17,7 +17,7 @@ use bevy::{
         component::Component,
         entity::Entity,
         query::{Changed, With},
-        system::{Commands, ParamSet, Query, Res, ResMut, Resource},
+        system::{Commands, ParamSet, Query, Res, ResMut},
     },
     hierarchy::{BuildChildren, ChildBuilder, Children, DespawnRecursiveExt},
     input::{keyboard::KeyCode, ButtonInput},
@@ -206,7 +206,7 @@ pub(crate) fn spawn(
                                         ));
                                     });
 
-                                    let mut button_style = Style {
+                                    let button_style = Style {
                                         align_items: AlignItems::Center,
                                         justify_content: JustifyContent::Center,
                                         min_width: Val::Px(28.),

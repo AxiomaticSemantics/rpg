@@ -2,7 +2,7 @@
 
 use crate::{assets::TextureAssets, state::AppState};
 
-use crate::game::plugin::{build_character_stats_string, GameSessionCleanup, GameState};
+use crate::game::plugin::GameSessionCleanup;
 
 use ui_util::style::UiTheme;
 use util::cleanup::CleanupStrategy;
@@ -29,7 +29,7 @@ use bevy::{
 use rpg_network_protocol::protocol::*;
 
 #[derive(Component)]
-pub struct MenuView;
+pub struct GameMenuRoot;
 
 #[derive(Component)]
 pub struct GameStats;
@@ -45,18 +45,12 @@ pub struct RestartButton;
 
 pub(crate) fn toggle_menu(
     input: Res<ButtonInput<KeyCode>>,
-    mut menu_q: Query<&mut Style, With<MenuView>>,
-    mut stats_q: Query<&mut Text, With<GameStats>>,
+    mut menu_q: Query<&mut Style, With<GameMenuRoot>>,
 ) {
     let mut style = menu_q.single_mut();
     if input.just_pressed(KeyCode::Escape) {
         if style.display == Display::None {
             style.display = Display::Flex;
-
-            /* FIXME
-            let mut stats = stats_q.single_mut();
-            stats.sections[0].value = build_stats_string(&game_state.session_stats);
-            */
         } else {
             style.display = Display::None;
         }
@@ -107,7 +101,6 @@ pub(crate) fn exit_button(
 pub(crate) fn exit_button(
     mut state: ResMut<NextState<AppState>>,
     mut net_client: ResMut<Client>,
-    mut menu_q: Query<&mut Style, With<MenuView>>,
     exit_button_q: Query<&Interaction, (With<ExitButton>, Changed<Interaction>)>,
 ) {
     let Ok(interaction) = exit_button_q.get_single() else {
@@ -115,14 +108,13 @@ pub(crate) fn exit_button(
     };
 
     if interaction == &Interaction::Pressed {
-        menu_q.single_mut().display = Display::None;
         net_client.send_message::<Channel1, _>(CSPlayerLeave);
         state.set(AppState::GameCleanup);
     }
 }
 
 pub(crate) fn cancel_button(
-    mut menu_q: Query<&mut Style, With<MenuView>>,
+    mut menu_q: Query<&mut Style, With<GameMenuRoot>>,
     cancel_button_q: Query<&Interaction, (With<CancelButton>, Changed<Interaction>)>,
 ) {
     let Ok(interaction) = cancel_button_q.get_single() else {
@@ -155,19 +147,11 @@ pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, _textures: R
         ..default()
     };
 
-    /*
-    let frame_row_node = NodeBundle {
-        style: ui_theme.frame_row_style.clone(),
-        background_color: ui_theme.menu_background_color,
-        ..default()
-    };*/
-
-    // Pause view
     commands
         .spawn((
             GameSessionCleanup,
             CleanupStrategy::DespawnRecursive,
-            MenuView,
+            GameMenuRoot,
             NodeBundle {
                 style: container_hidden_style.clone(),
                 ..default()
@@ -177,7 +161,7 @@ pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, _textures: R
             p.spawn(frame_col_node.clone()).with_children(|p| {
                 p.spawn(col_node.clone()).with_children(|p| {
                     p.spawn(TextBundle::from_section(
-                        "Stats",
+                        "Menu",
                         ui_theme.text_style_regular.clone(),
                     ));
                 });
@@ -195,49 +179,51 @@ pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, _textures: R
                     },
                 ));
 
-                p.spawn((
-                    ExitButton,
-                    ButtonBundle {
-                        style: ui_theme.button_theme.style.clone(),
-                        border_color: BorderColor(Color::rgb(0.3, 0.3, 0.3)),
-                        ..default()
-                    },
-                ))
-                .with_children(|p| {
-                    p.spawn(TextBundle::from_section(
-                        "Exit",
-                        ui_theme.text_style_regular.clone(),
-                    ));
-                });
+                p.spawn(row_node.clone()).with_children(|p| {
+                    p.spawn((
+                        ExitButton,
+                        ButtonBundle {
+                            style: ui_theme.button_theme.style.clone(),
+                            border_color: BorderColor(Color::rgb(0.3, 0.3, 0.3)),
+                            ..default()
+                        },
+                    ))
+                    .with_children(|p| {
+                        p.spawn(TextBundle::from_section(
+                            "Exit",
+                            ui_theme.text_style_regular.clone(),
+                        ));
+                    });
 
-                p.spawn((
-                    RestartButton,
-                    ButtonBundle {
-                        style: ui_theme.button_theme.style.clone(),
-                        border_color: BorderColor(Color::rgb(0.3, 0.3, 0.3)),
-                        ..default()
-                    },
-                ))
-                .with_children(|p| {
-                    p.spawn(TextBundle::from_section(
-                        "Respawn",
-                        ui_theme.text_style_regular.clone(),
-                    ));
-                });
+                    p.spawn((
+                        RestartButton,
+                        ButtonBundle {
+                            style: ui_theme.button_theme.style.clone(),
+                            border_color: BorderColor(Color::rgb(0.3, 0.3, 0.3)),
+                            ..default()
+                        },
+                    ))
+                    .with_children(|p| {
+                        p.spawn(TextBundle::from_section(
+                            "Respawn",
+                            ui_theme.text_style_regular.clone(),
+                        ));
+                    });
 
-                p.spawn((
-                    CancelButton,
-                    ButtonBundle {
-                        style: ui_theme.button_theme.style.clone(),
-                        border_color: BorderColor(Color::rgb(0.3, 0.3, 0.3)),
-                        ..default()
-                    },
-                ))
-                .with_children(|p| {
-                    p.spawn(TextBundle::from_section(
-                        "Cancel",
-                        ui_theme.text_style_regular.clone(),
-                    ));
+                    p.spawn((
+                        CancelButton,
+                        ButtonBundle {
+                            style: ui_theme.button_theme.style.clone(),
+                            border_color: BorderColor(Color::rgb(0.3, 0.3, 0.3)),
+                            ..default()
+                        },
+                    ))
+                    .with_children(|p| {
+                        p.spawn(TextBundle::from_section(
+                            "Cancel",
+                            ui_theme.text_style_regular.clone(),
+                        ));
+                    });
                 });
             });
         });

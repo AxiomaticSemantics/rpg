@@ -1,4 +1,4 @@
-use glam::UVec2;
+use bevy_math::UVec2;
 
 pub trait Neighbour {
     fn top(&self) -> Self;

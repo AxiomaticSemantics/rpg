@@ -14,10 +14,7 @@ use crate::{
 };
 
 use audio_manager::plugin::AudioActions;
-use rpg_core::{
-    skill::{SkillInfo, SkillUseResult},
-    storage::Storage,
-};
+use rpg_core::skill::{SkillInfo, SkillUseResult};
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions::{ActionData, Actions, State},
@@ -166,7 +163,6 @@ pub fn pick_storable_items(
 
             /* FIXME move to message handler
             u_audio.push("item_pickup".into());
-            commands.entity(i_entity).despawn_recursive();
             */
 
             break;

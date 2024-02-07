@@ -10,7 +10,7 @@ use crate::{
         },
         assets::RenderResources,
         metadata::MetadataResources,
-        plugin::{GameOverState, GameState, PlayState},
+        plugin::GameState,
         skill,
     },
     net::account::RpgAccount,
@@ -45,8 +45,8 @@ use rpg_core::{
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     item::{GroundItem, GroundItemDrops},
-    skill::{SkillSlots, Skills},
-    unit::{Corpse, Unit, Villain},
+    skill::{SkillSlots, SkillUse, Skills},
+    unit::{Corpse, Hero, Unit, Villain},
 };
 
 use audio_manager::plugin::AudioActions;
@@ -119,12 +119,12 @@ pub(crate) fn receive_player_spawn(
             entity,
             &mut commands,
             &renderables,
+            transform,
             unit,
             Skills(skills),
             SkillSlots::new(active),
             Some(storage),
             Some(passive_tree),
-            Some(transform),
         );
 
         state.set(AppState::Game);
@@ -349,13 +349,18 @@ pub(crate) fn receive_spawn_skill(
     }
 }
 
+// TODO need to correlate skill instances between client and server
 pub(crate) fn receive_despawn_skill(
     mut commands: Commands,
     mut despawn_reader: EventReader<MessageEvent<SCDespawnSkill>>,
+    skill_q: Query<Entity, With<SkillUse>>,
 ) {
     for event in despawn_reader.read() {
         let despawn_msg = event.message();
-        //
+        for entity in &skill_q {
+            // TODO
+            // commands.entity(despawn_msg.0);
+        }
     }
 }
 
@@ -396,12 +401,12 @@ pub(crate) fn receive_spawn_hero(
             Entity::PLACEHOLDER,
             &mut commands,
             &renderables,
+            transform,
             unit,
             skills,
             skill_slots,
             Some(UnitStorage::default()),
             Some(PassiveSkillGraph::new(spawn_msg.class)),
-            Some(transform),
         );
     }
 }
@@ -441,17 +446,18 @@ pub(crate) fn receive_spawn_villain(
             Entity::PLACEHOLDER,
             &mut commands,
             &renderables,
+            transform,
             unit,
             skills,
             skill_slots,
             None,
             None,
-            Some(transform),
         );
     }
 }
 
 pub(crate) fn receive_combat_result(
+    metadata: Res<MetadataResources>,
     mut combat_reader: EventReader<MessageEvent<SCCombatResult>>,
     mut player_q: Query<(&mut Unit, &mut AudioActions, &mut AnimationState), With<Player>>,
 ) {
@@ -473,6 +479,10 @@ pub(crate) fn receive_combat_result(
             CombatResult::VillainDeath(death) => {
                 if let Some(reward) = &death.reward {
                     player.info.hero_mut().xp_curr.value = reward.xp_total;
+                    if let Some(level) = &reward.level {
+                        player.level = level.level;
+                        player.passive_skill_points = level.passive_points;
+                    }
                 }
             }
             CombatResult::Blocked | CombatResult::Dodged => {
@@ -598,15 +608,14 @@ pub(crate) fn receive_villain_death(
 
 pub(crate) fn receive_hero_death(
     mut commands: Commands,
-    mut game_state: ResMut<GameState>,
     mut death_reader: EventReader<MessageEvent<SCHeroDeath>>,
-    mut player_q: Query<(Entity, &Unit, &mut AudioActions, &mut AnimationState), With<Player>>,
+    mut hero_q: Query<(Entity, &Unit, &mut AudioActions, &mut AnimationState), With<Hero>>,
 ) {
     for event in death_reader.read() {
         let death_msg = event.message();
 
         info!("hero death {death_msg:?}");
-        let (entity, unit, mut audio, mut anim) = player_q.single_mut();
+        let (entity, unit, mut audio, mut anim) = hero_q.single_mut();
         audio.push("hit_death".into());
         *anim = ANIM_DEATH;
         if unit.uid == death_msg.0 {

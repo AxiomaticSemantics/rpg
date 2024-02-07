@@ -111,7 +111,8 @@ pub(crate) fn receive_leave_error(
     mut leave_events: EventReader<MessageEvent<SCLobbyLeaveError>>,
 ) {
     for _ in leave_events.read() {
-        info!("lobby leave");
+        lobby.0 = None;
+        info!("lobby leave error");
     }
 }
 

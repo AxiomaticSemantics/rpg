@@ -17,7 +17,7 @@ use bevy::{
     math::{Vec2, Vec3},
     render::{color::Color, view::visibility::Visibility},
     sprite::{Sprite, SpriteBundle},
-    text::{BreakLineOn, JustifyText, Text, Text2dBounds, Text2dBundle, TextSection, TextStyle},
+    text::{JustifyText, Text, Text2dBounds, Text2dBundle},
     transform::components::Transform,
     utils::{default, Duration},
     window::{PrimaryWindow, Window},
@@ -444,17 +444,30 @@ fn setup_splash_screen(
         )),
     ]));
 
-    screens.push_back(Sequence::new(vec![TweenKind::Translation(TweenInfo::new(
-        bevy_logo_entity,
-        Some(Tween::new(
-            EaseFunction::CircularInOut,
-            Duration::from_secs_f32(4.),
-            TransformPositionLens {
-                start: Vec3::ZERO,
-                end: Vec3::Y * 50.,
-            },
+    screens.push_back(Sequence::new(vec![
+        TweenKind::Translation(TweenInfo::new(
+            bevy_logo_entity,
+            Some(Tween::new(
+                EaseFunction::CircularInOut,
+                Duration::from_secs_f32(4.),
+                TransformPositionLens {
+                    start: Vec3::Z * 2.,
+                    end: Vec3::Y * 50. + Vec3::Z * 2.,
+                },
+            )),
         )),
-    ))]));
+        TweenKind::SpriteColor(TweenInfo::new(
+            bevy_logo_entity,
+            Some(Tween::new(
+                EaseFunction::SineOut,
+                Duration::from_secs_f32(8.),
+                SpriteColorLens {
+                    start: Color::rgba(1.0, 1.0, 1.0, 1.0),
+                    end: Color::rgba(1.0, 1.0, 1.0, 0.0),
+                },
+            )),
+        )),
+    ]));
 
     commands.spawn((
         SplashScreenCleanup,

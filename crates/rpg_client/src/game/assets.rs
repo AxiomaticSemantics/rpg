@@ -60,6 +60,14 @@ impl FromWorld for RenderResources {
             },
         );
 
+        aabbs.insert(
+            Cow::Owned("item".into()),
+            Aabb3d {
+                min: Vec3::splat(-0.25),
+                max: Vec3::splat(0.25),
+            },
+        );
+
         let mut textures = HashMap::<&'static str, Handle<Image>>::new();
 
         let asset_server = world.resource_mut::<AssetServer>();

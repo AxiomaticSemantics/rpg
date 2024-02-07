@@ -12,9 +12,6 @@ use rpg_core::{
 pub struct GroundItem(pub Option<Item>);
 
 #[derive(Component)]
-pub struct ResourceItem;
-
-#[derive(Component)]
 pub struct StorableItem;
 
 #[derive(Component, Copy, Clone, Deref, DerefMut, PartialEq, Eq, Debug)]

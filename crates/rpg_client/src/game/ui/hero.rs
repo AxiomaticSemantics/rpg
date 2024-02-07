@@ -2,11 +2,7 @@
 
 use crate::assets::TextureAssets;
 
-use crate::game::{
-    actor::player::Player,
-    metadata::MetadataResources,
-    plugin::{GameSessionCleanup, GameState},
-};
+use crate::game::{actor::player::Player, metadata::MetadataResources, plugin::GameSessionCleanup};
 use rpg_util::unit::Unit;
 use ui_util::style::UiTheme;
 use util::cleanup::CleanupStrategy;
@@ -48,7 +44,7 @@ struct PlayerName;
 
 pub(crate) fn update(
     metadata: Res<MetadataResources>,
-    player_q: Query<&Unit, With<Player>>,
+    player_q: Query<&Unit, (With<Player>, Changed<Unit>)>,
     mut bar_set: ParamSet<(
         Query<&mut Style, With<Health>>,
         Query<&mut Style, With<Stamina>>,
@@ -121,12 +117,7 @@ pub(crate) fn update(
     );
 }
 
-pub(crate) fn setup(
-    mut commands: Commands,
-    game_state: Res<GameState>,
-    ui_theme: Res<UiTheme>,
-    _textures: Res<TextureAssets>,
-) {
+pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, _textures: Res<TextureAssets>) {
     let mut container_hidden_style = ui_theme.container_absolute_max.clone();
     container_hidden_style.display = Display::None;
 
