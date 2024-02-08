@@ -6,7 +6,6 @@ use bevy::{
 use rpg_core::{
     item::{Item, ItemDrops},
     storage::{StorageSlot as RpgStorageSlot, UnitStorage as RpgUnitStorage},
-    uid::Uid,
 };
 
 #[derive(Component, Deref, DerefMut)]

@@ -4,7 +4,7 @@ use std::{borrow::Cow, collections::HashMap, fmt};
 use glam::Vec2;
 use petgraph::{
     algo,
-    graph::{EdgeIndex, Graph, NodeIndex},
+    graph::{Graph, NodeIndex},
     Undirected,
 };
 use serde_derive::{Deserialize as De, Serialize as Ser};

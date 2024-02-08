@@ -110,8 +110,8 @@ pub mod generation {
 
     use crate::{
         item::{
-            CurrencyId, CurrencyInfo, GemInfo, Item, ItemDescriptor, ItemId, ItemInfo, ItemKind,
-            PotionInfo, Rarity,
+            CurrencyInfo, GemInfo, Item, ItemDescriptor, ItemId, ItemInfo, ItemKind, PotionInfo,
+            Rarity,
         },
         metadata::Metadata,
         stat::{
@@ -190,7 +190,7 @@ pub mod generation {
                     Value::sample(rng, *modifier_meta.min.u32()..=*modifier_meta.max.u32())
                 }
                 ValueKind::U64 => {
-                    Value::U64(rng.u64(modifier_meta.min.u64()..=modifier_meta.max.u64()))
+                    Value::sample(rng, *modifier_meta.min.u64()..=*modifier_meta.max.u64())
                 }
                 ValueKind::F32 => Value::F32(OrderedFloat(
                     modifier_meta.min.f32()
@@ -240,22 +240,14 @@ pub mod generation {
         };
 
         // TODO add flags
-        let (item_table_id, storable, socketable) = match kind {
-            ItemKind::Gem => (
-                rng.u16(metadata.item.gem_ids.begin.0..=metadata.item.gem_ids.end.0),
-                true,
-                true,
-            ),
-            ItemKind::Potion => (
-                rng.u16(metadata.item.potion_ids.begin.0..=metadata.item.potion_ids.end.0),
-                false,
-                false,
-            ),
-            ItemKind::Currency => (
-                rng.u16(metadata.item.currency_ids.begin.0..=metadata.item.currency_ids.end.0),
-                true,
-                false,
-            ),
+        let item_table_id = match kind {
+            ItemKind::Gem => rng.u16(metadata.item.gem_ids.begin.0..=metadata.item.gem_ids.end.0),
+            ItemKind::Potion => {
+                rng.u16(metadata.item.potion_ids.begin.0..=metadata.item.potion_ids.end.0)
+            }
+            ItemKind::Currency => {
+                rng.u16(metadata.item.currency_ids.begin.0..=metadata.item.currency_ids.end.0)
+            }
         };
 
         let entry = metadata.item.items.get(&ItemId(item_table_id)).unwrap();
