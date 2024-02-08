@@ -1,6 +1,7 @@
 use crate::{
     stat::{StatId, StatModifier},
     uid::Uid,
+    value::Value,
 };
 
 use serde_derive::{Deserialize as De, Serialize as Ser};
@@ -32,13 +33,13 @@ pub enum GemClass {
 }
 
 #[derive(Debug, Clone, Ser, De)]
-pub struct GemInfo {
+pub struct GemDescriptor {
     pub class: GemClass,
     pub max_modifiers: u8,
 }
 
 #[derive(Debug, Clone, Ser, De)]
-pub struct PotionInfo {
+pub struct PotionDescriptor {
     pub id: StatId,
 }
 
@@ -46,11 +47,36 @@ pub struct PotionInfo {
 pub struct CurrencyId(pub u16);
 
 #[derive(Debug, Clone, Ser, De)]
-pub struct CurrencyInfo {
+pub struct CurrencyDescriptor {
     pub id: CurrencyId,
 }
 
 #[derive(Debug, Clone, Ser, De)]
+pub enum ItemDescriptor {
+    Gem(GemDescriptor),
+    Potion(PotionDescriptor),
+    Currency(CurrencyDescriptor),
+}
+
+#[derive(Debug, Clone, PartialEq, Ser, De)]
+pub struct GemInfo {
+    pub rarity: Rarity,
+    pub level: u8,
+    pub modifiers: Vec<StatModifier>,
+    pub identified: bool,
+    pub socketable: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Ser, De)]
+pub struct PotionInfo {
+    pub id: StatId,
+    pub value: Value,
+}
+
+#[derive(Debug, Clone, PartialEq, Ser, De)]
+pub struct CurrencyInfo {}
+
+#[derive(Debug, Clone, PartialEq, Ser, De)]
 pub enum ItemInfo {
     Gem(GemInfo),
     Potion(PotionInfo),
@@ -67,35 +93,12 @@ pub struct ItemDrops {
 pub struct Item {
     pub uid: Uid,
     pub id: ItemId,
-    pub level: u8,
-    pub rarity: Rarity,
-    pub modifiers: Vec<StatModifier>,
-    pub revealed: bool,
-    pub storable: bool,
-    pub socketable: bool,
+    pub info: ItemInfo,
 }
 
 impl Item {
-    pub fn new(
-        uid: Uid,
-        id: ItemId,
-        level: u8,
-        rarity: Rarity,
-        modifiers: Vec<StatModifier>,
-        revealed: bool,
-        storable: bool,
-        socketable: bool,
-    ) -> Self {
-        Self {
-            uid,
-            id,
-            level,
-            rarity,
-            modifiers,
-            revealed,
-            storable,
-            socketable,
-        }
+    pub fn new(uid: Uid, id: ItemId, info: ItemInfo) -> Self {
+        Self { uid, id, info }
     }
 }
 
@@ -104,7 +107,10 @@ pub mod generation {
     use ordered_float::OrderedFloat;
 
     use crate::{
-        item::{Item, ItemId, ItemInfo, ItemKind, Rarity},
+        item::{
+            CurrencyInfo, GemInfo, Item, ItemDescriptor, ItemId, ItemInfo, ItemKind, PotionInfo,
+            Rarity,
+        },
         metadata::Metadata,
         stat::{
             modifier::{Affix, Modifier, ModifierFormat, ModifierId, ModifierKind, Operation},
@@ -177,8 +183,8 @@ pub mod generation {
         let entry = metadata.item.items.get(&ItemId(item_table_id)).unwrap();
         let mut modifiers = vec![];
 
-        let is_revealed = match &entry.info {
-            ItemInfo::Potion(info) => {
+        let item_info = match &entry.info {
+            ItemDescriptor::Potion(info) => {
                 let modifier_meta = &metadata
                     .modifier
                     .modifiers
@@ -207,6 +213,7 @@ pub mod generation {
                     _ => unreachable!(),
                 };
 
+                /*
                 let modifier = Modifier::new(
                     modifier_meta.id,
                     amount,
@@ -216,11 +223,15 @@ pub mod generation {
                 );
 
                 modifiers.push(StatModifier::new(modifier_meta.stat_id, modifier));
+                */
 
-                true
+                ItemInfo::Potion(PotionInfo {
+                    id: info.id,
+                    value: amount,
+                })
             }
-            ItemInfo::Currency(_) => true,
-            ItemInfo::Gem(_) => {
+            ItemDescriptor::Currency(_) => ItemInfo::Currency(CurrencyInfo {}),
+            ItemDescriptor::Gem(_) => {
                 let rarity_info = &metadata.item.drop_info.rarity;
 
                 let max_modifers = match rarity {
@@ -300,19 +311,20 @@ pub mod generation {
 
                 assert!(!modifiers.is_empty());
 
-                false
+                ItemInfo::Gem(GemInfo {
+                    rarity,
+                    level,
+                    modifiers,
+                    identified: false,
+                    socketable: true,
+                })
             }
         };
 
         let item = Item {
             uid: next_uid.get(),
             id: ItemId(item_table_id),
-            level,
-            rarity,
-            modifiers,
-            revealed: is_revealed,
-            storable,
-            socketable,
+            info: item_info,
         };
 
         next_uid.next();

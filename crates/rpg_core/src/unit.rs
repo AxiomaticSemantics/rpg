@@ -3,7 +3,7 @@ use crate::{
     combat::{CombatResult, DamageResult, HeroDeathResult, VillainDeathResult},
     damage::{DamageDescriptor, DamageKind, DamageValue, DamageValueDescriptor},
     game_mode::GameMode,
-    item::{self, Item},
+    item::{self, GemInfo, Item, ItemInfo},
     metadata::Metadata,
     passive_tree::PassiveSkillGraph,
     skill::{Skill, SkillId, SkillUseResult},
@@ -379,7 +379,11 @@ impl Unit {
     }*/
 
     fn apply_item_modifiers(&mut self, metadata: &Metadata, item: &Item) -> Option<()> {
-        for modifier in &item.modifiers {
+        let ItemInfo::Gem(info) = &item.info else {
+            return None;
+        };
+
+        for modifier in &info.modifiers {
             let (str_id, _) = metadata
                 .stat
                 .stats
