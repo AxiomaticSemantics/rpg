@@ -4,9 +4,8 @@ use crate::{
     net::account::RpgAccount,
     state::AppState,
     ui::{
-        chat::{self},
-        lobby::{self, LobbyRoot},
-        menu::{self, main::MainRoot},
+        chat, lobby,
+        menu::{self, account::AccountListRoot, main::MainRoot},
     },
 };
 
@@ -70,7 +69,6 @@ impl Plugin for MenuPlugin {
                         menu::account::lobby_join_button,
                         menu::account::list_create_character_button,
                         menu::account::list_create_game_button,
-                        menu::account::list_cancel_button,
                         menu::account::list_select_slot,
                         menu::account::update_character_list,
                     ),
@@ -106,7 +104,7 @@ fn display_menu(
     mut menu_set: ParamSet<(
         Query<&mut Style, With<UiRoot>>,
         Query<&mut Style, With<MainRoot>>,
-        Query<&mut Style, With<LobbyRoot>>,
+        Query<&mut Style, With<AccountListRoot>>,
     )>,
     account_q: Query<&RpgAccount>,
     camera_q: Query<(), With<OutOfGameCamera>>,
@@ -130,8 +128,6 @@ fn display_menu(
 
         ui_root.0 = Some(TargetCamera(id));
     }
-
-    info!("displaying menu");
 
     let account = account_q.get_single();
     menu_set.p0().single_mut().display = Display::Flex;

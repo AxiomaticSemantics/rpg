@@ -2,16 +2,12 @@ use crate::{
     assets::TextureAssets,
     net::account::RpgAccount,
     ui::{
-        chat::ChatRoot,
         lobby::LobbyRoot,
         menu::{create::CreateRoot, main::MainRoot},
     },
 };
 
-use ui_util::{
-    style::{UiRoot, UiTheme},
-    widgets::EditText,
-};
+use ui_util::{style::UiTheme, widgets::EditText};
 
 use rpg_account::character::{CharacterInfo, CharacterSlot};
 use rpg_lobby::lobby::LobbyId;
@@ -858,20 +854,6 @@ pub fn list_create_game_button(
                 slot: selected_character.slot,
             })
             .unwrap();
-    }
-}
-
-pub fn list_cancel_button(
-    interaction_q: Query<&Interaction, (Changed<Interaction>, With<ListCancelButton>)>,
-    mut menu_set: ParamSet<(
-        Query<&mut Style, With<AccountListRoot>>,
-        Query<&mut Style, With<AccountLoginRoot>>,
-    )>,
-) {
-    let interaction = interaction_q.get_single();
-    if let Ok(Interaction::Pressed) = interaction {
-        menu_set.p0().single_mut().display = Display::None;
-        menu_set.p1().single_mut().display = Display::Flex;
     }
 }
 

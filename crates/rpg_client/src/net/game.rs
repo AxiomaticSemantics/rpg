@@ -89,14 +89,14 @@ pub(crate) fn receive_player_spawn(
     mut state: ResMut<NextState<AppState>>,
     renderables: Res<RenderResources>,
     mut spawn_events: EventReader<MessageEvent<SCPlayerSpawn>>,
-    account_q: Query<(Entity, &RpgAccount)>,
+    account_q: Query<&RpgAccount>,
 ) {
     for event in spawn_events.read() {
         info!("spawning local player");
 
         let spawn_msg = event.message();
 
-        let (entity, account) = account_q.single();
+        let account = account_q.single();
 
         let transform = Transform::from_translation(spawn_msg.position);
 
@@ -116,7 +116,8 @@ pub(crate) fn receive_player_spawn(
         };
 
         actor::spawn_actor(
-            entity,
+            Entity::PLACEHOLDER,
+            true,
             &mut commands,
             &renderables,
             transform,
@@ -399,6 +400,7 @@ pub(crate) fn receive_spawn_hero(
         // FIXME storage and skill graph are dummy data here
         spawn_actor(
             Entity::PLACEHOLDER,
+            false,
             &mut commands,
             &renderables,
             transform,
@@ -444,6 +446,7 @@ pub(crate) fn receive_spawn_villain(
             .looking_to(spawn_msg.direction, Vec3::Y);
         spawn_actor(
             Entity::PLACEHOLDER,
+            false,
             &mut commands,
             &renderables,
             transform,
