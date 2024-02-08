@@ -1,14 +1,10 @@
-use crate::{
-    damage::{DamageKind, DamageValue},
-    unit::HeroReward,
-};
+use crate::{damage::Damage, unit::HeroReward};
 
 use serde_derive::{Deserialize as De, Serialize as Ser};
 
 #[derive(Debug, Ser, De, Clone, PartialEq)]
 pub struct DamageResult {
-    pub kind: DamageKind,
-    pub damage: DamageValue,
+    pub damage: Damage,
     pub total: u32,
     pub is_crit: bool,
 }

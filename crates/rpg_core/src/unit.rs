@@ -1,7 +1,7 @@
 use crate::{
     class::Class,
     combat::{CombatResult, DamageResult, HeroDeathResult, VillainDeathResult},
-    damage::{DamageDescriptor, DamageKind, DamageValue, DamageValueDescriptor},
+    damage::{Damage, DamageDescriptor, DamageKind, DamageValueDescriptor},
     game_mode::GameMode,
     item::{self, Item, ItemInfo},
     metadata::Metadata,
@@ -249,10 +249,9 @@ impl Unit {
             .u32_mut() = new_hp;
 
         let damage = DamageResult {
-            kind: DamageKind::Physical,
-            damage: DamageValue {
-                total: new_hp,
-                damage: *damage_dealt.u32(),
+            damage: Damage {
+                kind: DamageKind::Physical,
+                amount: *damage_dealt.u32(),
             },
             total: new_hp,
             is_crit,
