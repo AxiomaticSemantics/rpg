@@ -7,9 +7,10 @@ use audio_manager::plugin::AudioActions;
 use rpg_core::{
     item::{Item, ItemInfo, ItemKind},
     metadata::Metadata,
+    uid::Uid,
 };
 use rpg_util::{
-    item::{GroundItem, GroundItemBundle, GroundItemDrops, StorableItem, StorageSlot},
+    item::{GroundItem, GroundItemDrops, StorageSlot},
     unit::Unit,
 };
 use util::{cleanup::CleanupStrategy, math::AabbComponent, random::SharedRng};
@@ -36,7 +37,7 @@ use fastrand::Rng;
 use std::borrow::Cow;
 
 #[derive(Default, Deref, DerefMut, Resource)]
-pub struct CursorItem(pub Option<StorageSlot>);
+pub struct CursorItem(pub Option<Uid>);
 
 #[derive(Component)]
 pub struct GroundItemHover;
@@ -58,7 +59,7 @@ pub(crate) fn hover_ground_item(
 
     let mut style = ground_hover_q.single_mut();
     for (transform, item) in &ground_item_q {
-        let item = item.as_ref().unwrap();
+        let item = &item.0;
 
         let mut item_ground_pos = transform.translation;
         item_ground_pos.y = 0.;
@@ -161,9 +162,11 @@ pub(crate) fn get_prop_key(metadata: &Metadata, item_info: &ItemInfo) -> Cow<'st
 pub(crate) fn make_item_stat_string(item: &Item, metadata: &Metadata) -> String {
     let mut value = String::new();
 
-    for modifier in &item.modifiers {
-        let modifier_meta = &metadata.modifier.modifiers[&modifier.modifier.id];
-        value = format!("{}{modifier} to {}\n", value, modifier_meta.name);
+    if let ItemInfo::Gem(info) = &item.info {
+        for modifier in &info.modifiers {
+            let modifier_meta = &metadata.modifier.modifiers[&modifier.modifier.id];
+            value = format!("{}{modifier} to {}\n", value, modifier_meta.name);
+        }
     }
 
     value
@@ -180,7 +183,7 @@ fn spawn_item(
     // println!("Spawning item at {position:?}");
     let item_info = &metadata.item.items[&item.id];
 
-    let key = get_prop_key(metadata, &item_info.info);
+    let key = get_prop_key(metadata, &item.info);
 
     let PropHandle::Scene(handle) = &renderables.props[&*key].handle else {
         panic!("bad handle");
@@ -203,10 +206,7 @@ fn spawn_item(
             transform,
             ..default()
         },
-        GroundItemBundle {
-            item: GroundItem(Some(item)),
-        },
-        StorableItem,
+        GroundItem(item),
         aabb,
     ));
 }

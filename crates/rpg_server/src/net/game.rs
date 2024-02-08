@@ -3,6 +3,7 @@ use crate::{
     account::AccountInstance,
     assets::MetadataResources,
     game::{
+        item::GroundItem,
         plugin::{AabbResources, GameState},
         skill::SkillOwner,
     },
@@ -30,7 +31,7 @@ use rpg_core::storage::Storage;
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions::{Action, ActionData, Actions, AttackData, State},
-    item::{GroundItem, StorableItem, UnitStorage},
+    item::UnitStorage,
     skill::{get_skill_origin, SkillSlots, SkillUse, Skills},
     unit::{Hero, HeroBundle, Unit, UnitBundle},
 };
@@ -57,6 +58,7 @@ pub(crate) fn receive_player_leave(
     mut leave_reader: EventReader<MessageEvent<CSPlayerLeave>>,
     mut game_state: ResMut<GameState>,
     mut net_params: NetworkParamsRW,
+    player_q: Query<&Unit>,
     skill_q: Query<(Entity, &SkillOwner), With<SkillUse>>,
 ) {
     for event in leave_reader.read() {
@@ -68,9 +70,12 @@ pub(crate) fn receive_player_leave(
 
         game_state.players.retain(|p| p.client_id != client_id);
 
-        commands
-            .entity(client.entity)
-            .remove::<(HeroBundle, Transform, AabbComponent)>();
+        let player = player_q.get(client.entity).unwrap();
+
+        net_params.server.send_message_to_target::<Channel1, _>(
+            SCPlayerLeave(player.uid),
+            NetworkTarget::AllExcept(vec![client_id]),
+        );
 
         // despawn any active skills that the player has cast
         for (entity, owner) in &skill_q {
@@ -78,6 +83,11 @@ pub(crate) fn receive_player_leave(
                 commands.entity(entity).despawn_recursive();
             }
         }
+
+        // remove game play components from the client's entity
+        commands
+            .entity(client.entity)
+            .remove::<(HeroBundle, Transform, AabbComponent)>();
 
         if game_state.players.is_empty() {
             info!("no players remain, ending game");
@@ -312,7 +322,7 @@ pub(crate) fn receive_item_pickup(
     mut commands: Commands,
     mut pickup_reader: EventReader<MessageEvent<CSItemPickup>>,
     mut net_params: NetworkParamsRW,
-    mut item_q: Query<(Entity, &mut GroundItem, &Transform), With<StorableItem>>,
+    mut item_q: Query<(Entity, &mut GroundItem, &Transform)>,
     mut hero_q: Query<(&Transform, &mut UnitStorage), With<Hero>>,
 ) {
     for event in pickup_reader.read() {
@@ -327,7 +337,7 @@ pub(crate) fn receive_item_pickup(
         let (u_transform, mut u_storage) = hero_q.get_mut(client.entity).unwrap();
 
         for (i_entity, mut i_item, i_transform) in &mut item_q {
-            if i_item.0.as_ref().unwrap().uid != pickup_msg.0 {
+            if i_item.0 != pickup_msg.0 {
                 continue;
             }
 
@@ -335,7 +345,10 @@ pub(crate) fn receive_item_pickup(
                 let Some(slot) = u_storage.0.get_empty_slot_mut() else {
                     break;
                 };
-                slot.item = i_item.0.take();
+
+                /* FIXME
+                slot.item = i_item.0;
+                */
 
                 net_params.server.send_message_to_target::<Channel1, _>(
                     SCDespawnItem(pickup_msg.0),

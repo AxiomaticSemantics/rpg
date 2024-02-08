@@ -18,7 +18,7 @@ use rpg_core::skill::{SkillInfo, SkillUseResult};
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions::{ActionData, Actions, State},
-    item::{GroundItem, StorableItem},
+    item::GroundItem,
     skill::{SkillSlots, Skills},
     unit::{Corpse, Hero, Unit},
 };
@@ -134,7 +134,7 @@ pub fn pick_storable_items(
     mouse_input: Res<ButtonInput<MouseButton>>,
     key_input: Res<ButtonInput<KeyCode>>,
     mut net_client: ResMut<Client>,
-    mut item_q: Query<(&Transform, &GroundItem), With<StorableItem>>,
+    mut item_q: Query<(&Transform, &GroundItem)>,
     mut hero_q: Query<
         &Transform,
         (
@@ -159,7 +159,7 @@ pub fn pick_storable_items(
                 || mouse_input.just_pressed(MouseButton::Left))
             && distance < 0.5
         {
-            net_client.send_message::<Channel1, _>(CSItemPickup(i_item.as_ref().unwrap().uid));
+            net_client.send_message::<Channel1, _>(CSItemPickup(i_item.uid));
 
             /* FIXME move to message handler
             u_audio.push("item_pickup".into());

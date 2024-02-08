@@ -1,18 +1,16 @@
 use bevy::{
-    ecs::{bundle::Bundle, component::Component, system::Resource},
+    ecs::{component::Component, system::Resource},
     prelude::{Deref, DerefMut},
 };
 
 use rpg_core::{
     item::{Item, ItemDrops},
     storage::{StorageSlot as RpgStorageSlot, UnitStorage as RpgUnitStorage},
+    uid::Uid,
 };
 
 #[derive(Component, Deref, DerefMut)]
-pub struct GroundItem(pub Option<Item>);
-
-#[derive(Component)]
-pub struct StorableItem;
+pub struct GroundItem(pub Item);
 
 #[derive(Component, Copy, Clone, Deref, DerefMut, PartialEq, Eq, Debug)]
 pub struct StorageSlot(pub RpgStorageSlot);
@@ -24,11 +22,6 @@ impl Default for UnitStorage {
     fn default() -> Self {
         Self(RpgUnitStorage::new())
     }
-}
-
-#[derive(Bundle)]
-pub struct GroundItemBundle {
-    pub item: GroundItem,
 }
 
 #[derive(Resource, Default, Deref, DerefMut)]

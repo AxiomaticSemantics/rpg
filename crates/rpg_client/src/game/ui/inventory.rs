@@ -13,15 +13,16 @@ use crate::game::{
 };
 
 use rpg_core::{
-    item::Rarity,
+    item::{ItemInfo, Rarity},
     storage::{
         self,
         inventory::{HERO_INVENTORY_COLUMNS, HERO_INVENTORY_ROWS},
         SlotIndex, Storage, StorageIndex, StorageSlot as RpgStorageSlot,
     },
 };
+use rpg_network_protocol::protocol::*;
 use rpg_util::{
-    item::{GroundItem, GroundItemBundle, StorableItem, StorageSlot, UnitStorage},
+    item::{StorageSlot, UnitStorage},
     unit::Unit,
 };
 
@@ -136,9 +137,10 @@ pub(crate) fn hover_storage(
                     border.0 = Color::AZURE;
                 }
 
+                /*
                 if let Some(item) = cursor_item.0 {
                     if storage.slot_has_item(node.0) {
-                        if item.0 == node.0 {
+                        if item == node. {
                             cursor_item.0 = None;
                         } else {
                             let item = cursor_item.0;
@@ -164,7 +166,7 @@ pub(crate) fn hover_storage(
                     }));
 
                     background.0 = Color::RED;
-                }
+                } */
 
                 continue;
             }
@@ -183,6 +185,7 @@ pub(crate) fn update_cursor_item(
     mut commands: Commands,
     metadata: Res<MetadataResources>,
     renderables: Res<RenderResources>,
+    mut net_client: ResMut<Client>,
     mut cursor_item: ResMut<CursorItem>,
     input: Res<ButtonInput<MouseButton>>,
     player_q: Query<&Transform, With<Player>>,
@@ -198,6 +201,11 @@ pub(crate) fn update_cursor_item(
         let item_slot = &cursor_item.as_ref().unwrap();
         let mut style = cursor_ui_q.single_mut();
         if input.just_pressed(MouseButton::Right) {
+            if let Some(uid) = cursor_item.0 {
+                net_client.send_message::<Channel1, _>(CSItemDrop(uid));
+            }
+
+            /* FIXME
             // Drop the cursor item on the ground
             let aabb = Aabb::from_min_max(Vec3::splat(-0.2), Vec3::splat(0.2));
             let item_slot = storage
@@ -215,7 +223,6 @@ pub(crate) fn update_cursor_item(
                     commands.spawn((
                         GameSessionCleanup,
                         CleanupStrategy::DespawnRecursive,
-                        StorableItem,
                         SceneBundle {
                             scene: handle.clone_weak(),
                             transform: *player_transform,
@@ -232,6 +239,7 @@ pub(crate) fn update_cursor_item(
 
             style.display = Display::None;
             cursor_item.0 = None;
+            */
             return;
         }
     }
@@ -245,13 +253,14 @@ pub(crate) fn update_cursor_item(
         let children = cursor_item_stats_q.single_mut();
         let mut text = text_q.get_mut(*children.first().unwrap()).unwrap();
 
+        /* FIXME
         let slot = storage
             .slot_from_index(item.storage_index, item.slot_index)
             .unwrap();
 
         if let Some(item) = &slot.item {
             text.sections[0].value = item::make_item_stat_string(item, &metadata.rpg);
-        }
+        }*/
 
         style.top = Val::Px(-200.);
         style.left = Val::Px(-400.);
@@ -280,16 +289,20 @@ pub(crate) fn inventory_update(
             continue;
         };
 
-        let rarity_color = match item.rarity {
-            Rarity::Normal => RARITY_COLOR_NORMAL,
-            Rarity::Magic => RARITY_COLOR_MAGIC,
-            Rarity::Rare => RARITY_COLOR_RARE,
-            Rarity::Legendary => RARITY_COLOR_LEGENDARY,
-            Rarity::Unique => RARITY_COLOR_UNIQUE,
+        let color = if let ItemInfo::Gem(info) = &item.info {
+            match info.rarity {
+                Rarity::Normal => RARITY_COLOR_NORMAL,
+                Rarity::Magic => RARITY_COLOR_MAGIC,
+                Rarity::Rare => RARITY_COLOR_RARE,
+                Rarity::Legendary => RARITY_COLOR_LEGENDARY,
+                Rarity::Unique => RARITY_COLOR_UNIQUE,
+            }
+        } else {
+            RARITY_COLOR_NORMAL
         };
 
-        if background.0 != rarity_color {
-            background.0 = rarity_color;
+        if background.0 != color {
+            background.0 = color;
         }
     }
 }

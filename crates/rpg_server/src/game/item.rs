@@ -1,19 +1,22 @@
 use super::plugin::{AabbResources, GameSessionCleanup};
 use crate::assets::MetadataResources;
 
-use rpg_core::{item::Item, metadata::Metadata};
-use rpg_util::{
-    item::{GroundItem, GroundItemBundle, GroundItemDrops, StorableItem},
-    unit::Unit,
-};
+use rpg_core::{item::Item, metadata::Metadata, uid::Uid};
+use rpg_util::{item::GroundItemDrops, unit::Unit};
 
 use util::{cleanup::CleanupStrategy, math::AabbComponent};
 
 use bevy::{
-    ecs::system::{Commands, Query, Res, ResMut},
+    ecs::{
+        component::Component,
+        system::{Commands, Query, Res, ResMut},
+    },
     math::Vec3,
     transform::components::Transform,
 };
+
+#[derive(Component)]
+pub(crate) struct GroundItem(pub(crate) Uid);
 
 pub(crate) fn spawn_ground_items(
     mut commands: Commands,
@@ -59,10 +62,7 @@ fn spawn_item(
         GameSessionCleanup,
         CleanupStrategy::DespawnRecursive,
         transform,
-        GroundItemBundle {
-            item: GroundItem(Some(item)),
-        },
-        StorableItem,
+        GroundItem(item.uid),
         aabb,
     ));
 }

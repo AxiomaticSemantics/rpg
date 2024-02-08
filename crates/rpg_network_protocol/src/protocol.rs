@@ -264,6 +264,9 @@ pub struct SCPlayerJoinSuccess;
 pub struct SCPlayerJoinError;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCPlayerLeave(pub Uid);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCPlayerSpawn {
     pub position: Vec3,
 }
@@ -422,6 +425,7 @@ pub enum Messages {
     // Game Messages
     SCPlayerJoinSuccess(SCPlayerJoinSuccess),
     SCPlayerJoinError(SCPlayerJoinError),
+    SCPlayerLeave(SCPlayerLeave),
     SCPlayerSpawn(SCPlayerSpawn),
     SCMovePlayer(SCMovePlayer),
     SCMovePlayerEnd(SCMovePlayerEnd),

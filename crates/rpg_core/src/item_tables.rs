@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde_derive::Deserialize as De;
 
-use crate::item::{ItemId, ItemInfo, ItemKind};
+use crate::item::{ItemDescriptor, ItemId, ItemKind};
 
 #[derive(De)]
 pub struct RarityInfo {
@@ -63,7 +63,7 @@ pub struct DropInfo {
 pub struct ItemTableEntry {
     pub name: String,
     pub kind: ItemKind,
-    pub info: ItemInfo,
+    pub info: ItemDescriptor,
 }
 
 #[derive(De)]
