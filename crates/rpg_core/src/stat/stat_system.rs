@@ -1,6 +1,8 @@
 use crate::{
     class::Class,
+    item::{Item, ItemInfo},
     metadata::Metadata,
+    storage::*,
     value::{Value, ValueKind},
 };
 
@@ -270,7 +272,7 @@ impl VitalStats {
 
     pub fn set_from_id(&mut self, id: StatId, value: Value) {
         let stat = self.stats.values_mut().find(|s| s.id == id);
-        debug_assert!(stat.is_some());
+        debug_assert!(stat.is_some(), "{id:?}");
 
         stat.unwrap().value = value;
     }
@@ -328,6 +330,54 @@ impl Stats {
             Operation::Mul => modifiers.modifiers.mul.push(modifier.modifier.value),
             Operation::Div => modifiers.modifiers.div.push(modifier.modifier.value),
         }
+    }
+
+    fn apply_item_modifier(&mut self, metadata: &Metadata, modifier: &StatModifier) -> Option<()> {
+        let (str_id, _) = metadata.stat.stats.iter().find(|d| d.1.id == modifier.id)?;
+        let list_modifier = self.item_stats.get_mut(str_id)?;
+
+        match modifier.modifier.operation {
+            Operation::Add => list_modifier.modifiers.add.push(modifier.modifier.value),
+            Operation::Sub => list_modifier.modifiers.sub.push(modifier.modifier.value),
+            Operation::Mul => list_modifier.modifiers.mul.push(modifier.modifier.value),
+            Operation::Div => list_modifier.modifiers.div.push(modifier.modifier.value),
+        }
+
+        Some(())
+    }
+
+    fn apply_item_modifiers(&mut self, metadata: &Metadata, item: &Item) -> Option<()> {
+        let ItemInfo::Gem(info) = &item.info else {
+            return None;
+        };
+
+        for modifier in &info.modifiers {
+            self.apply_item_modifier(metadata, modifier);
+        }
+
+        Some(())
+    }
+
+    pub fn apply_item_stats(&mut self, metadata: &Metadata, storage: &UnitStorage) {
+        self.clear_item_stats();
+
+        for node in storage.storage.iter() {
+            if node.index == StorageIndex(STORAGE_INVENTORY)
+                || node.index == StorageIndex(STORAGE_STASH)
+            {
+                continue;
+            }
+
+            for item in node.node.iter() {
+                let Some(item) = &item.item else {
+                    continue;
+                };
+
+                self.apply_item_modifiers(metadata, item);
+            }
+        }
+
+        self.recompute(false);
     }
 
     pub fn clear_item_stats(&mut self) {
