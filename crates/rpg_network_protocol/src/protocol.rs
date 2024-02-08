@@ -215,7 +215,7 @@ pub struct SCLobbyMessageSuccess;
 pub struct SCLobbyMessageError;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCGameCreateSuccess;
+pub struct SCGameCreateSuccess(pub GameMode);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCGameCreateError;

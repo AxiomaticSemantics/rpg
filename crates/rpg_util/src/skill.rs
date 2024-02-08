@@ -135,7 +135,7 @@ pub fn clean_skills(
                 // info!("direct skill: {info:?}");
                 info.frame >= info.info.frames
             }
-            SkillInstance::Area(info) => {
+            SkillInstance::Area(_) => {
                 // info!("area skill: {info:?}");
                 false
             }

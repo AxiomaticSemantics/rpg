@@ -8,6 +8,7 @@ use bevy::{
         system::Resource,
         world::{FromWorld, World},
     },
+    log::debug,
     text::Font,
 };
 
@@ -30,7 +31,7 @@ pub struct UiUtilPlugin;
 
 impl Plugin for UiUtilPlugin {
     fn build(&self, app: &mut App) {
-        println!("Initializing UI plugin.");
+        debug!("Initializing UI plugin.");
 
         app.init_resource::<UiFont>()
             .add_systems(Startup, (widgets::setup_focus, style::insert_theme))

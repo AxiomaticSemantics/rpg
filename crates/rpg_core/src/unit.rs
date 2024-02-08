@@ -1,14 +1,13 @@
 use crate::{
     class::Class,
     combat::{CombatResult, DamageResult, HeroDeathResult, VillainDeathResult},
-    damage::{DamageDescriptor, DamageKind, DamageValue, DamageValueDescriptor},
+    damage::{Damage, DamageDescriptor, DamageKind, DamageValueDescriptor},
     game_mode::GameMode,
-    item::{self, GemInfo, Item, ItemInfo},
+    item::{self, Item},
     metadata::Metadata,
-    passive_tree::PassiveSkillGraph,
+    passive_tree::UnitPassiveSkills,
     skill::{Skill, SkillId, SkillUseResult},
-    stat::{modifier::Operation, stat_system::Stats, Stat},
-    storage::{StorageIndex, UnitStorage, STORAGE_INVENTORY, STORAGE_STASH},
+    stat::{stat_system::Stats, Stat},
     uid::{NextUid, Uid},
     value::{Value, ValueKind},
     villain::VillainId,
@@ -114,7 +113,7 @@ impl UnitInfo {
 }
 
 #[derive(Ser, De, Clone, Debug)]
-// FIXME stats and skills should be passed as params
+// FIXME stats should be passed as params
 pub struct Unit {
     pub uid: Uid,
     pub kind: UnitKind,
@@ -249,10 +248,9 @@ impl Unit {
             .u32_mut() = new_hp;
 
         let damage = DamageResult {
-            kind: DamageKind::Physical,
-            damage: DamageValue {
-                total: new_hp,
-                damage: *damage_dealt.u32(),
+            damage: Damage {
+                kind: DamageKind::Physical,
+                amount: *damage_dealt.u32(),
             },
             total: new_hp,
             is_crit,
@@ -282,11 +280,11 @@ impl Unit {
     pub fn apply_passive_rewards(
         &mut self,
         metadata: &Metadata,
-        passive_skill_graph: &PassiveSkillGraph,
+        passive_skills: &UnitPassiveSkills,
     ) {
         self.stats.clear_passive_stats();
 
-        for node_id in &passive_skill_graph.allocated_nodes {
+        for node_id in &passive_skills.allocated_nodes {
             let node = metadata
                 .passive_tree
                 .nodes
@@ -377,53 +375,6 @@ impl Unit {
 
         gained_level
     }*/
-
-    fn apply_item_modifiers(&mut self, metadata: &Metadata, item: &Item) -> Option<()> {
-        let ItemInfo::Gem(info) = &item.info else {
-            return None;
-        };
-
-        for modifier in &info.modifiers {
-            let (str_id, _) = metadata
-                .stat
-                .stats
-                .iter()
-                .find(|d| d.1.id == modifier.id)
-                .unwrap();
-            let list_modifier = self.stats.item_stats.get_mut(str_id)?;
-
-            match modifier.modifier.operation {
-                Operation::Add => list_modifier.modifiers.add.push(modifier.modifier.value),
-                Operation::Sub => list_modifier.modifiers.sub.push(modifier.modifier.value),
-                Operation::Mul => list_modifier.modifiers.mul.push(modifier.modifier.value),
-                Operation::Div => list_modifier.modifiers.div.push(modifier.modifier.value),
-            }
-        }
-
-        Some(())
-    }
-
-    pub fn apply_item_stats(&mut self, metadata: &Metadata, storage: &UnitStorage) {
-        self.stats.clear_item_stats();
-
-        for node in storage.storage.iter() {
-            if node.index == StorageIndex(STORAGE_INVENTORY)
-                || node.index == StorageIndex(STORAGE_STASH)
-            {
-                continue;
-            }
-
-            for item in node.node.iter() {
-                let Some(item) = &item.item else {
-                    continue;
-                };
-
-                self.apply_item_modifiers(metadata, item);
-            }
-        }
-
-        self.stats.recompute(false);
-    }
 
     // TODO add a flag to signify max level gained
     fn reward_experience(&mut self, metadata: &Metadata, value: Value) -> Option<HeroReward> {

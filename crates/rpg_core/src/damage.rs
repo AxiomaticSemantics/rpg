@@ -19,20 +19,14 @@ pub struct DamageDescriptor {
     pub value: DamageValueDescriptor,
 }
 
-#[derive(Ser, De, Debug, PartialEq, Copy, Clone)]
-pub struct DamageValue {
-    pub damage: u32,
-    pub total: u32,
-}
-
 #[derive(Ser, De, Debug, PartialEq, Clone)]
 pub struct Damage {
     pub kind: DamageKind,
-    pub value: DamageValue,
+    pub amount: u32,
 }
 
 impl Damage {
-    pub const fn new(kind: DamageKind, value: DamageValue) -> Self {
-        Self { kind, value }
+    pub const fn new(kind: DamageKind, amount: u32) -> Self {
+        Self { kind, amount }
     }
 }

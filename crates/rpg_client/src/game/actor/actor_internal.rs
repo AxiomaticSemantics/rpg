@@ -3,7 +3,7 @@ use super::{
     player::{Player, PlayerBundle},
 };
 use crate::game::{
-    assets::RenderResources, health_bar::HealthBar, passive_tree::PassiveTree,
+    assets::RenderResources, health_bar::HealthBar, passive_tree::UnitPassiveSkills,
     plugin::GameSessionCleanup,
 };
 
@@ -24,7 +24,7 @@ use bevy::{
 use audio_manager::plugin::AudioActions;
 use rpg_core::{
     class::Class,
-    passive_tree::PassiveSkillGraph,
+    passive_tree::UnitPassiveSkills as RpgUnitPassiveSkills,
     storage::UnitStorage as RpgUnitStorage,
     unit::{Unit as RpgUnit, UnitKind},
     villain::VillainId,
@@ -97,6 +97,7 @@ pub fn get_villain_actor_key(id: VillainId) -> &'static str {
 
 pub(crate) fn spawn_actor(
     entity: Entity,
+    is_local_player: bool,
     commands: &mut Commands,
     renderables: &RenderResources,
     transform: Transform,
@@ -104,7 +105,7 @@ pub(crate) fn spawn_actor(
     skills: Skills,
     skill_slots: SkillSlots,
     storage: Option<RpgUnitStorage>,
-    passive_tree: Option<PassiveSkillGraph>,
+    passive_tree: Option<RpgUnitPassiveSkills>,
 ) {
     let aabb = AabbComponent(Aabb3d {
         min: Vec3::new(-0.3, 0., -0.25),
@@ -134,76 +135,138 @@ pub(crate) fn spawn_actor(
                 CleanupStrategy::DespawnRecursive,
                 UnitBundle::new(Unit(unit), skills, skill_slots),
                 UnitStorage(storage.unwrap()),
-                PassiveTree(passive_tree.unwrap()),
+                UnitPassiveSkills(passive_tree.unwrap()),
                 //AabbGizmo::default(),
             );
 
             if entity == Entity::PLACEHOLDER {
+                // Spawn a new entity
                 match actor {
                     ActorHandle::Mesh(handle) => {
-                        commands.spawn((
-                            actor_hero_bundle,
-                            Hero,
-                            ActorMeshBundle {
-                                basic: actor_basic_bundle,
-                                mesh: MaterialMeshBundle {
-                                    mesh: handle,
-                                    transform,
-                                    ..default()
+                        if is_local_player {
+                            commands.spawn((
+                                actor_hero_bundle,
+                                Player,
+                                Hero,
+                                ActorMeshBundle {
+                                    basic: actor_basic_bundle,
+                                    mesh: MaterialMeshBundle {
+                                        mesh: handle,
+                                        transform,
+                                        ..default()
+                                    },
                                 },
-                            },
-                        ));
+                            ));
+                        } else {
+                            commands.spawn((
+                                actor_hero_bundle,
+                                Hero,
+                                ActorMeshBundle {
+                                    basic: actor_basic_bundle,
+                                    mesh: MaterialMeshBundle {
+                                        mesh: handle,
+                                        transform,
+                                        ..default()
+                                    },
+                                },
+                            ));
+                        }
                     }
                     ActorHandle::Scene(handle) => {
-                        commands.spawn((
-                            actor_hero_bundle,
-                            Hero,
-                            ActorSceneBundle {
-                                basic: actor_basic_bundle,
-                                scene: SceneBundle {
-                                    scene: handle,
-                                    transform,
-                                    ..default()
+                        if is_local_player {
+                            commands.spawn((
+                                actor_hero_bundle,
+                                Player,
+                                Hero,
+                                ActorSceneBundle {
+                                    basic: actor_basic_bundle,
+                                    scene: SceneBundle {
+                                        scene: handle,
+                                        transform,
+                                        ..default()
+                                    },
                                 },
-                            },
-                        ));
+                            ));
+                        } else {
+                            commands.spawn((
+                                actor_hero_bundle,
+                                Hero,
+                                ActorSceneBundle {
+                                    basic: actor_basic_bundle,
+                                    scene: SceneBundle {
+                                        scene: handle,
+                                        transform,
+                                        ..default()
+                                    },
+                                },
+                            ));
+                        }
                     }
                 }
             } else {
+                // spawn on an existing entity
                 match actor {
                     ActorHandle::Mesh(handle) => {
-                        commands.entity(entity).insert((
-                            actor_hero_bundle,
-                            PlayerBundle {
-                                player: Player,
-                                hero: Hero,
-                            },
-                            ActorMeshBundle {
-                                basic: actor_basic_bundle,
-                                mesh: MaterialMeshBundle {
-                                    mesh: handle,
-                                    transform,
-                                    ..default()
+                        if is_local_player {
+                            commands.entity(entity).insert((
+                                actor_hero_bundle,
+                                Player,
+                                Hero,
+                                ActorMeshBundle {
+                                    basic: actor_basic_bundle,
+                                    mesh: MaterialMeshBundle {
+                                        mesh: handle,
+                                        transform,
+                                        ..default()
+                                    },
                                 },
-                            },
-                        ));
+                            ));
+                        } else {
+                            commands.entity(entity).insert((
+                                actor_hero_bundle,
+                                Hero,
+                                ActorMeshBundle {
+                                    basic: actor_basic_bundle,
+                                    mesh: MaterialMeshBundle {
+                                        mesh: handle,
+                                        transform,
+                                        ..default()
+                                    },
+                                },
+                            ));
+                        }
                     }
                     ActorHandle::Scene(handle) => {
-                        commands.entity(entity).insert((
-                            actor_hero_bundle,
-                            PlayerBundle {
-                                player: Player,
-                                hero: Hero,
-                            },
-                            ActorSceneBundle {
-                                basic: actor_basic_bundle,
-                                scene: SceneBundle {
-                                    scene: handle,
-                                    transform,
-                                    ..default()
+                        if is_local_player {
+                            commands.entity(entity).insert((
+                                actor_hero_bundle,
+                                PlayerBundle {
+                                    player: Player,
+                                    hero: Hero,
                                 },
-                            },
-                        ));
+                                ActorSceneBundle {
+                                    basic: actor_basic_bundle,
+                                    scene: SceneBundle {
+                                        scene: handle,
+                                        transform,
+                                        ..default()
+                                    },
+                                },
+                            ));
+                        } else {
+                            commands.entity(entity).insert((
+                                actor_hero_bundle,
+                                Hero,
+                                ActorSceneBundle {
+                                    basic: actor_basic_bundle,
+                                    scene: SceneBundle {
+                                        scene: handle,
+                                        transform,
+                                        ..default()
+                                    },
+                                },
+                            ));
+                        }
                     }
                 }
             };

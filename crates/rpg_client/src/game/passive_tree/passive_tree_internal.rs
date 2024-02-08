@@ -8,7 +8,7 @@ use crate::{
     },
 };
 use rpg_core::{
-    passive_tree::{EdgeNodes, Node, NodeId, NodeKind, PassiveSkillGraph},
+    passive_tree::{EdgeNodes, Node, NodeId, NodeKind, UnitPassiveSkills as RpgUnitPassiveSkills},
     value::ValueKind,
 };
 use rpg_util::unit::Unit;
@@ -25,6 +25,7 @@ use bevy::{
     },
     hierarchy::{BuildChildren, Parent},
     input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
+    log::debug,
     math::{Vec2, Vec3},
     prelude::{Deref, DerefMut},
     render::{
@@ -48,10 +49,8 @@ use bevy::{
     window::{PrimaryWindow, Window},
 };
 
-use petgraph::algo;
-
 #[derive(Component, Deref, DerefMut)]
-pub struct PassiveTree(pub PassiveSkillGraph);
+pub struct UnitPassiveSkills(pub RpgUnitPassiveSkills);
 
 #[derive(Component)]
 pub struct PassiveTreeCamera;
@@ -500,7 +499,7 @@ pub fn display(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mouse_input: Res<ButtonInput<MouseButton>>,
     window_q: Query<&Window, With<PrimaryWindow>>,
-    mut player_q: Query<(&mut Unit, &mut PassiveTree), With<Player>>,
+    mut player_q: Query<(&mut Unit, &mut UnitPassiveSkills), With<Player>>,
     mut camera_passive_q: Query<(&GlobalTransform, &mut Camera), With<PassiveTreeCamera>>,
     mut passive_node_q: Query<(&PassiveTreeNode, &mut Handle<ColorMaterial>)>,
     mut passive_connection_q: Query<
@@ -642,20 +641,12 @@ pub fn display(
                     let start = metadata.rpg.passive_tree.graph_indices[&node];
                     let dest = metadata.rpg.passive_tree.graph_indices[&node_descriptor.id];
 
-                    let path = algo::astar(
-                        &metadata.rpg.passive_tree.graph,
-                        start,
-                        |d| d == dest,
-                        |e| *e.weight(),
-                        |_| 0,
-                    );
-
-                    let Some((len, _)) = path else {
-                        //println!("no path {len}");
+                    let Some((len, path)) = metadata.rpg.passive_tree.get_node_path(start, dest)
+                    else {
                         continue;
                     };
 
-                    println!("no path {len}");
+                    debug!("path length: {len}");
                     if len == 1 {
                         allocated_node_id = Some(*node);
                         break;

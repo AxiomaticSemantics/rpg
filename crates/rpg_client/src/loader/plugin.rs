@@ -15,7 +15,7 @@ use crate::{
 use ui_util::{plugin::UiUtilPlugin, style::UiTheme};
 use util::{plugin::UtilityPlugin, random::Rng};
 
-#[cfg(all(debug_assertions, feature = "bevy_diagnostic"))]
+#[cfg(all(debug_assertions, feature = "diagnostic"))]
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 
 use bevy::{
@@ -30,7 +30,7 @@ use bevy::{
         schedule::{common_conditions::in_state, IntoSystemConfigs, NextState, OnEnter},
         system::{Commands, NonSend, Query, ResMut},
     },
-    log::{info, warn, LogPlugin},
+    log::{debug, warn, LogPlugin},
     render::{
         camera::{Camera, ClearColorConfig},
         color::Color,
@@ -68,7 +68,7 @@ pub struct LoaderPlugin;
 
 impl Plugin for LoaderPlugin {
     fn build(&self, app: &mut App) {
-        println!("Initializing loader plugin.");
+        debug!("Initializing loader plugin.");
 
         let cli = Cli::parse();
 
@@ -147,8 +147,6 @@ impl Plugin for LoaderPlugin {
 }
 
 fn transition_splash(mut commands: Commands, mut state: ResMut<NextState<AppState>>) {
-    info!("transition to `AppState::Splash`");
-
     commands.spawn((
         OutOfGameCamera,
         Camera2dBundle {
@@ -164,7 +162,6 @@ fn transition_splash(mut commands: Commands, mut state: ResMut<NextState<AppStat
 }
 
 fn transition_game_asset_load(mut state: ResMut<NextState<AppState>>) {
-    info!("transition to `AppState::LoadGameAssets`");
     state.set(AppState::LoadGameAssets);
 }
 
