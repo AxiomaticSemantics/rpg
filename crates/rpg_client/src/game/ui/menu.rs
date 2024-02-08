@@ -1,8 +1,12 @@
 #![allow(clippy::too_many_arguments)]
 
-use crate::{assets::TextureAssets, state::AppState};
+use crate::{
+    assets::TextureAssets,
+    game::plugin::{GameSessionCleanup, GameState},
+    state::AppState,
+};
 
-use crate::game::plugin::GameSessionCleanup;
+use rpg_core::game_mode::GameMode;
 
 use ui_util::style::UiTheme;
 use util::cleanup::CleanupStrategy;
@@ -21,7 +25,7 @@ use bevy::{
     text::Text,
     ui::{
         node_bundles::{ButtonBundle, ImageBundle, NodeBundle, TextBundle},
-        AlignSelf, BackgroundColor, BorderColor, Display, FlexDirection, Interaction, Style,
+        AlignSelf, BackgroundColor, BorderColor, Display, Interaction, Style,
     },
     utils::default,
 };
@@ -59,11 +63,16 @@ pub(crate) fn toggle_menu(
 
 pub(crate) fn restart_button(
     ui_theme: Res<UiTheme>,
+    game_state: Res<GameState>,
     mut restart_q: Query<
         (&Interaction, &mut BackgroundColor),
         (With<RestartButton>, Changed<Interaction>),
     >,
 ) {
+    if game_state.mode == GameMode::Normal {
+        return;
+    }
+
     if let Ok((interaction, mut bg_color)) = restart_q.get_single_mut() {
         match interaction {
             Interaction::Pressed => {
@@ -126,7 +135,12 @@ pub(crate) fn cancel_button(
     }
 }
 
-pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, _textures: Res<TextureAssets>) {
+pub(crate) fn setup(
+    mut commands: Commands,
+    game_state: Res<GameState>,
+    ui_theme: Res<UiTheme>,
+    _textures: Res<TextureAssets>,
+) {
     let mut container_hidden_style = ui_theme.container_absolute_max.clone();
     container_hidden_style.display = Display::None;
 
@@ -195,20 +209,22 @@ pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, _textures: R
                         ));
                     });
 
-                    p.spawn((
-                        RestartButton,
-                        ButtonBundle {
-                            style: ui_theme.button_theme.style.clone(),
-                            border_color: BorderColor(Color::rgb(0.3, 0.3, 0.3)),
-                            ..default()
-                        },
-                    ))
-                    .with_children(|p| {
-                        p.spawn(TextBundle::from_section(
-                            "Respawn",
-                            ui_theme.text_style_regular.clone(),
-                        ));
-                    });
+                    if game_state.mode == GameMode::Normal {
+                        p.spawn((
+                            RestartButton,
+                            ButtonBundle {
+                                style: ui_theme.button_theme.style.clone(),
+                                border_color: BorderColor(Color::rgb(0.3, 0.3, 0.3)),
+                                ..default()
+                            },
+                        ))
+                        .with_children(|p| {
+                            p.spawn(TextBundle::from_section(
+                                "Respawn",
+                                ui_theme.text_style_regular.clone(),
+                            ));
+                        });
+                    }
 
                     p.spawn((
                         CancelButton,

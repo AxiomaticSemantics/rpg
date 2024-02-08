@@ -28,7 +28,7 @@ use bevy::{
         system::{Commands, ParamSet, Query, Res, ResMut},
     },
     hierarchy::BuildChildren,
-    log::info,
+    log::{debug, info},
     render::{
         camera::{Camera, ClearColorConfig},
         color::Color,
@@ -44,7 +44,8 @@ pub struct MenuPlugin;
 
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
-        println!("Initializing menu plugin.");
+        debug!("Initializing menu plugin.");
+
         app.init_resource::<menu::account::SelectedCharacter>()
             .init_resource::<menu::create::SelectedClass>()
             .add_systems(OnEnter(AppState::MenuLoad), spawn)
@@ -62,6 +63,7 @@ impl Plugin for MenuPlugin {
                     (
                         menu::account::cancel_create_button,
                         menu::account::cancel_login_button,
+                        menu::account::cancel_account_list_button,
                         menu::account::create_button,
                         menu::account::login_button,
                         menu::account::lobby_create_button,

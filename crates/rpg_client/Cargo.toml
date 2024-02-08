@@ -16,6 +16,7 @@ build = "windows-build.rs"
 
 [features]
 default = ["gizmos"]
+diagnostics = []
 gizmos = ["bevy/bevy_gizmos"]
 
 [dependencies]
@@ -35,7 +36,6 @@ ui_util = { path = "../ui_util" }
 audio_manager = { path = "../audio_manager" }
 
 # external dependencies
-petgraph = { workspace = true }
 serde = { workspace = true }
 serde_derive = { workspace = true }
 serde_json = { workspace = true }

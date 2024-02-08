@@ -14,6 +14,7 @@ use bevy::{
     },
     hierarchy::BuildChildren,
     input::{keyboard::KeyCode, ButtonInput},
+    log::debug,
     math::{Vec2, Vec3},
     render::{color::Color, view::visibility::Visibility},
     sprite::{Sprite, SpriteBundle},
@@ -31,7 +32,7 @@ pub struct SplashScreenPlugin;
 
 impl Plugin for SplashScreenPlugin {
     fn build(&self, app: &mut App) {
-        println!("Initializing Splash Screen plugin.");
+        debug!("Initializing Splash Screen plugin.");
 
         app.add_systems(OnEnter(AppState::Splash), setup_splash_screen)
             .add_systems(
@@ -159,7 +160,6 @@ impl Sequence {
 
             let (mut visibility, _, _, _) = target_q.get_mut(tween.entity()).unwrap();
             if *visibility == Visibility::Hidden {
-                println!("setting target visible");
                 *visibility = Visibility::Visible;
             }
 
@@ -396,6 +396,42 @@ fn setup_splash_screen(
     let mut screens = VecDeque::new();
 
     screens.push_back(Sequence::new(vec![
+        TweenKind::Translation(TweenInfo::new(
+            bevy_logo_entity,
+            Some(Tween::new(
+                EaseFunction::CircularInOut,
+                Duration::from_secs_f32(4.),
+                TransformPositionLens {
+                    start: Vec3::Z * 2.,
+                    end: Vec3::Y * 50. + Vec3::Z * 2.,
+                },
+            )),
+        )),
+        TweenKind::SpriteColor(TweenInfo::new(
+            bevy_logo_entity,
+            Some(Tween::new(
+                EaseFunction::SineIn,
+                Duration::from_secs_f32(2.),
+                SpriteColorLens {
+                    start: Color::rgba(1.0, 1.0, 1.0, 1.0),
+                    end: Color::rgba(1.0, 1.0, 1.0, 0.0),
+                },
+            )),
+        )),
+        TweenKind::SpriteColor(TweenInfo::new(
+            bevy_logo_entity,
+            Some(Tween::new(
+                EaseFunction::SineOut,
+                Duration::from_secs_f32(6.),
+                SpriteColorLens {
+                    start: Color::rgba(1.0, 1.0, 1.0, 0.0),
+                    end: Color::rgba(1.0, 1.0, 1.0, 1.0),
+                },
+            )),
+        )),
+    ]));
+
+    screens.push_back(Sequence::new(vec![
         TweenKind::TextColor(TweenInfo::new(
             top_text_entity,
             Some(Tween::new(
@@ -411,7 +447,7 @@ fn setup_splash_screen(
         TweenKind::TextColor(TweenInfo::new(
             bottom_text_entity,
             Some(Tween::new(
-                EaseFunction::SineIn,
+                EaseFunction::SineOut,
                 Duration::from_secs_f32(4.),
                 TextColorLens {
                     start: Color::rgba(0.0, 0.0, 0.0, 0.0),
@@ -439,31 +475,6 @@ fn setup_splash_screen(
                 TransformPositionLens {
                     start: Vec3::new(0., -400., 0.),
                     end: Vec3::new(0., 0., 0.),
-                },
-            )),
-        )),
-    ]));
-
-    screens.push_back(Sequence::new(vec![
-        TweenKind::Translation(TweenInfo::new(
-            bevy_logo_entity,
-            Some(Tween::new(
-                EaseFunction::CircularInOut,
-                Duration::from_secs_f32(4.),
-                TransformPositionLens {
-                    start: Vec3::Z * 2.,
-                    end: Vec3::Y * 50. + Vec3::Z * 2.,
-                },
-            )),
-        )),
-        TweenKind::SpriteColor(TweenInfo::new(
-            bevy_logo_entity,
-            Some(Tween::new(
-                EaseFunction::SineOut,
-                Duration::from_secs_f32(8.),
-                SpriteColorLens {
-                    start: Color::rgba(1.0, 1.0, 1.0, 1.0),
-                    end: Color::rgba(1.0, 1.0, 1.0, 0.0),
                 },
             )),
         )),

@@ -1,4 +1,5 @@
 use crate::{
+    game::plugin::GameState,
     state::AppState,
     ui::menu::{
         account::{AccountCreateRoot, AccountListRoot, AccountLoginRoot},
@@ -62,7 +63,7 @@ pub(crate) fn receive_account_create_error(
 
 pub(crate) fn receive_account_login_success(
     mut commands: Commands,
-    mut style_set: ParamSet<(
+    mut menu_set: ParamSet<(
         Query<&mut Style, With<AccountLoginRoot>>,
         Query<&mut Style, With<AccountListRoot>>,
     )>,
@@ -75,8 +76,8 @@ pub(crate) fn receive_account_login_success(
 
         commands.spawn(RpgAccount(account_msg.0.clone()));
 
-        style_set.p0().single_mut().display = Display::None;
-        style_set.p1().single_mut().display = Display::Flex;
+        menu_set.p0().single_mut().display = Display::None;
+        menu_set.p1().single_mut().display = Display::Flex;
 
         login_reader.clear();
         return;
@@ -165,12 +166,14 @@ pub(crate) fn receive_game_join_error(mut join_events: EventReader<MessageEvent<
 
 pub(crate) fn receive_game_create_success(
     mut state: ResMut<NextState<AppState>>,
+    mut game_state: ResMut<GameState>,
     mut create_events: EventReader<MessageEvent<SCGameCreateSuccess>>,
 ) {
     for event in create_events.read() {
         let create_msg = event.message();
         info!("game create success {create_msg:?}");
 
+        game_state.mode = create_msg.0;
         state.set(AppState::GameSpawn);
 
         create_events.clear();

@@ -35,7 +35,7 @@ use bevy::{
 
 use rpg_core::{
     combat::CombatResult,
-    passive_tree::PassiveSkillGraph,
+    passive_tree::UnitPassiveSkills,
     skill::SkillInfo,
     stat::{Stat, StatId},
     storage::UnitStorage,
@@ -406,7 +406,7 @@ pub(crate) fn receive_spawn_hero(
             skills,
             skill_slots,
             Some(UnitStorage::default()),
-            Some(PassiveSkillGraph::new(spawn_msg.class)),
+            Some(UnitPassiveSkills::new(spawn_msg.class)),
         );
     }
 }

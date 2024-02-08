@@ -13,10 +13,7 @@ use ui_util::{
     widgets::EditText,
 };
 
-use rpg_account::{
-    account::{Account, AccountInfo},
-    character::{CharacterInfo, CharacterSlot},
-};
+use rpg_account::character::{CharacterInfo, CharacterSlot};
 use rpg_lobby::lobby::LobbyId;
 use rpg_network_protocol::protocol::*;
 
@@ -33,8 +30,7 @@ use bevy::{
     text::Text,
     ui::{
         node_bundles::{ButtonBundle, ImageBundle, NodeBundle, TextBundle},
-        AlignItems, AlignSelf, BackgroundColor, Display, FocusPolicy, Interaction, JustifyContent,
-        Style, UiImage, UiRect, Val,
+        AlignSelf, BackgroundColor, Display, FocusPolicy, Interaction, Style, UiImage, UiRect, Val,
     },
     utils::default,
 };
@@ -647,10 +643,15 @@ pub fn create_button(
 
 pub fn login_button(
     mut net_client: ResMut<Client>,
+    account_q: Query<&RpgAccount>,
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<LoginButton>)>,
     mut account_text_set: ParamSet<(
         Query<&Text, With<LoginName>>,
         Query<&Text, With<LoginPassword>>,
+    )>,
+    mut menu_set: ParamSet<(
+        Query<&mut Style, With<AccountLoginRoot>>,
+        Query<&mut Style, With<AccountListRoot>>,
     )>,
 ) {
     for interaction in &interaction_q {
@@ -658,12 +659,18 @@ pub fn login_button(
             continue;
         }
 
-        let name = account_text_set.p0().single().sections[0].value.clone();
-        let password = account_text_set.p1().single().sections[0].value.clone();
+        let account = account_q.get_single();
+        if let Ok(_) = account {
+            menu_set.p0().single_mut().display = Display::None;
+            menu_set.p1().single_mut().display = Display::Flex;
+        } else {
+            let name = account_text_set.p0().single().sections[0].value.clone();
+            let password = account_text_set.p1().single().sections[0].value.clone();
 
-        let login_msg = CSLoadAccount { name, password };
+            let login_msg = CSLoadAccount { name, password };
 
-        net_client.send_message::<Channel1, _>(login_msg);
+            net_client.send_message::<Channel1, _>(login_msg);
+        }
     }
 }
 

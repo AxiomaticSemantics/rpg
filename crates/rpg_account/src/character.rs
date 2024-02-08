@@ -2,7 +2,7 @@ use crate::character_statistics::CharacterStatistics;
 
 use rpg_core::{
     game_mode::GameMode,
-    passive_tree::PassiveSkillGraph,
+    passive_tree::UnitPassiveSkills,
     skill::{Skill, SkillSlot},
     storage::UnitStorage,
     uid::Uid,
@@ -41,5 +41,5 @@ pub struct Character {
     pub skills: Vec<Skill>,
     pub skill_slots: Vec<SkillSlot>,
     pub storage: UnitStorage,
-    pub passive_tree: PassiveSkillGraph,
+    pub passive_tree: UnitPassiveSkills,
 }

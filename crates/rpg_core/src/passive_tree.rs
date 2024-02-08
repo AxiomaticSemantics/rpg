@@ -214,6 +214,14 @@ impl PassiveTreeTable {
         self.graph_indices = graph_indices;
         self.passive_indices = passive_indices;
     }
+
+    pub fn get_node_path(
+        &self,
+        origin: NodeIndex,
+        dest: NodeIndex,
+    ) -> Option<(u32, Vec<NodeIndex>)> {
+        algo::astar(&self.graph, origin, |d| d == dest, |e| *e.weight(), |_| 0)
+    }
 }
 
 #[derive(Ser, De, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -223,12 +231,19 @@ pub struct EdgeNodes {
 }
 
 #[derive(Ser, De, Clone, Debug)]
-pub struct PassiveSkillGraph {
+pub struct UnitPassiveSkills {
     pub allocated_nodes: Vec<NodeId>,
     pub allocated_edges: Vec<EdgeNodes>,
 }
 
-impl PassiveSkillGraph {
+impl UnitPassiveSkills {
+    pub fn new(class: Class) -> Self {
+        Self {
+            allocated_nodes: vec![Self::get_class_root(class)],
+            allocated_edges: vec![],
+        }
+    }
+
     pub fn get_class_root(class: Class) -> NodeId {
         match class {
             Class::Str => NodeId(48),
@@ -238,13 +253,6 @@ impl PassiveSkillGraph {
             Class::Int => NodeId(1616),
             Class::IntStr => NodeId(2008),
             Class::StrDexInt => NodeId(2400),
-        }
-    }
-
-    pub fn new(class: Class) -> Self {
-        Self {
-            allocated_nodes: vec![Self::get_class_root(class)],
-            allocated_edges: vec![],
         }
     }
 }

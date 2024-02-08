@@ -3,9 +3,9 @@ use crate::{
     combat::{CombatResult, DamageResult, HeroDeathResult, VillainDeathResult},
     damage::{DamageDescriptor, DamageKind, DamageValue, DamageValueDescriptor},
     game_mode::GameMode,
-    item::{self, GemInfo, Item, ItemInfo},
+    item::{self, Item, ItemInfo},
     metadata::Metadata,
-    passive_tree::PassiveSkillGraph,
+    passive_tree::UnitPassiveSkills,
     skill::{Skill, SkillId, SkillUseResult},
     stat::{modifier::Operation, stat_system::Stats, Stat},
     storage::{StorageIndex, UnitStorage, STORAGE_INVENTORY, STORAGE_STASH},
@@ -282,11 +282,11 @@ impl Unit {
     pub fn apply_passive_rewards(
         &mut self,
         metadata: &Metadata,
-        passive_skill_graph: &PassiveSkillGraph,
+        passive_skills: &UnitPassiveSkills,
     ) {
         self.stats.clear_passive_stats();
 
-        for node_id in &passive_skill_graph.allocated_nodes {
+        for node_id in &passive_skills.allocated_nodes {
             let node = metadata
                 .passive_tree
                 .nodes

@@ -30,7 +30,7 @@ use rpg_account::{
     character_statistics::CharacterStatistics,
 };
 use rpg_core::{
-    passive_tree::PassiveSkillGraph,
+    passive_tree::UnitPassiveSkills,
     skill::{SkillSlot, SkillSlotId},
     storage::UnitStorage,
     unit::{HeroInfo, Unit as RpgUnit, UnitInfo, UnitKind},
@@ -301,7 +301,7 @@ pub(crate) fn receive_character_create(
                         unit,
                         skills,
                         skill_slots,
-                        passive_tree: PassiveSkillGraph::new(create_msg.class),
+                        passive_tree: UnitPassiveSkills::new(create_msg.class),
                         storage: UnitStorage::default(),
                     },
                 };
@@ -382,7 +382,7 @@ pub(crate) fn receive_game_create(
         game_state.options.mode = create_msg.game_mode;
 
         net_params.server.send_message_to_target::<Channel1, _>(
-            SCGameCreateSuccess,
+            SCGameCreateSuccess(create_msg.game_mode),
             NetworkTarget::Only(vec![client_id]),
         );
 

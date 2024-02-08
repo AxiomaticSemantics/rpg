@@ -43,7 +43,7 @@ pub struct PotionDescriptor {
     pub id: StatId,
 }
 
-#[derive(Debug, Clone, Copy, Ser, De)]
+#[derive(Debug, Clone, Copy, PartialEq, Ser, De)]
 pub struct CurrencyId(pub u16);
 
 #[derive(Debug, Clone, Ser, De)]
@@ -74,7 +74,9 @@ pub struct PotionInfo {
 }
 
 #[derive(Debug, Clone, PartialEq, Ser, De)]
-pub struct CurrencyInfo {}
+pub struct CurrencyInfo {
+    pub id: CurrencyId,
+}
 
 #[derive(Debug, Clone, PartialEq, Ser, De)]
 pub enum ItemInfo {
@@ -108,8 +110,8 @@ pub mod generation {
 
     use crate::{
         item::{
-            CurrencyInfo, GemInfo, Item, ItemDescriptor, ItemId, ItemInfo, ItemKind, PotionInfo,
-            Rarity,
+            CurrencyId, CurrencyInfo, GemInfo, Item, ItemDescriptor, ItemId, ItemInfo, ItemKind,
+            PotionInfo, Rarity,
         },
         metadata::Metadata,
         stat::{
@@ -137,6 +139,82 @@ pub mod generation {
         }
 
         drops
+    }
+
+    fn generate_modifiers(rng: &mut Rng, metadata: &Metadata, rarity: Rarity) -> Vec<StatModifier> {
+        let mut modifiers = Vec::new();
+
+        let rarity_info = &metadata.item.drop_info.rarity;
+
+        let max_modifers = match rarity {
+            Rarity::Normal => rarity_info.normal.max_affixes,
+            Rarity::Magic => rarity_info.magic.max_affixes,
+            Rarity::Rare => rarity_info.rare.max_affixes,
+            Rarity::Legendary => rarity_info.legendary.max_affixes,
+            Rarity::Unique => rarity_info.unique.max_affixes,
+        };
+
+        let modifier_count = rng.u8(1..=max_modifers);
+
+        for _count in 0..modifier_count {
+            // TODO handle id clash
+            // TODO decide where max generation attemps should be stored
+            // for _attempt in max_attempts {}
+
+            let affix_kind = if rng.bool() {
+                Affix::Prefix
+            } else {
+                Affix::Suffix
+            };
+
+            let modifier_id = match affix_kind {
+                Affix::Prefix => ModifierId(rng.u16(
+                    metadata.modifier.prefix_ids.begin.0..=metadata.modifier.prefix_ids.end.0,
+                )),
+                Affix::Suffix => ModifierId(rng.u16(
+                    metadata.modifier.suffix_ids.begin.0..=metadata.modifier.suffix_ids.end.0,
+                )),
+            };
+
+            let modifier_meta = &metadata.modifier.modifiers[&modifier_id];
+
+            let stat_meta = metadata
+                .stat
+                .stats
+                .values()
+                .find(|s| s.id == modifier_meta.stat_id)
+                .unwrap();
+
+            let amount = match stat_meta.value_kind {
+                ValueKind::U32 => {
+                    Value::sample(rng, *modifier_meta.min.u32()..=*modifier_meta.max.u32())
+                }
+                ValueKind::U64 => {
+                    Value::U64(rng.u64(modifier_meta.min.u64()..=modifier_meta.max.u64()))
+                }
+                ValueKind::F32 => Value::F32(OrderedFloat(
+                    modifier_meta.min.f32()
+                        + (modifier_meta.max.f32() - modifier_meta.min.f32()) * rng.f32(),
+                )),
+                ValueKind::F64 => Value::F64(OrderedFloat(
+                    modifier_meta.min.f64()
+                        + (modifier_meta.max.f64() - modifier_meta.min.f64()) * rng.f64(),
+                )),
+            };
+
+            let modifier = Modifier::new(
+                modifier_id,
+                amount,
+                Operation::Add,
+                ModifierKind::Normal,
+                ModifierFormat::Flat,
+            );
+
+            //println!("adding {modifier:?} to gem");
+            modifiers.push(StatModifier::new(modifier_meta.stat_id, modifier));
+        }
+
+        modifiers
     }
 
     pub fn generate(rng: &mut Rng, metadata: &Metadata, level: u8, next_uid: &mut NextUid) -> Item {
@@ -181,7 +259,6 @@ pub mod generation {
         };
 
         let entry = metadata.item.items.get(&ItemId(item_table_id)).unwrap();
-        let mut modifiers = vec![];
 
         let item_info = match &entry.info {
             ItemDescriptor::Potion(info) => {
@@ -213,97 +290,14 @@ pub mod generation {
                     _ => unreachable!(),
                 };
 
-                /*
-                let modifier = Modifier::new(
-                    modifier_meta.id,
-                    amount,
-                    Operation::Add,
-                    ModifierKind::Normal,
-                    ModifierFormat::Flat,
-                );
-
-                modifiers.push(StatModifier::new(modifier_meta.stat_id, modifier));
-                */
-
                 ItemInfo::Potion(PotionInfo {
                     id: info.id,
                     value: amount,
                 })
             }
-            ItemDescriptor::Currency(_) => ItemInfo::Currency(CurrencyInfo {}),
+            ItemDescriptor::Currency(desc) => ItemInfo::Currency(CurrencyInfo { id: desc.id }),
             ItemDescriptor::Gem(_) => {
-                let rarity_info = &metadata.item.drop_info.rarity;
-
-                let max_modifers = match rarity {
-                    Rarity::Normal => rarity_info.normal.max_affixes,
-                    Rarity::Magic => rarity_info.magic.max_affixes,
-                    Rarity::Rare => rarity_info.rare.max_affixes,
-                    Rarity::Legendary => rarity_info.legendary.max_affixes,
-                    Rarity::Unique => rarity_info.unique.max_affixes,
-                };
-
-                let modifier_count = rng.u8(1..=max_modifers);
-
-                for _count in 0..modifier_count {
-                    // TODO handle id clash
-                    // TODO decide where max generation attemps should be stored
-                    // for _attempt in max_attempts {}
-
-                    let affix_kind = if rng.bool() {
-                        Affix::Prefix
-                    } else {
-                        Affix::Suffix
-                    };
-
-                    let modifier_id = match affix_kind {
-                        Affix::Prefix => ModifierId(rng.u16(
-                            metadata.modifier.prefix_ids.begin.0
-                                ..=metadata.modifier.prefix_ids.end.0,
-                        )),
-                        Affix::Suffix => ModifierId(rng.u16(
-                            metadata.modifier.suffix_ids.begin.0
-                                ..=metadata.modifier.suffix_ids.end.0,
-                        )),
-                    };
-
-                    let modifier_meta = &metadata.modifier.modifiers[&modifier_id];
-
-                    let stat_meta = metadata
-                        .stat
-                        .stats
-                        .values()
-                        .find(|s| s.id == modifier_meta.stat_id)
-                        .unwrap();
-
-                    let amount = match stat_meta.value_kind {
-                        ValueKind::U32 => {
-                            Value::sample(rng, *modifier_meta.min.u32()..=*modifier_meta.max.u32())
-                        }
-
-                        ValueKind::U64 => {
-                            Value::U64(rng.u64(modifier_meta.min.u64()..=modifier_meta.max.u64()))
-                        }
-                        ValueKind::F32 => Value::F32(OrderedFloat(
-                            modifier_meta.min.f32()
-                                + (modifier_meta.max.f32() - modifier_meta.min.f32()) * rng.f32(),
-                        )),
-                        ValueKind::F64 => Value::F64(OrderedFloat(
-                            modifier_meta.min.f64()
-                                + (modifier_meta.max.f64() - modifier_meta.min.f64()) * rng.f64(),
-                        )),
-                    };
-
-                    let modifier = Modifier::new(
-                        modifier_id,
-                        amount,
-                        Operation::Add,
-                        ModifierKind::Normal,
-                        ModifierFormat::Flat,
-                    );
-
-                    //println!("adding {modifier:?} to gem");
-                    modifiers.push(StatModifier::new(modifier_meta.stat_id, modifier));
-                }
+                let modifiers = generate_modifiers(rng, metadata, rarity);
 
                 if rarity != Rarity::Normal {
                     println!("generated {rarity:?} item");
