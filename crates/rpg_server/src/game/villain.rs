@@ -222,7 +222,7 @@ pub(crate) fn find_target(
         }
 
         let max_distance =
-            (metadata.0.unit.villains[&unit.info.villain().id].max_vision * 100.).round() as u32;
+            (metadata.rpg.unit.villains[&unit.info.villain().id].max_vision * 100.).round() as u32;
         if villain.has_target() {
             if let Ok((_, hero_transform)) = hero_q.get(villain.target) {
                 let distance = (transform.translation.distance(hero_transform.translation) * 100.)
@@ -313,7 +313,7 @@ pub(crate) fn villain_think(
         let distance =
             (transform.translation.distance(hero_transform.translation) * 100.).round() as u32;
         let villain_id = unit.info.villain().id;
-        let villain_meta = &metadata.0.unit.villains[&villain_id];
+        let villain_meta = &metadata.rpg.unit.villains[&villain_id];
         if distance > (villain_meta.max_vision * 100.).floor() as u32 {
             // this should be handled elsewhere
             villain.target = Entity::PLACEHOLDER;
@@ -333,7 +333,7 @@ pub(crate) fn villain_think(
         }
 
         let skill_id = skill_slots.slots[0].skill_id.unwrap();
-        let skill_info = &metadata.0.skill.skills[&skill_id];
+        let skill_info = &metadata.rpg.skill.skills[&skill_id];
 
         let wanted_range = (skill_info.use_range as f32 * 0.5) as u32;
         let wanted_range = wanted_range.clamp(150, wanted_range.max(150));
@@ -359,8 +359,12 @@ pub(crate) fn villain_think(
         if think_timer.finished() && actions.attack.is_none() {
             // debug!("distance {distance} use range {}", skill_info.use_range);
 
-            let skill_target =
-                get_skill_origin(&metadata.0, transform, hero_transform.translation, skill_id);
+            let skill_target = get_skill_origin(
+                &metadata.rpg,
+                transform,
+                hero_transform.translation,
+                skill_id,
+            );
 
             actions.request(Action::new(
                 ActionData::Attack(AttackData {

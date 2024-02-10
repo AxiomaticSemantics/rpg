@@ -34,7 +34,7 @@ pub(crate) fn spawn_ground_items(
             for item in &items.items {
                 spawn_item(
                     &mut commands,
-                    &metadata.0,
+                    &metadata.rpg,
                     &aabbs,
                     source_transform.translation,
                     item.clone(),

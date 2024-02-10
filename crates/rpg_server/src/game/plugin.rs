@@ -188,7 +188,7 @@ pub(crate) fn setup_simulation(
             &mut commands,
             &mut server_metadata.0.next_uid,
             &position,
-            &metadata.0,
+            &metadata.rpg,
             aabbs.aabbs["hero"],
             villain_id,
         );

@@ -272,7 +272,7 @@ pub(crate) fn receive_character_create(
                     )
                     .unwrap();
             } else {
-                let unit_info = UnitInfo::Hero(HeroInfo::new(&metadata.0, create_msg.game_mode));
+                let unit_info = UnitInfo::Hero(HeroInfo::new(&metadata.rpg, create_msg.game_mode));
                 let mut unit = RpgUnit::new(
                     server_metadata.0.next_uid.get(),
                     create_msg.class,
@@ -280,10 +280,10 @@ pub(crate) fn receive_character_create(
                     unit_info,
                     1,
                     create_msg.name.clone(),
-                    &metadata.0,
+                    &metadata.rpg,
                 );
                 let mut skills = Vec::new();
-                unit.add_default_skills(&mut skills, &metadata.0);
+                unit.add_default_skills(&mut skills, &metadata.rpg);
                 let skill_slots = vec![SkillSlot::new(SkillSlotId(0), Some(skills[0].id))];
 
                 server_metadata.0.next_uid.next();

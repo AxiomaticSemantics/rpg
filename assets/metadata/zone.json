@@ -1,0 +1,20 @@
+{
+  "towns": {
+    "0": {
+      "name": "Fjotinheim"
+    },
+    "7": {
+      "name": "Hiemdalsfard"
+    },
+    "14": {
+      "name": "Skalavik"
+    },
+    "21": {
+      "name": "Langadalr"
+    },
+    "28": {
+      "name": "Myrr"
+    }
+  },
+  "zones": {}
+}
