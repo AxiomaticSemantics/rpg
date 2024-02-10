@@ -122,6 +122,8 @@ impl Plugin for NetworkClientPlugin {
                     game::receive_spawn_villain,
                     game::receive_spawn_hero,
                     game::receive_spawn_skill,
+                    game::receive_player_revive,
+                    game::receive_hero_revive,
                 ),
             )
             .add_systems(
@@ -176,9 +178,10 @@ fn connect(
     }
 
     let dt = time.delta();
-    if connection_timer.elapsed_secs() == 0.0 {
+    if connection_timer.paused() {
         net_client.connect();
-        connection_timer.tick(dt);
+        connection_timer.reset();
+        connection_timer.unpause();
         return;
     }
 

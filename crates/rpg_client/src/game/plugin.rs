@@ -177,7 +177,7 @@ impl Plugin for GamePlugin {
                             ui::menu::toggle_menu,
                             ui::menu::exit_button,
                             ui::menu::cancel_button,
-                            ui::menu::restart_button,
+                            ui::menu::respawn_button,
                         )
                             .after(player::update_camera),
                     ),
@@ -203,6 +203,7 @@ impl Plugin for GamePlugin {
                     item::spawn_ground_items,
                     item::animate_ground_items,
                     ui::hud::update,
+                    unit::toggle_healthbar,
                 )
                     .run_if(in_state(AppState::Game).and_then(is_game)),
             )
@@ -210,7 +211,6 @@ impl Plugin for GamePlugin {
                 PreUpdate,
                 (
                     environment::day_night_cycle,
-                    unit::remove_healthbar,
                     clean_skills,
                     actions::action_tick,
                 )
@@ -354,7 +354,7 @@ fn setup(mut commands: Commands, camera_q: Query<Entity, With<OutOfGameCamera>>)
 }
 
 fn cleanup(mut game_state: ResMut<GameState>, mut controls: ResMut<Controls>) {
-    debug!("game::plugin cleanup");
+    debug!("cleanup");
 
     controls.reset();
 

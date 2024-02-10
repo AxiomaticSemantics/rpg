@@ -142,12 +142,14 @@ pub(crate) fn receive_character_create_error(
 
 pub(crate) fn receive_game_join_success(
     mut state: ResMut<NextState<AppState>>,
+    mut game_state: ResMut<GameState>,
     mut join_events: EventReader<MessageEvent<SCGameJoinSuccess>>,
 ) {
     for event in join_events.read() {
         let join_msg = event.message();
         info!("game join success {join_msg:?}");
 
+        game_state.mode = join_msg.0;
         state.set(AppState::GameSpawn);
 
         join_events.clear();

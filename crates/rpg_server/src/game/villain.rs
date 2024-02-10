@@ -1,3 +1,5 @@
+use super::plugin::GameSessionCleanup;
+
 use crate::{account::AccountInstance, assets::MetadataResources, net::server::NetworkParamsRW};
 
 use rpg_core::{
@@ -14,7 +16,7 @@ use rpg_util::{
     unit::{Corpse, Hero, Unit, UnitBundle, Villain, VillainBundle},
 };
 
-use util::{math::AabbComponent, random::SharedRng};
+use util::{cleanup::CleanupStrategy, math::AabbComponent, random::SharedRng};
 
 use lightyear::shared::NetworkTarget;
 
@@ -123,15 +125,19 @@ pub(crate) fn spawn(
     let skill_slots = SkillSlots::new(slots);
 
     let transform = Transform::from_translation(*origin);
-    let unit_info = unit.info.villain();
 
-    info!(
-        "spawning villain uid {:?} {unit_info:?} at {:?}",
-        unit.uid, transform.translation
+    #[cfg(feature = "not_now")]
+    debug!(
+        "spawning villain uid {:?} {?} at {:?}",
+        unit.uid,
+        unit.info.vaillain(),
+        transform.translation
     );
 
     // spawn
     commands.spawn((
+        CleanupStrategy::DespawnRecursive,
+        GameSessionCleanup,
         AabbComponent(aabb),
         VillainBundle {
             villain: Villain,
@@ -172,7 +178,7 @@ pub(crate) fn remote_spawn(
 
             let villain_info = unit.info.villain().clone();
 
-            info!("spawning monster on client {villain_info:?}");
+            // info!("spawning nearby monster on client {villain_info:?}");
             controller.spawned_on.push(hero_entity);
 
             let client_id = net_params

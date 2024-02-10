@@ -40,6 +40,7 @@ pub struct HeroReward {
 pub struct HeroInfo {
     pub game_mode: GameMode,
     pub xp_curr: Stat,
+    pub deaths: Option<u32>,
 }
 
 impl HeroInfo {
@@ -47,6 +48,11 @@ impl HeroInfo {
         Self {
             game_mode,
             xp_curr: Stat::new(metadata.stat.stats["Xp"].id, Value::zero(ValueKind::U64)),
+            deaths: if game_mode == GameMode::Normal {
+                Some(0)
+            } else {
+                None
+            },
         }
     }
 }

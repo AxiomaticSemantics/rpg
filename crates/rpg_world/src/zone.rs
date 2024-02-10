@@ -13,16 +13,36 @@ use serde_derive::{Deserialize as De, Serialize as Ser};
 #[derive(Ser, De, Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub struct ZoneId(pub u16);
 
+#[derive(Ser, De, Debug, Clone, PartialEq)]
+pub struct TownInfo {
+    pub spawn_position: Vec3,
+}
+
+#[derive(Ser, De, Debug, Clone, PartialEq)]
+pub struct OverworldInfo {}
+
+#[derive(Ser, De, Debug, Clone, PartialEq)]
+pub struct UnderworldInfo {}
+
+#[derive(Ser, De, Debug, Clone, PartialEq)]
+pub enum ZoneInfo {
+    OverworldTown(TownInfo),
+    UnderworldTown(TownInfo),
+    Overworld(OverworldInfo),
+    Underworld(UnderworldInfo),
+}
+
 pub struct Zone {
     pub id: ZoneId,
     pub size_info: SizeInfo,
     pub kind: Kind,
+    pub info: ZoneInfo,
     pub connections: Vec<Connection>,
     pub room_route: Vec<UVec2>,
     pub tile_route: Vec<UVec2>,
     pub path: ZonePath,
     pub rooms: Vec<Room>,
-    pub rng: Rng,
+    pub rng: Rng, // FIXME the rpg world should own the rng
 }
 
 impl Zone {
@@ -106,10 +126,22 @@ impl Zone {
             Connection::new(ConnectionKind::Edge(Edge::Bottom), *back),
         ];
 
+        let info = match kind {
+            Kind::OverworldTown => ZoneInfo::OverworldTown(TownInfo {
+                spawn_position: Vec3::ZERO,
+            }),
+            Kind::UnderworldTown => ZoneInfo::OverworldTown(TownInfo {
+                spawn_position: Vec3::ZERO,
+            }),
+            Kind::Overworld => ZoneInfo::Overworld(OverworldInfo {}),
+            Kind::Underworld => ZoneInfo::Underworld(UnderworldInfo {}),
+        };
+
         Self {
             id,
             size_info,
             kind,
+            info,
             connections,
             room_route,
             tile_route,
@@ -286,7 +318,7 @@ impl Zone {
                 tile.set_edge_flag(next_edge, EdgeFlags::Open);
                 self.make_tile_barriers(next_edge, position);
             }
-            println!("pos {position}");
+            // println!("pos {position}");
         }
 
         self.tile_route = tile_route;
@@ -307,7 +339,8 @@ impl Zone {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Kind {
-    Town,
+    OverworldTown,
+    UnderworldTown,
     Overworld,
     Underworld,
 }

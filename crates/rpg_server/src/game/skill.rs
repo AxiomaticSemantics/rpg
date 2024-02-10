@@ -13,9 +13,7 @@ use rpg_core::{
         effect::*, skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData,
         ProjectileInstance, ProjectileShape, Skill, SkillInfo, SkillInstance, TimerDescriptor,
     },
-    stat::{StatChange, StatId, StatUpdate},
     unit::UnitKind,
-    value::Value,
 };
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
@@ -366,10 +364,10 @@ pub fn handle_contacts(
             continue;
         }
 
-        let (s_entity, mut s_transform, mut invulnerability, mut instance, timer) =
+        let (s_entity, mut s_transform, mut invulnerability, mut skill_use, timer) =
             skill_q.get_mut(event.entity).unwrap();
         let combat_result =
-            defender.handle_attack(&mut attacker, &metadata.0, &mut rng.0, &instance.damage);
+            defender.handle_attack(&mut attacker, &metadata.0, &mut rng.0, &skill_use.damage);
 
         info!("{combat_result:?}");
 
@@ -390,7 +388,7 @@ pub fn handle_contacts(
                     NetworkTarget::All,
                 );
 
-                match &instance.instance {
+                match &skill_use.instance {
                     SkillInstance::Direct(_) | SkillInstance::Projectile(_) => {
                         commands.entity(s_entity).despawn_recursive();
                         continue;
@@ -437,8 +435,8 @@ pub fn handle_contacts(
                     );
                 }
 
-                if let SkillInstance::Projectile(_) = &instance.instance {
-                    if instance
+                if let SkillInstance::Projectile(_) = &skill_use.instance {
+                    if skill_use
                         .effects
                         .iter()
                         .any(|e| matches!(e.info, EffectInfo::Pierce(_)))
@@ -525,17 +523,16 @@ pub fn handle_contacts(
             }
         }
 
-        if !instance.effects.is_empty()
+        if !(skill_use.effects.is_empty()
             && handle_effects(
                 &time,
                 &mut rng.0,
-                &mut instance,
+                &mut skill_use,
                 &mut s_transform,
                 &mut d_actions,
-            )
+            ))
         {
-            // debug!("Despawning skill");
-            commands.entity(event.entity).despawn_recursive();
+            skill_use.want_despawn = true;
         }
     }
 }

@@ -23,7 +23,6 @@ impl TileEdge {
             flags: 1 << edge as u8,
             edge_flags: edge_flags as u8,
         }
-        //println!("flags: {flags:#010b}");
     }
 
     pub fn get_edge_flags(&self) -> u8 {

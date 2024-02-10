@@ -1,3 +1,4 @@
+use super::{client::ClientType, server::NetworkParamsRW};
 use crate::{
     account::{
         AccountInstance, AccountInstanceBundle, AdminAccountInstance, AdminAccountInstanceBundle,
@@ -6,13 +7,12 @@ use crate::{
     game::plugin::{GameState, PlayerIdInfo},
     server_state::ServerMetadataResource,
     state::AppState,
+    world::{LoadZone, RpgWorld},
 };
-
-use super::{client::ClientType, server::NetworkParamsRW};
 
 use bevy::{
     ecs::{
-        event::EventReader,
+        event::{EventReader, EventWriter},
         schedule::NextState,
         system::{Commands, Query, Res, ResMut},
     },
@@ -36,6 +36,7 @@ use rpg_core::{
     unit::{HeroInfo, Unit as RpgUnit, UnitInfo, UnitKind},
 };
 use rpg_network_protocol::protocol::*;
+use rpg_world::zone::ZoneId;
 
 use util::fs::{open_read, open_write};
 
@@ -349,6 +350,7 @@ pub(crate) fn receive_character_create(
 pub(crate) fn receive_game_create(
     mut state: ResMut<NextState<AppState>>,
     mut game_state: ResMut<GameState>,
+    mut load_writer: EventWriter<LoadZone>,
     mut net_params: NetworkParamsRW,
     mut create_events: EventReader<MessageEvent<CSCreateGame>>,
     mut account_q: Query<&mut AccountInstance>,
@@ -360,6 +362,12 @@ pub(crate) fn receive_game_create(
             continue;
         };
 
+        if !game_state.players.is_empty() {
+            // TODO only a single game instance is currently supported
+            info!("game already active");
+            continue;
+        }
+
         let create_msg = create.message();
         info!("create game {create_msg:?}");
 
@@ -370,8 +378,16 @@ pub(crate) fn receive_game_create(
             continue;
         };
 
-        // FIXME temporarily clear, this will be handled properly later
-        game_state.players.clear();
+        let hero_info = character.character.unit.info.hero();
+        if hero_info.game_mode != create_msg.game_mode {
+            info!(
+                "a {:?} character cannot create a {:?} game",
+                hero_info.game_mode, create_msg.game_mode
+            );
+            continue;
+        }
+
+        // add the creator to the player list
         game_state.players.push(PlayerIdInfo {
             slot: create_msg.slot,
             account_id: account.0.info.id,
@@ -379,6 +395,7 @@ pub(crate) fn receive_game_create(
             client_id,
             entity: client.entity,
         });
+        game_state.options.max_players = 8;
         game_state.options.mode = create_msg.game_mode;
 
         net_params.server.send_message_to_target::<Channel1, _>(
@@ -388,6 +405,7 @@ pub(crate) fn receive_game_create(
 
         account.info.selected_slot = Some(create_msg.slot);
 
+        load_writer.send(LoadZone(ZoneId(0)));
         // FIXME turn this into an event
         state.set(AppState::SpawnSimulation);
     }
@@ -406,6 +424,13 @@ pub(crate) fn receive_game_join(
         if !client.is_authenticated_player() {
             continue;
         };
+
+        // If the game is full reject new joins
+        if game_state.players.len() >= game_state.options.max_players as usize {
+            info!("game full");
+            join_events.clear();
+            return;
+        }
 
         let join_msg = join.message();
         info!("join game {join_msg:?}");
@@ -430,6 +455,14 @@ pub(crate) fn receive_game_join(
             continue;
         };
 
+        // Ensure the player is of the correct type to join the game
+        if character.info.game_mode != game_state.options.mode {
+            info!(
+                "a {:?} player attemped to join a {:?} game",
+                character.info.game_mode, game_state.options.mode
+            );
+        }
+
         // TODO optimize
         // spawn the new player on all connected players
         net_params.server.send_message_to_target::<Channel1, _>(
@@ -440,6 +473,7 @@ pub(crate) fn receive_game_join(
                 level: character.character.unit.level,
                 name: character.character.unit.name.clone(),
                 skills: character.character.skills.clone(),
+                deaths: None,
                 skill_slots: character.character.skill_slots.clone(),
             },
             NetworkTarget::AllExcept(vec![client_id]),
@@ -454,7 +488,7 @@ pub(crate) fn receive_game_join(
         });
 
         net_params.server.send_message_to_target::<Channel1, _>(
-            SCGameJoinSuccess,
+            SCGameJoinSuccess(game_state.options.mode),
             NetworkTarget::Only(vec![client_id]),
         );
     }

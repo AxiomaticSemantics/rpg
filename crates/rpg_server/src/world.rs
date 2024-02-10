@@ -1,7 +1,10 @@
+use crate::state::AppState;
+
 use bevy::{
     app::{App, Plugin, Update},
     ecs::{
         event::{Event, EventReader},
+        schedule::{common_conditions::in_state, IntoSystemConfigs},
         system::{ResMut, Resource},
     },
     log::info,
@@ -45,22 +48,28 @@ impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<LoadZone>()
             .init_resource::<RpgWorld>()
-            .add_systems(Update, spawn_world);
+            .add_systems(
+                Update,
+                spawn_world.run_if(in_state(AppState::SpawnSimulation)),
+            );
     }
 }
 
-fn spawn_world(mut rpg_world: ResMut<RpgWorld>, mut load_zone: EventReader<LoadZone>) {
+pub(crate) fn spawn_world(mut rpg_world: ResMut<RpgWorld>, mut load_zone: EventReader<LoadZone>) {
     for load_zone_request in load_zone.read() {
         if rpg_world.zones.contains_key(&load_zone_request.0) {
             // ..
+            info!("zone is already loaded");
             continue;
         }
+
+        info!("loading zone {:?}", load_zone_request.0);
 
         let zone = Zone::new(
             load_zone_request.0,
             1234,
             SizeInfo::new(uvec2(8, 8), uvec2(8, 8), uvec2(4, 4)),
-            Kind::Overworld,
+            Kind::OverworldTown,
             ZonePath::generate(),
         );
 

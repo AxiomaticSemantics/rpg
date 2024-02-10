@@ -103,6 +103,7 @@ impl Plugin for NetworkServerPlugin {
                         game::receive_player_leave,
                         game::receive_player_join,
                         game::receive_player_loaded,
+                        game::receive_player_revive,
                     )
                         .run_if(in_state(AppState::Simulation)),
                 ),

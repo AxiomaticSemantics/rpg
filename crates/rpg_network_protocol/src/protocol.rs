@@ -151,6 +151,9 @@ pub struct CSItemDrop(pub Uid);
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSItemPickup(pub Uid);
 
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CSPlayerRevive;
+
 // Server -> Client
 
 // Account Messages
@@ -221,7 +224,7 @@ pub struct SCGameCreateSuccess(pub GameMode);
 pub struct SCGameCreateError;
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCGameJoinSuccess;
+pub struct SCGameJoinSuccess(pub GameMode);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCGameJoinError;
@@ -269,6 +272,15 @@ pub struct SCPlayerLeave(pub Uid);
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCPlayerSpawn {
     pub position: Vec3,
+}
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCPlayerRevive {
+    pub position: Vec3,
+    pub hp: u32,
+    pub xp_total: u64,
+    pub xp_loss: u64,
+    pub deaths: u32,
 }
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -336,6 +348,7 @@ pub struct SCSpawnHero {
     pub name: String,
     pub class: Class,
     pub level: u8,
+    pub deaths: Option<u32>,
     pub skills: Vec<Skill>,
     pub skill_slots: Vec<SkillSlot>,
 }
@@ -356,6 +369,9 @@ pub struct SCHeroDeath(pub Uid);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCVillainDeath(pub Uid);
+
+#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCHeroRevive(pub Vec3);
 
 #[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCDespawnCorpse(pub Uid);
@@ -444,6 +460,8 @@ pub enum Messages {
     SCSpawnVillain(SCSpawnVillain),
     SCHeroDeath(SCHeroDeath),
     SCVillainDeath(SCVillainDeath),
+    SCPlayerRevive(SCPlayerRevive),
+    SCHeroRevive(SCHeroRevive),
     SCDespawnCorpse(SCDespawnCorpse),
     SCCombatResult(SCCombatResult),
     SCDamage(SCDamage),
@@ -478,6 +496,7 @@ pub enum Messages {
     CSItemDrop(CSItemDrop),
     CSItemPickup(CSItemPickup),
     CSClientReady(CSClientReady),
+    CSPlayerRevice(CSPlayerRevive),
     CSPlayerJoin(CSPlayerJoin),
     CSPlayerLeave(CSPlayerLeave),
     CSJoinZone(CSJoinZone),

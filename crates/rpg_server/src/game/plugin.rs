@@ -2,7 +2,7 @@ use super::{action, item, skill, unit, villain};
 
 use crate::{
     assets::MetadataResources, net::server::NetworkParamsRW, server_state::ServerMetadataResource,
-    state::AppState, world::WorldPlugin,
+    state::AppState, world, world::WorldPlugin,
 };
 
 use bevy::{
@@ -91,6 +91,12 @@ impl Plugin for GamePlugin {
             .init_resource::<GroundItemDrops>()
             .insert_resource(SharedRng(Rng::with_seed(1234)))
             .add_systems(OnEnter(AppState::SpawnSimulation), setup_simulation)
+            .add_systems(
+                Update,
+                transition_to_game
+                    .run_if(in_state(AppState::SpawnSimulation))
+                    .after(world::spawn_world),
+            )
             .add_systems(OnEnter(AppState::Simulation), join_clients)
             .add_systems(
                 OnEnter(AppState::CleanupSimulation),
@@ -98,12 +104,11 @@ impl Plugin for GamePlugin {
             )
             .add_systems(
                 Update,
-                transition_to_game.run_if(in_state(AppState::SpawnSimulation)),
+                transition_to_lobby.run_if(in_state(AppState::CleanupSimulation)),
             )
             .add_systems(
                 FixedPreUpdate,
                 (
-                    unit::collide_units,
                     villain::remote_spawn,
                     skill::update_invulnerability,
                     unit::remove_corpses,
@@ -125,6 +130,7 @@ impl Plugin for GamePlugin {
                     action::action,
                     action::try_move_units,
                     action::move_units,
+                    //unit::collide_units,
                 )
                     .chain()
                     .run_if(in_state(AppState::Simulation)),
@@ -194,6 +200,11 @@ pub(crate) fn setup_simulation(
 pub(crate) fn transition_to_game(mut state: ResMut<NextState<AppState>>) {
     info!("transitioning to game simulation");
     state.set(AppState::Simulation);
+}
+
+pub(crate) fn transition_to_lobby(mut state: ResMut<NextState<AppState>>) {
+    info!("transitioning to lobby");
+    state.set(AppState::Lobby);
 }
 
 pub(crate) fn join_clients(game_state: ResMut<GameState>, mut net_params: NetworkParamsRW) {
