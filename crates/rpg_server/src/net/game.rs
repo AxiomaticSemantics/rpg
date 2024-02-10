@@ -344,7 +344,7 @@ pub(crate) fn receive_skill_use_direct(
         // info!("skill use direct: {skill_msg:?}");
 
         let skill_target = get_skill_origin(
-            &metadata.0,
+            &metadata.rpg,
             &transform,
             transform.translation, // FIXMEcursor_position.ground,
             skill_msg.0,
@@ -382,7 +382,7 @@ pub(crate) fn receive_skill_use_targeted(
         // info!("skill use targeted: {skill_msg:?}");
 
         let skill_target = get_skill_origin(
-            &metadata.0,
+            &metadata.rpg,
             &transform,
             skill_msg.target, // FIXMEcursor_position.ground,
             skill_msg.skill_id,

@@ -367,7 +367,7 @@ pub fn handle_contacts(
         let (s_entity, mut s_transform, mut invulnerability, mut skill_use, timer) =
             skill_q.get_mut(event.entity).unwrap();
         let combat_result =
-            defender.handle_attack(&mut attacker, &metadata.0, &mut rng.0, &skill_use.damage);
+            defender.handle_attack(&mut attacker, &metadata.rpg, &mut rng.0, &skill_use.damage);
 
         info!("{combat_result:?}");
 
@@ -475,7 +475,7 @@ pub fn handle_contacts(
 
                 if let Some(items) = defender.handle_death(
                     &mut attacker,
-                    &metadata.0,
+                    &metadata.rpg,
                     &mut rng.0,
                     &mut server_metadata.0.next_uid,
                 ) {

@@ -94,12 +94,16 @@ pub(crate) fn action(
                     let skill_id = skill_slots.slots[0].skill_id.unwrap();
                     assert_eq!(skill_id, attack.skill_id);
 
-                    let Some(skill_info) = metadata.0.skill.skills.get(&skill_id) else {
+                    let Some(skill_info) = metadata.rpg.skill.skills.get(&skill_id) else {
                         panic!("skill metadata not found");
                     };
 
-                    match unit.can_use_skill(&mut skills.0, &metadata.0, attack.skill_id, distance)
-                    {
+                    match unit.can_use_skill(
+                        &mut skills.0,
+                        &metadata.rpg,
+                        attack.skill_id,
+                        distance,
+                    ) {
                         SkillUseResult::Blocked
                         | SkillUseResult::OutOfRange
                         | SkillUseResult::InsufficientResources => {
@@ -139,7 +143,7 @@ pub(crate) fn action(
                     let distance =
                         (attack.user.distance(attack.skill_target.target) * 100.).round() as u32;
                     let skill_use_result =
-                        unit.use_skill(&mut skills, &metadata.0, attack.skill_id, distance);
+                        unit.use_skill(&mut skills, &metadata.rpg, attack.skill_id, distance);
                     match skill_use_result {
                         SkillUseResult::Ok => {}
                         _ => panic!("This should never happen. {skill_use_result:?}"),
@@ -148,7 +152,7 @@ pub(crate) fn action(
                     let Some(skill) = skills.iter().find(|s| s.id == attack.skill_id) else {
                         panic!("skill missing");
                     };
-                    let Some(skill_info) = metadata.0.skill.skills.get(&attack.skill_id) else {
+                    let Some(skill_info) = metadata.rpg.skill.skills.get(&attack.skill_id) else {
                         panic!("skill metadata not found");
                     };
 

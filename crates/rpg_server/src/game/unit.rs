@@ -43,7 +43,7 @@ pub(crate) fn upkeep(
         let updates = unit
             .0
             .stats
-            .apply_regeneration(&metadata.0, time.delta_seconds());
+            .apply_regeneration(&metadata.rpg, time.delta_seconds());
 
         if !updates.is_empty() {
             // debug!("{updates:?}");
