@@ -160,7 +160,7 @@ pub(crate) fn spawn(
                                     },
                                 ))
                                 .with_children(|p| {
-                                    for i in 0..10 {
+                                    for _ in 0..10 {
                                         p.spawn((
                                             LobbyMessageText,
                                             TextBundle::from_section(

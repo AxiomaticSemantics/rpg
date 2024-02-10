@@ -60,6 +60,7 @@ pub struct SkillUse {
     pub id: SkillId,
     pub damage: DamageDescriptor,
     pub instance: SkillInstance,
+    pub want_despawn: bool,
     pub effects: Vec<EffectInstance>,
 }
 
@@ -76,6 +77,7 @@ impl SkillUse {
             id,
             damage,
             instance,
+            want_despawn: false,
             effects,
         }
     }
@@ -109,6 +111,11 @@ pub fn clean_skills(
     mut skill_q: Query<(Entity, &Transform, &SkillUse, Option<&SkillTimer>)>,
 ) {
     for (entity, transform, skill_use, timer) in &mut skill_q {
+        if skill_use.want_despawn {
+            commands.entity(entity).despawn_recursive();
+            continue;
+        }
+
         if let Some(timer) = timer {
             if let SkillTimer::Duration(timer) = timer {
                 if timer.just_finished() {

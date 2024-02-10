@@ -4,22 +4,23 @@ use crate::{
     assets::MetadataResources,
     game::{
         item::GroundItem,
-        plugin::{AabbResources, GameState},
+        plugin::{AabbResources, GameState, PlayerIdInfo},
         skill::SkillOwner,
     },
     state::AppState,
+    world::RpgWorld,
 };
 
 use bevy::{
     ecs::{
         entity::Entity,
         event::EventReader,
-        query::With,
+        query::{With, Without},
         schedule::NextState,
         system::{Commands, Query, Res, ResMut},
     },
     hierarchy::DespawnRecursiveExt,
-    log::info,
+    log::{error, info},
     math::Vec3,
     transform::components::Transform,
 };
@@ -27,17 +28,19 @@ use bevy::{
 use lightyear::prelude::server::*;
 use lightyear::prelude::*;
 
-use rpg_core::storage::Storage;
+use rpg_core::{game_mode::GameMode, storage::Storage};
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions::{Action, ActionData, Actions, AttackData, State},
     item::UnitStorage,
     skill::{get_skill_origin, SkillSlots, SkillUse, Skills},
-    unit::{Hero, HeroBundle, Unit, UnitBundle},
+    unit::{Corpse, Hero, HeroBundle, Unit, UnitBundle},
 };
+use rpg_world::zone::{ZoneId, ZoneInfo};
 use util::math::AabbComponent;
 
 pub(crate) fn receive_player_join(
+    mut server_state: ResMut<GameState>,
     mut join_reader: EventReader<MessageEvent<CSPlayerJoin>>,
     net_params: NetworkParamsRO,
 ) {
@@ -92,9 +95,9 @@ pub(crate) fn receive_player_leave(
         if game_state.players.is_empty() {
             info!("no players remain, ending game");
             state.set(AppState::CleanupSimulation);
+        } else {
+            info!("player left");
         }
-
-        info!("player leave");
     }
 }
 
@@ -105,7 +108,9 @@ pub(crate) fn receive_player_loaded(
     mut net_params: NetworkParamsRW,
     aabbs: Res<AabbResources>,
     game_state: Res<GameState>,
-    account_q: Query<&AccountInstance>,
+    rpg_world: Res<RpgWorld>,
+    account_q: Query<&AccountInstance, Without<Unit>>,
+    hero_q: Query<&Transform, With<Unit>>,
 ) {
     for event in ready_reader.read() {
         let client_id = *event.context();
@@ -129,9 +134,50 @@ pub(crate) fn receive_player_loaded(
         let unit = character.character.unit.clone();
         let aabb = aabbs.aabbs["hero"];
 
+        let zone_info = &rpg_world.zones[&ZoneId(0)].zone.as_ref().unwrap().info;
+        let mut spawn_position = if let ZoneInfo::OverworldTown(info) = zone_info {
+            info.spawn_position
+        } else if let ZoneInfo::UnderworldTown(info) = zone_info {
+            info.spawn_position
+        } else {
+            panic!("this should never happen {zone_info:?}");
+        };
+
+        let mut position_is_valid = true;
+        let mut attempts = 0;
+        let max_attempts = 16;
+
+        while attempts < max_attempts {
+            position_is_valid = true;
+
+            if attempts % 2 != 0 {
+                spawn_position.x += 2.0;
+            } else if attempts % 4 != 0 {
+                spawn_position.y += 2.0;
+            }
+
+            for hero_transform in &hero_q {
+                if hero_transform.translation.distance(spawn_position) < 2.0 {
+                    position_is_valid = false;
+                    break;
+                }
+            }
+
+            if position_is_valid {
+                break;
+            }
+
+            attempts += 1;
+        }
+
+        if !position_is_valid {
+            error!("unable to find a valid spawn position");
+            return;
+        }
+
         net_params.server.send_message_to_target::<Channel1, _>(
             SCPlayerSpawn {
-                position: Vec3::ZERO,
+                position: spawn_position,
             },
             NetworkTarget::Only(vec![client_id]),
         );
@@ -139,10 +185,11 @@ pub(crate) fn receive_player_loaded(
         net_params.server.send_message_to_target::<Channel1, _>(
             SCSpawnHero {
                 uid: unit.uid,
-                position: Vec3::ZERO,
+                position: spawn_position,
                 name: unit.name.clone(),
                 class: unit.class,
                 level: unit.level,
+                deaths: None,
                 skills: character.character.skills.clone(),
                 skill_slots: character.character.skill_slots.clone(),
             },
@@ -151,7 +198,7 @@ pub(crate) fn receive_player_loaded(
 
         commands.entity(client.entity).insert((
             AabbComponent(aabb),
-            Transform::from_translation(Vec3::ZERO),
+            Transform::from_translation(spawn_position),
             HeroBundle {
                 unit: UnitBundle::new(
                     Unit(unit),
@@ -162,6 +209,57 @@ pub(crate) fn receive_player_loaded(
             },
         ));
         // TODO ensure the player is spawned in a town
+    }
+}
+
+pub(crate) fn receive_player_revive(
+    mut commands: Commands,
+    server_state: Res<GameState>,
+    mut join_reader: EventReader<MessageEvent<CSPlayerRevive>>,
+    mut net_params: NetworkParamsRW,
+    mut player_q: Query<(&mut Unit, &mut Transform), (With<Hero>, With<Corpse>)>,
+) {
+    for event in join_reader.read() {
+        let client_id = *event.context();
+        let client = net_params.context.clients.get(&client_id).unwrap();
+        if !client.is_authenticated_player() {
+            continue;
+        };
+
+        if server_state.options.mode == GameMode::Hardcore {
+            // TODO disconnect and logout or such
+            info!("hardcore player attempted to revive!");
+            continue;
+        }
+
+        // TODO implement xp_loss
+        let (mut hero, mut transform) = player_q.get_mut(client.entity).unwrap();
+        hero.stats.vitals.stats.get_mut("Hp").unwrap().value =
+            hero.stats.vitals.stats["HpMax"].value;
+
+        transform.translation = Vec3::ZERO;
+
+        let hero_info = hero.info.hero_mut();
+        let deaths = hero_info.deaths.unwrap();
+        *hero_info.deaths.as_mut().unwrap() = deaths + 1;
+        commands.entity(client.entity).remove::<Corpse>();
+
+        net_params.server.send_message_to_target::<Channel1, _>(
+            SCPlayerRevive {
+                position: Vec3::ZERO,
+                deaths: hero_info.deaths.unwrap(),
+                hp: *hero.stats.vitals.stats["HpMax"].value.u32(),
+                xp_total: 0,
+                xp_loss: 0,
+            },
+            NetworkTarget::Only(vec![client_id]),
+        );
+
+        net_params.server.send_message_to_target::<Channel1, _>(
+            SCHeroRevive(transform.translation),
+            NetworkTarget::AllExcept(vec![client_id]),
+        );
+        info!("player revive");
     }
 }
 

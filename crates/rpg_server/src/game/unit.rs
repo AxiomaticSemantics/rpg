@@ -1,18 +1,19 @@
-use crate::{account::AccountInstance, assets::MetadataResources, net::server::NetworkParamsRW};
+use crate::{
+    account::AccountInstance, assets::MetadataResources, net::server::NetworkParamsRW,
+    world::RpgWorld,
+};
 
 use rpg_network_protocol::protocol::*;
-use rpg_util::{
-    actions::Actions,
-    unit::{Corpse, Unit},
-};
+use rpg_util::unit::{Corpse, Unit};
+use rpg_world::zone::{ZoneId, ZoneInfo};
 use util::math::{intersect_aabb, AabbComponent};
 
 use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
-        query::{QueryIter, With, Without},
-        system::{Commands, Query, Res},
+        query::{With, Without},
+        system::{Commands, Query, Res, ResMut},
     },
     hierarchy::DespawnRecursiveExt,
     log::info,
@@ -87,12 +88,13 @@ pub(crate) fn can_move(
 pub fn collide_units(
     mut unit_q: Query<(&mut Transform, &AabbComponent), (With<Unit>, Without<Corpse>)>,
 ) {
-    /*let mut combinations = unit_q.iter_combinations_mut();
+    let mut combinations = unit_q.iter_combinations_mut();
     while let Some([(mut t1, a1), (t2, a2)]) = combinations.fetch_next() {
         while intersect_aabb(
             (t1.translation, t1.rotation, a1.0),
             (t2.translation, t2.rotation, a2.0),
         ) {
+            info!("units intersections, attempting to resolve");
             let distance = t1.translation.distance(t2.translation);
             let offset = 0.01 * *t1.forward();
 
@@ -102,5 +104,17 @@ pub fn collide_units(
                 t1.translation -= offset;
             }
         }
-    }*/
+    }
+}
+
+pub(crate) fn get_spawn_position(rpg_world: &RpgWorld) -> Option<Vec3> {
+    //
+    let Some(zone) = rpg_world.zones[&ZoneId(0)].zone.as_ref() else {
+        return None;
+    };
+
+    match &zone.info {
+        ZoneInfo::OverworldTown(info) | ZoneInfo::UnderworldTown(info) => Some(info.spawn_position),
+        _ => None,
+    }
 }

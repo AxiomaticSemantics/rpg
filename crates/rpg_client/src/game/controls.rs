@@ -17,7 +17,7 @@ use bevy::{
         mouse::{MouseButton, MouseMotion, MouseWheel},
         ButtonInput,
     },
-    log::error,
+    log::{debug, error},
     math::{primitives::Plane3d, Vec2, Vec3},
     render::camera::Camera,
     transform::components::GlobalTransform,

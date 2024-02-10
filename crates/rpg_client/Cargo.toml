@@ -8,9 +8,6 @@ authors.workspace = true
 edition.workspace = true
 default-run = "rpg_client"
 
-[lints]
-workspace = true
-
 [package.'cfg(target_os = "windows")']
 build = "windows-build.rs"
 
@@ -33,6 +30,7 @@ rpg_network_protocol = { path = "../rpg_network_protocol" }
 
 util = { path = "../util" }
 ui_util = { path = "../ui_util" }
+console_plugin = { path = "../console_plugin" }
 audio_manager = { path = "../audio_manager" }
 
 # external dependencies

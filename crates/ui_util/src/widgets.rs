@@ -240,7 +240,6 @@ pub fn setup_focus(mut commands: Commands) {
 }
 
 pub fn edit_focus_update(
-    ui_theme: Res<UiTheme>,
     mut focused_element: ResMut<FocusedElement>,
     edit_text_q: Query<(Entity, &Interaction), (Changed<Interaction>, With<EditText>)>,
 ) {

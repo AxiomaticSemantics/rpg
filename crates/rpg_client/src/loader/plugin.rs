@@ -11,7 +11,7 @@ use crate::{
     ui::menu::plugin::MenuPlugin,
 };
 
-//use console_plugin::plugin::ConsolePlugin;
+use console_plugin::plugin::ConsolePlugin;
 use ui_util::{plugin::UiUtilPlugin, style::UiTheme};
 use util::{plugin::UtilityPlugin, random::Rng};
 
@@ -123,9 +123,9 @@ impl Plugin for LoaderPlugin {
             })
             .add_plugins(TweeningPlugin)
             .add_plugins(UiUtilPlugin)
-            //.add_plugins(ConsolePlugin)
             .add_plugins(AudioManagerPlugin)
             .add_plugins(SplashScreenPlugin)
+            //.add_plugins(ConsolePlugin)
             .add_plugins(MenuPlugin)
             .add_plugins(GamePlugin)
             .add_systems(OnEnter(AppState::LoadGameAssets), game::plugin::load_assets)

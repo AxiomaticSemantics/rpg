@@ -45,7 +45,7 @@ pub struct ExitButton;
 pub struct CancelButton;
 
 #[derive(Component)]
-pub struct RestartButton;
+pub struct RespawnButton;
 
 pub(crate) fn toggle_menu(
     input: Res<ButtonInput<KeyCode>>,
@@ -61,23 +61,24 @@ pub(crate) fn toggle_menu(
     }
 }
 
-pub(crate) fn restart_button(
+pub(crate) fn respawn_button(
     ui_theme: Res<UiTheme>,
     game_state: Res<GameState>,
+    mut net_client: ResMut<Client>,
     mut restart_q: Query<
         (&Interaction, &mut BackgroundColor),
-        (With<RestartButton>, Changed<Interaction>),
+        (With<RespawnButton>, Changed<Interaction>),
     >,
 ) {
-    if game_state.mode == GameMode::Normal {
+    if game_state.mode != GameMode::Normal {
         return;
     }
 
     if let Ok((interaction, mut bg_color)) = restart_q.get_single_mut() {
         match interaction {
             Interaction::Pressed => {
-                info!("game_over: respawn request");
-                // TODO request respawn
+                info!("respawn request");
+                net_client.send_message::<Channel1, _>(CSPlayerRevive);
             }
             Interaction::Hovered => *bg_color = ui_theme.button_theme.hovered_background_color,
             Interaction::None => *bg_color = ui_theme.button_theme.normal_background_color,
@@ -211,7 +212,7 @@ pub(crate) fn setup(
 
                     if game_state.mode == GameMode::Normal {
                         p.spawn((
-                            RestartButton,
+                            RespawnButton,
                             ButtonBundle {
                                 style: ui_theme.button_theme.style.clone(),
                                 border_color: BorderColor(Color::rgb(0.3, 0.3, 0.3)),

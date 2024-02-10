@@ -4,6 +4,7 @@ use crate::game::{assets::RenderResources, prop};
 
 use bevy::{
     ecs::system::Commands,
+    log::debug,
     math::{Quat, Vec3},
 };
 
@@ -45,7 +46,7 @@ impl RoomSpawn for Room {
             self.position * room_world_size + zone.zone.size_info.tile_size * tile_position;
         let world_offset = zone.zone.size_info.zone_world_offset();
 
-        //println!("room pos {} world_off {world_offset} room_world_size {room_world_size} tile_off {tile_offset}", self.position);
+        // debug!("room pos {} world_off {world_offset} room_world_size {room_world_size} tile_off {tile_offset}", self.position);
 
         let mut count = 0;
         for edge in [Edge::Top, Edge::Bottom, Edge::Left, Edge::Right] {
@@ -58,7 +59,7 @@ impl RoomSpawn for Room {
                 let pos = world_offset + (tile_offset + tile.get_edge_offset(edge)).as_vec2();
 
                 count += 1;
-                //println!("spawn wall at {x} {y}");
+                // debug!("spawn wall at {x} {y}");
                 prop::spawn(
                     commands,
                     renderables,

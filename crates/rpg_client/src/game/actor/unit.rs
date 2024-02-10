@@ -29,12 +29,13 @@ use bevy::{
     audio::{AudioBundle, PlaybackSettings},
     ecs::{
         entity::Entity,
-        query::{Changed, With, Without},
+        query::{Added, Changed, With, Without},
         system::{Commands, ParamSet, Query, Res, ResMut},
     },
-    hierarchy::{BuildChildren, Children, DespawnRecursiveExt},
+    hierarchy::{BuildChildren, Children},
     input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
     math::Vec3,
+    render::view::Visibility,
     time::{Time, Timer, TimerMode},
     transform::components::Transform,
 };
@@ -57,6 +58,7 @@ pub(crate) fn unit_audio(
     }
 }
 
+// TODO optimize, cache the entities
 pub fn update_health_bars(
     mut unit_q: Query<
         (&Unit, &Transform, &mut HealthBar),
@@ -325,12 +327,14 @@ pub fn action(
     }
 }
 
-pub fn remove_healthbar(
-    mut commands: Commands,
-    unit_q: Query<(Entity, &Unit, &HealthBar), (With<AudioActions>, With<Corpse>)>,
+pub fn toggle_healthbar(
+    unit_q: Query<&HealthBar, Added<Corpse>>,
+    mut bar_q: Query<&mut Visibility, With<HealthBarFrame>>,
 ) {
-    for (entity, _unit, health_bar) in &unit_q {
-        commands.entity(entity).remove::<AudioActions>();
-        commands.entity(health_bar.bar_entity).despawn_recursive();
+    for health_bar in &unit_q {
+        let mut bar = bar_q.get_mut(health_bar.bar_entity).unwrap();
+        if *bar != Visibility::Hidden {
+            *bar = Visibility::Hidden;
+        }
     }
 }

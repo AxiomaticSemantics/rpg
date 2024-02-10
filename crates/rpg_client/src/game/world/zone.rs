@@ -16,17 +16,14 @@ use bevy::{
         component::Component,
         system::{Commands, Res, ResMut, Resource},
     },
-    math::{
-        cubic_splines::{CubicCardinalSpline, CubicGenerator},
-        uvec2, Quat, UVec2, Vec2, Vec3,
-    },
+    log::debug,
+    math::{uvec2, Quat, UVec2, Vec2, Vec3},
     pbr::{PbrBundle, StandardMaterial},
     render::mesh::{shape::Quad, Mesh},
     transform::components::Transform,
     utils::default,
 };
 
-use std::collections::VecDeque;
 use std::f32::consts::{FRAC_PI_2, PI};
 
 #[derive(Component)]
@@ -169,7 +166,8 @@ fn build_zone(
                 }
             }
         }
-        Kind::Town => {}
+        Kind::OverworldTown => {}
+        Kind::UnderworldTown => {}
         Kind::Underworld => {}
     }
 }
@@ -183,7 +181,7 @@ fn spawn_debug_connections(commands: &mut Commands, zone: &Zone, room: &Room) {
         .collect();
 
     if !connections.is_empty() && zone.debug_options.as_ref().is_some_and(|v| v.room_debug) {
-        println!("room has connection: {connections:?} {}", room.position);
+        debug!("room has connection: {connections:?} {}", room.position);
         /*
         commands.spawn((
             GameSessionCleanup,

@@ -1,0 +1,30 @@
+[package]
+resolver = "2"
+name = "console_plugin"
+version = "0.1.0"
+description = "A WIP console widget for bevy_ui"
+license = "MIT OR Apache-2.0"
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+ui_util = { path = "../ui_util" }
+
+clap = { version = "4.2.7", features = ["std", "derive"], default-features = false }
+ab_glyph = "0.2.21"
+#pretty-type-name = "1.0.1"
+#smallvec = "1.10.0"
+
+[dependencies.bevy]
+git = "https://github.com/AxiomaticSemantics/bevy"
+features = [
+  "bevy_input",
+  "bevy_a11y",
+  "bevy_window",
+  "bevy_sprite",  
+  "bevy_text",
+  "bevy_ui",
+  "subpixel_glyph_atlas",
+]
+optional = false
+default-features = false

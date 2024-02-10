@@ -163,7 +163,7 @@ pub(crate) fn action(
                         &attack, &mut aabbs, skill_info, skill, &unit, &transform,
                     );
 
-                    info!("spawning skill");
+                    // debug!("spawning skill");
                     skill::spawn_instance(
                         &mut commands,
                         skill_aabb,
@@ -261,7 +261,6 @@ pub(crate) fn action(
 
 // TODO cache info about the movement in `MoveUnits`
 pub(crate) fn try_move_units(
-    mut net_params: NetworkParamsRW,
     mut moving_units: ResMut<MovingUnits>,
     time: Res<Time>,
     mut move_q: Query<(Entity, &Unit, &Transform, &AabbComponent, &mut Actions), Without<Corpse>>,

@@ -1,6 +1,6 @@
 use bevy_math::{
     cubic_splines::{CubicCardinalSpline, CubicCurve, CubicGenerator},
-    uvec2, UVec2, Vec2, Vec3,
+    Vec2,
 };
 
 use std::collections::VecDeque;

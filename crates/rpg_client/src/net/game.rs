@@ -9,6 +9,8 @@ use crate::{
             spawn_actor,
         },
         assets::RenderResources,
+        controls::Controls,
+        health_bar::{HealthBar, HealthBarFrame},
         metadata::MetadataResources,
         plugin::GameState,
         skill,
@@ -29,7 +31,7 @@ use bevy::{
     hierarchy::DespawnRecursiveExt,
     log::{debug, info},
     math::Vec3,
-    render::mesh::Mesh,
+    render::{mesh::Mesh, view::Visibility},
     transform::components::Transform,
 };
 
@@ -132,6 +134,81 @@ pub(crate) fn receive_player_spawn(
 
         spawn_events.clear();
         return;
+    }
+}
+
+pub(crate) fn receive_player_revive(
+    mut commands: Commands,
+    mut controls: ResMut<Controls>,
+    mut revive_reader: EventReader<MessageEvent<SCPlayerRevive>>,
+    mut player_q: Query<
+        (
+            Entity,
+            &mut Transform,
+            &mut Unit,
+            &mut AnimationState,
+            &HealthBar,
+        ),
+        With<Player>,
+    >,
+    mut bar_q: Query<&mut Visibility, With<HealthBarFrame>>,
+) {
+    for event in revive_reader.read() {
+        let revive_msg = event.message();
+
+        info!("revive player {revive_msg:?}");
+        let (entity, mut transform, mut unit, mut anim, health_bar) = player_q.single_mut();
+        transform.translation = revive_msg.position;
+        let hero_info = unit.info.hero_mut();
+        hero_info.deaths = Some(revive_msg.deaths);
+        *unit
+            .stats
+            .vitals
+            .stats
+            .get_mut("Hp")
+            .unwrap()
+            .value
+            .u32_mut() = revive_msg.hp;
+
+        controls.set_inhibited(false);
+
+        let mut bar = bar_q.get_mut(health_bar.bar_entity).unwrap();
+        *bar = Visibility::Inherited;
+
+        commands.entity(entity).remove::<Corpse>();
+
+        *anim = ANIM_WALK;
+    }
+}
+
+pub(crate) fn receive_hero_revive(
+    mut commands: Commands,
+    mut revive_reader: EventReader<MessageEvent<SCHeroRevive>>,
+    mut player_q: Query<
+        (
+            Entity,
+            &mut Transform,
+            &mut Unit,
+            &mut AnimationState,
+            &HealthBar,
+        ),
+        With<Hero>,
+    >,
+    mut bar_q: Query<&mut Visibility, With<HealthBarFrame>>,
+) {
+    for event in revive_reader.read() {
+        let revive_msg = event.message();
+
+        info!("revive player {revive_msg:?}");
+        let (entity, mut transform, mut unit, mut anim, health_bar) = player_q.single_mut();
+        transform.translation = revive_msg.0;
+
+        let mut bar = bar_q.get_mut(health_bar.bar_entity).unwrap();
+        *bar = Visibility::Inherited;
+
+        *anim = ANIM_IDLE;
+
+        commands.entity(entity).remove::<Corpse>();
     }
 }
 
@@ -387,6 +464,7 @@ pub(crate) fn receive_spawn_hero(
                     id: StatId(23),
                     value: Value::U64(0),
                 },
+                deaths: spawn_msg.deaths,
             }),
             spawn_msg.level,
             spawn_msg.name.clone(),

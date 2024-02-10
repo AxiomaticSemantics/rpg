@@ -9,19 +9,22 @@ use crate::{
     },
 };
 
-/*
 use console_plugin::{
     console::{Console, HistoryIndex},
     plugin::{ConsoleHistoryItem, ConsoleInput},
-};*/
+};
 
-use ui_util::style::{UiRoot, UiTheme};
+use ui_util::{
+    style::{UiRoot, UiTheme},
+    widgets::EditText,
+};
 use util::cleanup::{self, CleanupStrategy};
 
 use bevy::{
     app::{App, Plugin, Update},
     core_pipeline::core_2d::Camera2dBundle,
     ecs::{
+        entity::Entity,
         query::With,
         schedule::{common_conditions::in_state, IntoSystemConfigs, NextState, OnEnter},
         system::{Commands, ParamSet, Query, Res, ResMut},
@@ -32,6 +35,7 @@ use bevy::{
         camera::{Camera, ClearColorConfig},
         color::Color,
     },
+    text::Text,
     ui::{
         node_bundles::{ButtonBundle, NodeBundle},
         AlignItems, AlignSelf, Display, JustifyContent, Style, TargetCamera, UiRect,
@@ -143,16 +147,15 @@ fn spawn(
     mut state: ResMut<NextState<AppState>>,
     ui_theme: Res<UiTheme>,
     textures: Res<TextureAssets>,
-    //mut console: ResMut<Console>,
-    /*console_set: ParamSet<(
+    /*mut console: ResMut<Console>,
+    console_set: ParamSet<(
         Query<(&mut EditText, &mut Text, &mut HistoryIndex), With<ConsoleInput>>,
         Query<(&mut Text, &mut HistoryIndex), With<ConsoleHistoryItem>>,
     )>,*/
 ) {
-    /*
-    let message = "spawning main menu".to_string();
+    /*let message = "spawning main menu".to_string();
 
-    if console.ui_root.is_some() {
+    if console.ui_root != Entity::PLACEHOLDER {
         console.update_history(message.clone(), false);
     }*/
 
