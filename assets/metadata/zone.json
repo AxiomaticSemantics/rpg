@@ -1,19 +1,94 @@
 {
+  "size_info": {
+    "room": [8, 8],
+    "tile": [1, 1]
+  },
   "towns": {
     "0": {
-      "name": "Fjotinheim"
+      "name": "Fjotinheim",
+      "kind": "OverworldTown",
+      "spawn_position": [
+        1,
+        2
+      ],
+      "size": [
+        6,
+        4
+      ],
+      "props": [
+	{
+	  "position": [13, 0],
+	  "key": "ground_lamp_1"
+	},
+        {
+	  "position": [16, 9],
+	  "key": "ground_lamp_1"
+	},
+        {
+	  "position": [8, 16],
+	  "key": "ground_lamp_1"
+	},
+        {
+	  "position": [0, 9],
+	  "key": "ground_lamp_1"
+	},
+        {
+	  "position": [3, 0],
+	  "key": "ground_lamp_1"
+	}
+      ]
     },
     "7": {
-      "name": "Hiemdalsfard"
+      "name": "Hiemdalsfard",
+      "kind": "OverworldTown",
+      "spawn_position": [
+        2,
+        8
+      ],
+      "size": [
+        4,
+        6
+      ],
+      "props": []
     },
     "14": {
-      "name": "Skalavik"
+      "name": "Skalavik",
+      "kind": "OverworldTown",
+      "spawn_position": [
+        2,
+        4
+      ],
+      "size": [
+        6,
+        8
+      ],
+      "props": []
     },
     "21": {
-      "name": "Langadalr"
+      "name": "Langadalr",
+      "kind": "OverworldTown",
+      "spawn_position": [
+        4,
+        6
+      ],
+      "size": [
+        8,
+        6
+      ],
+      "props": []
     },
     "28": {
-      "name": "Myrr"
+      "name": "Myrr",
+      "kind": "UnderworldTown",
+      "spawn_position": [
+        4,
+        4
+      ],
+      "size": [
+        10,
+        8
+      ],
+      "props": []
     }
   },
   "zones": {}

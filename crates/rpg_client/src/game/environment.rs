@@ -1,4 +1,4 @@
-use super::world::zone::Zone;
+use super::world::RpgWorld;
 use crate::game::plugin::GameSessionCleanup;
 
 use bevy::{
@@ -32,8 +32,16 @@ pub(crate) struct EnvironmentDirectionalLight;
 #[derive(Resource)]
 pub struct Environment;
 
-pub(crate) fn setup(mut commands: Commands, zone: Res<Zone>) {
-    println!("environment::setup");
+pub(crate) fn prepare_environment(mut commands: Commands, mut rpg_world: ResMut<RpgWorld>) {
+    if rpg_world.env_loaded {
+        return;
+    }
+
+    let Some(active_zone) = rpg_world.active_zone else {
+        return;
+    };
+
+    debug!("spawning environment");
 
     let cascade_shadow_config = CascadeShadowConfigBuilder {
         first_cascade_far_bound: 32.,
@@ -62,7 +70,9 @@ pub(crate) fn setup(mut commands: Commands, zone: Res<Zone>) {
 
     // PointLight { intensity: 1000., range: 32., shadows_enabled: true, ..default() }
 
-    if zone.zone.kind == ZoneKind::Overworld {
+    let zone_kind = rpg_world.zones[&active_zone].kind;
+
+    if zone_kind == ZoneKind::Overworld || zone_kind == ZoneKind::OverworldTown {
         commands.spawn((
             GameSessionCleanup,
             CleanupStrategy::Despawn,
@@ -80,7 +90,7 @@ pub(crate) fn setup(mut commands: Commands, zone: Res<Zone>) {
         ));
     }
 
-    debug!("game environment spawn complete");
+    rpg_world.env_loaded = true;
 }
 
 pub(crate) fn cleanup(mut commands: Commands) {

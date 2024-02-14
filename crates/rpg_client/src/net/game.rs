@@ -14,6 +14,7 @@ use crate::{
         metadata::MetadataResources,
         plugin::GameState,
         skill,
+        world::LoadZone,
     },
     net::account::RpgAccount,
     state::AppState,
@@ -23,7 +24,7 @@ use bevy::{
     asset::Assets,
     ecs::{
         entity::Entity,
-        event::EventReader,
+        event::{EventReader, EventWriter},
         query::{With, Without},
         schedule::NextState,
         system::{Commands, Query, Res, ResMut},
@@ -54,34 +55,37 @@ use rpg_util::{
 use audio_manager::plugin::AudioActions;
 use util::random::SharedRng;
 
-use lightyear::client::events::MessageEvent;
-
 pub(crate) fn receive_player_join_success(
     mut state: ResMut<NextState<AppState>>,
-    mut join_events: EventReader<MessageEvent<SCPlayerJoinSuccess>>,
+    mut join_events: EventReader<ServerMessage>,
 ) {
     for event in join_events.read() {
-        let join_msg = event.message();
-        info!("player joined game {join_msg:?}");
+        let ServerMessage::SCPlayerJoinSuccess(msg) = event else {
+            continue;
+        };
 
-        state.set(AppState::GameSpawn);
+        info!("player joined game {msg:?}");
 
-        join_events.clear();
+        //state.set(AppState::GameSpawn);
+
         return;
     }
 }
 
 pub(crate) fn receive_player_join_error(
     mut state: ResMut<NextState<AppState>>,
-    mut join_events: EventReader<MessageEvent<SCPlayerJoinError>>,
+    mut join_events: EventReader<ServerMessage>,
 ) {
-    for _ in join_events.read() {
+    for event in join_events.read() {
+        let ServerMessage::SCPlayerJoinError(msg) = event else {
+            continue;
+        };
+
         info!("join error");
         // TODO Error screen
 
         state.set(AppState::GameCleanup);
 
-        join_events.clear();
         return;
     }
 }
@@ -90,17 +94,19 @@ pub(crate) fn receive_player_spawn(
     mut commands: Commands,
     mut state: ResMut<NextState<AppState>>,
     renderables: Res<RenderResources>,
-    mut spawn_events: EventReader<MessageEvent<SCPlayerSpawn>>,
+    mut spawn_events: EventReader<ServerMessage>,
     account_q: Query<&RpgAccount>,
 ) {
     for event in spawn_events.read() {
-        info!("spawning local player");
+        let ServerMessage::SCPlayerSpawn(msg) = event else {
+            continue;
+        };
 
-        let spawn_msg = event.message();
+        info!("spawning local player");
 
         let account = account_q.single();
 
-        let transform = Transform::from_translation(spawn_msg.position);
+        let transform = Transform::from_translation(msg.position);
 
         let character_record = account
             .0
@@ -140,7 +146,7 @@ pub(crate) fn receive_player_spawn(
 pub(crate) fn receive_player_revive(
     mut commands: Commands,
     mut controls: ResMut<Controls>,
-    mut revive_reader: EventReader<MessageEvent<SCPlayerRevive>>,
+    mut revive_reader: EventReader<ServerMessage>,
     mut player_q: Query<
         (
             Entity,
@@ -154,21 +160,23 @@ pub(crate) fn receive_player_revive(
     mut bar_q: Query<&mut Visibility, With<HealthBarFrame>>,
 ) {
     for event in revive_reader.read() {
-        let revive_msg = event.message();
+        let ServerMessage::SCPlayerRevive(msg) = event else {
+            continue;
+        };
 
-        info!("revive player {revive_msg:?}");
+        info!("revive player {msg:?}");
         let (entity, mut transform, mut unit, mut anim, health_bar) = player_q.single_mut();
-        transform.translation = revive_msg.position;
+        transform.translation = msg.position;
         let hero_info = unit.info.hero_mut();
-        hero_info.deaths = Some(revive_msg.deaths);
-        *unit
-            .stats
-            .vitals
-            .stats
-            .get_mut("Hp")
-            .unwrap()
-            .value
-            .u32_mut() = revive_msg.hp;
+        hero_info.deaths = Some(msg.deaths);
+
+        // Reset the units vitals stats on revive
+        unit.stats.vitals.get_mut_stat("Hp").unwrap().value =
+            unit.stats.vitals.get_stat("HpMax").unwrap().value;
+        unit.stats.vitals.get_mut_stat("Ep").unwrap().value =
+            unit.stats.vitals.get_stat("EpMax").unwrap().value;
+        unit.stats.vitals.get_mut_stat("Mp").unwrap().value =
+            unit.stats.vitals.get_stat("MpMax").unwrap().value;
 
         controls.set_inhibited(false);
 
@@ -183,7 +191,7 @@ pub(crate) fn receive_player_revive(
 
 pub(crate) fn receive_hero_revive(
     mut commands: Commands,
-    mut revive_reader: EventReader<MessageEvent<SCHeroRevive>>,
+    mut revive_reader: EventReader<ServerMessage>,
     mut player_q: Query<
         (
             Entity,
@@ -197,11 +205,13 @@ pub(crate) fn receive_hero_revive(
     mut bar_q: Query<&mut Visibility, With<HealthBarFrame>>,
 ) {
     for event in revive_reader.read() {
-        let revive_msg = event.message();
+        let ServerMessage::SCHeroRevive(msg) = event else {
+            continue;
+        };
 
-        info!("revive player {revive_msg:?}");
+        info!("revive player {msg:?}");
         let (entity, mut transform, mut unit, mut anim, health_bar) = player_q.single_mut();
-        transform.translation = revive_msg.0;
+        transform.translation = msg.0;
 
         let mut bar = bar_q.get_mut(health_bar.bar_entity).unwrap();
         *bar = Visibility::Inherited;
@@ -213,15 +223,17 @@ pub(crate) fn receive_hero_revive(
 }
 
 pub(crate) fn receive_player_move(
-    mut move_events: EventReader<MessageEvent<SCMovePlayer>>,
+    mut move_events: EventReader<ServerMessage>,
     mut player_q: Query<(&mut Transform, &mut AnimationState), With<Player>>,
 ) {
     for event in move_events.read() {
-        let move_msg = event.message();
+        let ServerMessage::SCMovePlayer(msg) = event else {
+            continue;
+        };
 
-        // info!("move player {move_msg:?}");
+        // info!("move player {msg:?}");
         let (mut transform, mut anim) = player_q.single_mut();
-        transform.translation = move_msg.0;
+        transform.translation = msg.0;
 
         if *anim != ANIM_WALK {
             *anim = ANIM_WALK;
@@ -230,116 +242,128 @@ pub(crate) fn receive_player_move(
 }
 
 pub(crate) fn receive_player_move_end(
-    mut move_events: EventReader<MessageEvent<SCMovePlayerEnd>>,
+    mut move_events: EventReader<ServerMessage>,
     mut player_q: Query<(&mut Transform, &mut AnimationState), With<Player>>,
 ) {
     for event in move_events.read() {
-        let move_msg = event.message();
+        let ServerMessage::SCMovePlayerEnd(msg) = event else {
+            continue;
+        };
 
-        //info!("move player end {move_msg:?}");
+        //info!("move player end {msg:?}");
         let (mut transform, mut anim) = player_q.single_mut();
-        transform.translation = move_msg.0;
+        transform.translation = msg.0;
 
         *anim = ANIM_IDLE;
     }
 }
 
 pub(crate) fn receive_player_rotation(
-    mut rotation_events: EventReader<MessageEvent<SCRotPlayer>>,
+    mut rotation_events: EventReader<ServerMessage>,
     mut player_q: Query<&mut Transform, With<Player>>,
 ) {
     for event in rotation_events.read() {
-        let rot_msg = event.message();
+        let ServerMessage::SCRotPlayer(msg) = event else {
+            continue;
+        };
 
-        // info!("rot: {rot_msg:?}");
+        // info!("rot: {msg:?}");
         let mut transform = player_q.single_mut();
-        transform.look_to(rot_msg.0, Vec3::Y);
+        transform.look_to(msg.0, Vec3::Y);
     }
 }
 
 pub(crate) fn receive_unit_move(
-    mut move_events: EventReader<MessageEvent<SCMoveUnit>>,
+    mut move_events: EventReader<ServerMessage>,
     mut unit_q: Query<(&mut Transform, &Unit, &mut AnimationState)>,
 ) {
     for event in move_events.read() {
-        let move_msg = event.message();
+        let ServerMessage::SCMoveUnit(msg) = event else {
+            continue;
+        };
+
         for (mut transform, unit, mut anim) in &mut unit_q {
-            if unit.uid != move_msg.uid {
+            if unit.uid != msg.uid {
                 continue;
             }
 
-            //info!("move: {move_msg:?}");
+            //info!("move: {msg:?}");
             *anim = ANIM_WALK;
 
-            transform.translation = move_msg.position;
+            transform.translation = msg.position;
         }
     }
 }
 
 pub(crate) fn receive_unit_move_end(
-    mut move_events: EventReader<MessageEvent<SCMoveUnitEnd>>,
+    mut move_events: EventReader<ServerMessage>,
     mut unit_q: Query<(&mut Transform, &Unit, &mut AnimationState)>,
 ) {
     for event in move_events.read() {
-        let move_msg = event.message();
+        let ServerMessage::SCMoveUnitEnd(msg) = event else {
+            continue;
+        };
+
         for (mut transform, unit, mut anim) in &mut unit_q {
-            if unit.uid != move_msg.uid {
+            if unit.uid != msg.uid {
                 continue;
             }
 
-            //info!("move unit end: {move_msg:?}");
+            //info!("move unit end: {msg:?}");
             *anim = ANIM_IDLE;
 
-            transform.translation = move_msg.position;
+            transform.translation = msg.position;
         }
     }
-
-    move_events.clear();
 }
 
 pub(crate) fn receive_unit_rotation(
-    mut rotation_events: EventReader<MessageEvent<SCRotUnit>>,
+    mut rotation_events: EventReader<ServerMessage>,
     mut unit_q: Query<(&mut Transform, &Unit)>,
 ) {
     for event in rotation_events.read() {
-        let rot_msg = event.message();
+        let ServerMessage::SCRotUnit(msg) = event else {
+            continue;
+        };
+
         for (mut transform, unit) in &mut unit_q {
-            if unit.uid != rot_msg.uid {
+            if unit.uid != msg.uid {
                 continue;
             }
 
-            // info!("rot unit: {rot_msg:?}");
-            transform.look_to(rot_msg.direction, Vec3::Y);
+            // info!("rot unit: {msg:?}");
+            transform.look_to(msg.direction, Vec3::Y);
         }
     }
 }
 
 pub(crate) fn receive_stat_update(
-    mut update_events: EventReader<MessageEvent<SCStatUpdate>>,
+    mut update_events: EventReader<ServerMessage>,
     mut player_q: Query<&mut Unit, With<Player>>,
 ) {
     for event in update_events.read() {
-        let update_msg = event.message();
+        let ServerMessage::SCStatUpdate(msg) = event else {
+            continue;
+        };
 
-        // info!("player stat update: {:?}", update_msg.0);
+        // info!("player stat update: {:?}", msg.0);
 
         let mut player = player_q.single_mut();
-        player
-            .stats
-            .vitals
-            .set_from_id(update_msg.0.id, update_msg.0.total);
+        player.stats.vitals.set_from_id(msg.0.id, msg.0.total);
     }
 }
 
 pub(crate) fn receive_stat_updates(
-    mut update_events: EventReader<MessageEvent<SCStatUpdates>>,
+    mut update_events: EventReader<ServerMessage>,
     mut player_q: Query<&mut Unit, With<Player>>,
 ) {
     for event in update_events.read() {
-        let update_msg = event.message();
+        let ServerMessage::SCStatUpdates(msg) = event else {
+            continue;
+        };
 
         let mut player = player_q.single_mut();
-        for update in &update_msg.0 {
+        for update in &msg.0 {
             player.stats.vitals.set_from_id(update.id, update.total);
             // info!("stat update: {update:?}");
         }
@@ -348,45 +372,51 @@ pub(crate) fn receive_stat_updates(
 
 pub(crate) fn receive_spawn_item(
     mut ground_items: ResMut<GroundItemDrops>,
-    mut spawn_reader: EventReader<MessageEvent<SCSpawnItem>>,
+    mut spawn_reader: EventReader<ServerMessage>,
 ) {
     for event in spawn_reader.read() {
-        let spawn_msg = event.message();
+        let ServerMessage::SCSpawnItem(msg) = event else {
+            continue;
+        };
 
-        info!("spawning item: {:?}", spawn_msg);
+        info!("spawning item: {msg:?}");
 
-        ground_items.0.push(spawn_msg.items.clone());
+        ground_items.0.push(msg.items.clone());
     }
 }
 
 pub(crate) fn receive_spawn_items(
     mut ground_items: ResMut<GroundItemDrops>,
-    mut spawn_reader: EventReader<MessageEvent<SCSpawnItems>>,
+    mut spawn_reader: EventReader<ServerMessage>,
 ) {
     for event in spawn_reader.read() {
-        let spawn_msg = event.message();
+        let ServerMessage::SCSpawnItems(msg) = event else {
+            continue;
+        };
 
-        info!("spawning items: {:?}", spawn_msg);
+        info!("spawning items: {msg:?}");
 
-        ground_items.0.push(spawn_msg.items.clone());
+        ground_items.0.push(msg.items.clone());
     }
 }
 
 pub(crate) fn receive_despawn_item(
     mut commands: Commands,
-    mut despawn_reader: EventReader<MessageEvent<SCDespawnItem>>,
+    mut despawn_reader: EventReader<ServerMessage>,
     item_q: Query<(Entity, &GroundItem)>,
 ) {
     for event in despawn_reader.read() {
-        let despawn_msg = event.message();
+        let ServerMessage::SCDespawnItem(msg) = event else {
+            continue;
+        };
 
         for (entity, item) in &item_q {
-            if item.0.uid != despawn_msg.0 {
+            if item.0.uid != msg.0 {
                 continue;
             }
 
             commands.entity(entity).despawn_recursive();
-            info!("ground item despawn: {despawn_msg:?}");
+            info!("ground item despawn: {msg:?}");
         }
     }
 }
@@ -396,23 +426,23 @@ pub(crate) fn receive_spawn_skill(
     mut meshes: ResMut<Assets<Mesh>>,
     mut renderables: ResMut<RenderResources>,
     metadata: Res<MetadataResources>,
-    mut spawn_reader: EventReader<MessageEvent<SCSpawnSkill>>,
+    mut spawn_reader: EventReader<ServerMessage>,
 ) {
     for event in spawn_reader.read() {
-        let spawn_msg = event.message();
-        let skill_id = spawn_msg.id;
+        let ServerMessage::SCSpawnSkill(msg) = event else {
+            continue;
+        };
 
-        info!("spawning skill: {spawn_msg:?}");
-
+        let skill_id = msg.id;
         let skill_meta = &metadata.rpg.skill.skills[&skill_id];
 
         let (aabb, transform, instance, mesh, material, timer) = skill::prepare_skill(
-            spawn_msg.uid,
-            &spawn_msg.target,
+            msg.uid,
+            &msg.target,
             &mut renderables,
             &mut meshes,
             skill_meta,
-            spawn_msg.id,
+            skill_id,
         );
 
         skill::spawn_instance(
@@ -424,17 +454,22 @@ pub(crate) fn receive_spawn_skill(
             material,
             timer,
         );
+
+        info!("spawning skill: {msg:?}");
     }
 }
 
 // TODO need to correlate skill instances between client and server
 pub(crate) fn receive_despawn_skill(
     mut commands: Commands,
-    mut despawn_reader: EventReader<MessageEvent<SCDespawnSkill>>,
+    mut despawn_reader: EventReader<ServerMessage>,
     skill_q: Query<Entity, With<SkillUse>>,
 ) {
     for event in despawn_reader.read() {
-        let despawn_msg = event.message();
+        let ServerMessage::SCDespawnSkill(msg) = event else {
+            continue;
+        };
+
         for entity in &skill_q {
             // TODO
             // commands.entity(despawn_msg.0);
@@ -444,19 +479,21 @@ pub(crate) fn receive_despawn_skill(
 
 pub(crate) fn receive_spawn_hero(
     mut commands: Commands,
-    mut spawn_reader: EventReader<MessageEvent<SCSpawnHero>>,
+    mut spawn_reader: EventReader<ServerMessage>,
     metadata: Res<MetadataResources>,
     game_state: Res<GameState>,
     renderables: Res<RenderResources>,
 ) {
     for event in spawn_reader.read() {
-        let spawn_msg = event.message();
+        let ServerMessage::SCSpawnHero(msg) = event else {
+            continue;
+        };
 
-        info!("spawning hero {spawn_msg:?}");
+        info!("spawning hero {msg:?}");
 
         let unit = rpg_core::unit::Unit::new(
-            spawn_msg.uid,
-            spawn_msg.class,
+            msg.uid,
+            msg.class,
             UnitKind::Hero,
             UnitInfo::Hero(HeroInfo {
                 game_mode: game_state.mode,
@@ -464,16 +501,16 @@ pub(crate) fn receive_spawn_hero(
                     id: StatId(23),
                     value: Value::U64(0),
                 },
-                deaths: spawn_msg.deaths,
+                deaths: msg.deaths,
             }),
-            spawn_msg.level,
-            spawn_msg.name.clone(),
+            msg.level,
+            msg.name.clone(),
             &metadata.rpg,
         );
 
-        let transform = Transform::from_translation(spawn_msg.position);
-        let skills = Skills(spawn_msg.skills.clone());
-        let skill_slots = SkillSlots::new(spawn_msg.skill_slots.clone());
+        let transform = Transform::from_translation(msg.position);
+        let skills = Skills(msg.skills.clone());
+        let skill_slots = SkillSlots::new(msg.skill_slots.clone());
 
         // FIXME storage and skill graph are dummy data here
         spawn_actor(
@@ -486,42 +523,44 @@ pub(crate) fn receive_spawn_hero(
             skills,
             skill_slots,
             Some(UnitStorage::default()),
-            Some(UnitPassiveSkills::new(spawn_msg.class)),
+            Some(UnitPassiveSkills::new(msg.class)),
         );
     }
 }
 
 pub(crate) fn receive_spawn_villain(
     mut commands: Commands,
-    mut spawn_reader: EventReader<MessageEvent<SCSpawnVillain>>,
+    mut spawn_reader: EventReader<ServerMessage>,
     metadata: Res<MetadataResources>,
     renderables: Res<RenderResources>,
 ) {
     for event in spawn_reader.read() {
-        let spawn_msg = event.message();
+        let ServerMessage::SCSpawnVillain(msg) = event else {
+            continue;
+        };
 
-        info!("spawning villain {spawn_msg:?}");
+        info!("spawning villain {msg:?}");
 
-        let villain_meta = &metadata.rpg.unit.villains[&spawn_msg.info.id];
+        let villain_meta = &metadata.rpg.unit.villains[&msg.info.id];
 
         // TODO
         // - ensure a server-side villain is the same as one generated by the based on
         //   the message data
         let unit = rpg_core::unit::Unit::new(
-            spawn_msg.uid,
+            msg.uid,
             villain_meta.class,
             UnitKind::Villain,
-            UnitInfo::Villain(spawn_msg.info.clone()),
-            spawn_msg.level,
+            UnitInfo::Villain(msg.info.clone()),
+            msg.level,
             villain_meta.name.clone(),
             &metadata.rpg,
         );
 
-        let skills = Skills(spawn_msg.skills.clone());
-        let skill_slots = SkillSlots::new(spawn_msg.skill_slots.clone());
+        let skills = Skills(msg.skills.clone());
+        let skill_slots = SkillSlots::new(msg.skill_slots.clone());
 
-        let transform = Transform::from_translation(spawn_msg.position)
-            .looking_to(spawn_msg.direction, Vec3::Y);
+        let transform =
+            Transform::from_translation(msg.position).looking_to(msg.direction, Vec3::Y);
         spawn_actor(
             Entity::PLACEHOLDER,
             false,
@@ -539,14 +578,16 @@ pub(crate) fn receive_spawn_villain(
 
 pub(crate) fn receive_combat_result(
     metadata: Res<MetadataResources>,
-    mut combat_reader: EventReader<MessageEvent<SCCombatResult>>,
+    mut combat_reader: EventReader<ServerMessage>,
     mut player_q: Query<(&mut Unit, &mut AudioActions, &mut AnimationState), With<Player>>,
 ) {
     for event in combat_reader.read() {
-        let combat_msg = event.message();
+        let ServerMessage::SCCombatResult(msg) = event else {
+            continue;
+        };
 
         let (mut player, mut audio, mut anim) = player_q.single_mut();
-        match &combat_msg.0 {
+        match &msg.0 {
             CombatResult::Damage(damage) => {
                 player.stats.vitals.set("Hp", Value::U32(damage.total));
                 *anim = ANIM_DEFEND;
@@ -573,19 +614,21 @@ pub(crate) fn receive_combat_result(
             CombatResult::Error => debug!("combat error received!?"),
         }
 
-        info!("combat result {combat_msg:?}");
+        info!("combat result {msg:?}");
     }
 }
 
 pub(crate) fn receive_damage(
-    mut combat_reader: EventReader<MessageEvent<SCDamage>>,
+    mut combat_reader: EventReader<ServerMessage>,
     mut unit_q: Query<(&mut AnimationState, &mut AudioActions, &mut Unit)>,
 ) {
     for event in combat_reader.read() {
-        let combat_msg = event.message();
+        let ServerMessage::SCDamage(msg) = event else {
+            continue;
+        };
 
         for (mut anim, mut audio, mut unit) in &mut unit_q {
-            if unit.uid != combat_msg.uid {
+            if unit.uid != msg.uid {
                 continue;
             }
 
@@ -594,27 +637,29 @@ pub(crate) fn receive_damage(
 
             let hp = &mut unit.stats.vitals.stats.get_mut("Hp").unwrap();
             let hp_ref = hp.value.u32_mut();
-            *hp_ref = combat_msg.damage.total;
+            *hp_ref = msg.damage.total;
         }
-        info!("combat result {combat_msg:?}");
+        info!("combat result {msg:?}");
     }
 }
 
 pub(crate) fn receive_unit_attack(
     mut rng: ResMut<SharedRng>,
     metadata: Res<MetadataResources>,
-    mut attack_reader: EventReader<MessageEvent<SCUnitAttack>>,
+    mut attack_reader: EventReader<ServerMessage>,
     mut unit_q: Query<(&mut AnimationState, &mut AudioActions, &Unit)>,
 ) {
     for event in attack_reader.read() {
-        let attack_msg = event.message();
+        let ServerMessage::SCUnitAttack(msg) = event else {
+            continue;
+        };
 
         for (mut anim, mut audio, unit) in &mut unit_q {
-            if unit.uid != attack_msg.uid {
+            if unit.uid != msg.uid {
                 continue;
             }
 
-            let skill_info = &metadata.rpg.skill.skills[&attack_msg.skill_id];
+            let skill_info = &metadata.rpg.skill.skills[&msg.skill_id];
             let audio_key = match skill_info.info {
                 SkillInfo::Direct(_) => match rng.usize(0..2) {
                     0 => "attack_proj1",
@@ -633,18 +678,20 @@ pub(crate) fn receive_unit_attack(
 }
 
 pub(crate) fn receive_unit_anim(
-    mut anim_reader: EventReader<MessageEvent<SCUnitAnim>>,
+    mut anim_reader: EventReader<ServerMessage>,
     mut unit_q: Query<(&mut AnimationState, &mut AudioActions, &Unit)>,
 ) {
     for event in anim_reader.read() {
-        let anim_msg = event.message();
+        let ServerMessage::SCUnitAnim(msg) = event else {
+            continue;
+        };
 
         for (mut anim, mut audio, unit) in &mut unit_q {
-            if unit.uid != anim_msg.uid {
+            if unit.uid != msg.uid {
                 continue;
             }
 
-            match anim_msg.anim {
+            match msg.anim {
                 0 => {
                     *anim = ANIM_DEFEND;
                     audio.push("hit_blocked".into());
@@ -666,16 +713,18 @@ pub(crate) fn receive_unit_anim(
 
 pub(crate) fn receive_villain_death(
     mut commands: Commands,
-    mut death_reader: EventReader<MessageEvent<SCVillainDeath>>,
+    mut death_reader: EventReader<ServerMessage>,
     mut villain_q: Query<(Entity, &Unit, &mut AudioActions, &mut AnimationState), With<Villain>>,
 ) {
     for event in death_reader.read() {
-        let death_msg = event.message();
+        let ServerMessage::SCVillainDeath(msg) = event else {
+            continue;
+        };
 
-        info!("villain death {death_msg:?}");
+        info!("villain death {msg:?}");
 
         for (entity, villain, mut villain_audio, mut villain_anim) in &mut villain_q {
-            if villain.uid != death_msg.0 {
+            if villain.uid != msg.0 {
                 continue;
             }
 
@@ -689,19 +738,18 @@ pub(crate) fn receive_villain_death(
 
 pub(crate) fn receive_hero_death(
     mut commands: Commands,
-    mut death_reader: EventReader<MessageEvent<SCHeroDeath>>,
+    mut death_reader: EventReader<ServerMessage>,
     mut hero_q: Query<(Entity, &Unit, &mut AudioActions, &mut AnimationState), With<Hero>>,
 ) {
     for event in death_reader.read() {
-        let death_msg = event.message();
+        let ServerMessage::SCHeroDeath(msg) = event else {
+            continue;
+        };
 
-        info!("hero death {death_msg:?}");
+        info!("hero death {msg:?}");
         let (entity, unit, mut audio, mut anim) = hero_q.single_mut();
         audio.push("hit_death".into());
         *anim = ANIM_DEATH;
-        if unit.uid == death_msg.0 {
-            //
-        }
 
         commands.entity(entity).insert(Corpse);
         death_reader.clear();
@@ -711,15 +759,17 @@ pub(crate) fn receive_hero_death(
 
 pub(crate) fn receive_despawn_corpse(
     mut commands: Commands,
-    mut despawn_reader: EventReader<MessageEvent<SCDespawnCorpse>>,
+    mut despawn_reader: EventReader<ServerMessage>,
     unit_q: Query<(Entity, &Unit), With<Corpse>>,
 ) {
     for event in despawn_reader.read() {
-        let despawn_msg = event.message();
+        let ServerMessage::SCDespawnCorpse(msg) = event else {
+            continue;
+        };
 
-        info!("despawning corpse {despawn_msg:?}");
+        info!("despawning corpse {msg:?}");
         for (entity, unit) in &unit_q {
-            if unit.uid != despawn_msg.0 {
+            if unit.uid != msg.0 {
                 continue;
             }
 
@@ -728,8 +778,46 @@ pub(crate) fn receive_despawn_corpse(
     }
 }
 
-pub(crate) fn recieve_item_pickup(
-    mut pickup_reader: EventReader<MessageEvent<SCDespawnCorpse>>,
+pub(crate) fn receive_item_pickup(
+    mut pickup_reader: EventReader<ServerMessage>,
     unit_q: Query<(Entity, &Unit), Without<Corpse>>,
 ) {
+    // SCItemPickup
+}
+
+pub(crate) fn receive_item_drop(
+    mut drop_reader: EventReader<ServerMessage>,
+    unit_q: Query<(Entity, &Unit), Without<Corpse>>,
+) {
+    // SCItemDrop
+}
+
+pub(crate) fn receive_item_store(
+    mut store_reader: EventReader<ServerMessage>,
+    unit_q: Query<(Entity, &Unit), Without<Corpse>>,
+) {
+    // SCItemStore
+}
+
+pub(crate) fn receive_zone_load(
+    mut load_reader: EventReader<ServerMessage>,
+    mut load_zone_writer: EventWriter<LoadZone>,
+) {
+    for event in load_reader.read() {
+        let ServerMessage::SCZoneLoad(msg) = event else {
+            continue;
+        };
+
+        info!("load zone");
+
+        load_zone_writer.send(LoadZone(msg.0));
+
+        return;
+    }
+}
+
+pub(crate) fn receive_zone_unload(mut unload_reader: EventReader<ServerMessage>) {
+    for event in unload_reader.read() {
+        // SCZoneUnload
+    }
 }

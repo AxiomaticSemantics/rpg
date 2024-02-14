@@ -1,6 +1,6 @@
 use bevy::{ecs::entity::Entity, log::info};
 
-use lightyear::prelude::*;
+use bevy_renet::renet::ClientId;
 
 use rpg_account::account::AccountId;
 
@@ -14,16 +14,16 @@ pub(crate) enum ClientType {
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Client {
-    pub(crate) id: ClientId,
+    pub(crate) client_id: ClientId,
     pub(crate) entity: Entity,
     pub(crate) client_type: ClientType,
     pub(crate) account_id: Option<AccountId>,
 }
 
 impl Client {
-    pub(crate) fn new(id: ClientId) -> Self {
+    pub(crate) fn new(client_id: ClientId) -> Self {
         Self {
-            id,
+            client_id,
             entity: Entity::PLACEHOLDER,
             account_id: None,
             client_type: ClientType::Unknown,

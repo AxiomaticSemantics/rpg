@@ -31,6 +31,8 @@ use bevy::{
     utils::default,
 };
 
+use bevy_renet::renet::RenetClient;
+
 #[derive(Component)]
 pub struct AccountCreateRoot;
 
@@ -592,7 +594,7 @@ pub fn spawn_list(
 }
 
 pub fn create_button(
-    mut net_client: ResMut<Client>,
+    mut net_client: ResMut<RenetClient>,
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<CreateButton>)>,
     mut account_text_set: ParamSet<(
         Query<&Text, With<CreateName>>,
@@ -626,19 +628,20 @@ pub fn create_button(
 
         // TODO some basic validation of input
         // TODO hash the users password
-        let create_msg = CSCreateAccount {
+        let message = bincode::serialize(&ClientMessage::CSCreateAccount(CSCreateAccount {
             name,
             email,
             password,
-        };
+        }))
+        .unwrap();
 
-        net_client.send_message::<Channel1, _>(create_msg);
+        net_client.send_message(ClientChannel::Message, message);
         info!("sending create account message");
     }
 }
 
 pub fn login_button(
-    mut net_client: ResMut<Client>,
+    mut net_client: ResMut<RenetClient>,
     account_q: Query<&RpgAccount>,
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<LoginButton>)>,
     mut account_text_set: ParamSet<(
@@ -663,9 +666,13 @@ pub fn login_button(
             let name = account_text_set.p0().single().sections[0].value.clone();
             let password = account_text_set.p1().single().sections[0].value.clone();
 
-            let login_msg = CSLoadAccount { name, password };
+            let message = bincode::serialize(&ClientMessage::CSLoadAccount(CSLoadAccount {
+                name,
+                password,
+            }))
+            .unwrap();
 
-            net_client.send_message::<Channel1, _>(login_msg);
+            net_client.send_message(ClientChannel::Message, message);
         }
     }
 }
@@ -714,7 +721,7 @@ pub fn cancel_account_list_button(
 
 pub fn lobby_create_button(
     selected_character: Res<SelectedCharacter>,
-    mut net_client: ResMut<Client>,
+    mut net_client: ResMut<RenetClient>,
     mut style_set: ParamSet<(
         Query<&Interaction, (Changed<Interaction>, With<LobbyCreateButton>)>,
         Query<&mut Style, With<LobbyRoot>>,
@@ -736,15 +743,18 @@ pub fn lobby_create_button(
         style_set.p1().single_mut().display = Display::Flex;
         style_set.p2().single_mut().display = Display::None;
 
-        net_client.send_message::<Channel1, _>(CSLobbyCreate {
+        let message = bincode::serialize(&ClientMessage::CSLobbyCreate(CSLobbyCreate {
             name: "Test Lobby".into(),
             game_mode: character_info.game_mode,
-        });
+        }))
+        .unwrap();
+
+        net_client.send_message(ClientChannel::Message, message);
     }
 }
 
 pub fn lobby_join_button(
-    mut net_client: ResMut<Client>,
+    mut net_client: ResMut<RenetClient>,
     mut style_set: ParamSet<(
         Query<&Interaction, (Changed<Interaction>, With<LobbyJoinButton>)>,
         Query<&mut Style, With<LobbyRoot>>,
@@ -757,7 +767,9 @@ pub fn lobby_join_button(
         style_set.p2().single_mut().display = Display::None;
 
         // FIXME temp hardcoded id
-        net_client.send_message::<Channel1, _>(CSLobbyJoin(LobbyId(0)));
+        let message =
+            bincode::serialize(&ClientMessage::CSLobbyJoin(CSLobbyJoin(LobbyId(0)))).unwrap();
+        net_client.send_message(ClientChannel::Message, message);
     }
 }
 
@@ -787,7 +799,7 @@ pub fn list_create_character_button(
 }
 
 pub fn list_join_game_button(
-    mut net_client: ResMut<Client>,
+    mut net_client: ResMut<RenetClient>,
     selected_character: Res<SelectedCharacter>,
     mut style_set: ParamSet<(
         Query<&Interaction, (Changed<Interaction>, With<ListJoinGameButton>)>,
@@ -811,12 +823,13 @@ pub fn list_join_game_button(
             .find(|c| c.info.slot == selected_character.slot)
             .unwrap();
 
-        net_client
-            .send_message::<Channel1, _>(CSJoinGame {
-                game_mode: character_record.info.game_mode,
-                slot: selected_character.slot,
-            })
-            .unwrap();
+        let message = bincode::serialize(&ClientMessage::CSJoinGame(CSJoinGame {
+            game_mode: character_record.info.game_mode,
+            slot: selected_character.slot,
+        }))
+        .unwrap();
+
+        net_client.send_message(ClientChannel::Message, message);
 
         style_set.p1().single_mut().display = Display::None;
         style_set.p2().single_mut().display = Display::None;
@@ -824,7 +837,7 @@ pub fn list_join_game_button(
 }
 
 pub fn list_create_game_button(
-    mut net_client: ResMut<Client>,
+    mut net_client: ResMut<RenetClient>,
     selected_character: Res<SelectedCharacter>,
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<ListCreateGameButton>)>,
     account_q: Query<&RpgAccount>,
@@ -848,12 +861,13 @@ pub fn list_create_game_button(
             .unwrap();
 
         info!("sending create game request");
-        net_client
-            .send_message::<Channel1, _>(CSCreateGame {
-                game_mode: character.info.game_mode,
-                slot: selected_character.slot,
-            })
-            .unwrap();
+        let message = bincode::serialize(&ClientMessage::CSCreateGame(CSCreateGame {
+            game_mode: character.info.game_mode,
+            slot: selected_character.slot,
+        }))
+        .unwrap();
+
+        net_client.send_message(ClientChannel::Message, message);
     }
 }
 

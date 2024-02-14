@@ -1,4 +1,4 @@
-use super::server::NetworkParamsRW;
+use super::server::{ClientMessageEvent, NetworkParamsRW};
 use crate::{account::AccountInstance, chat::ChatManager};
 
 use rpg_account::account::AccountId;
@@ -13,17 +13,19 @@ use bevy::{
     log::info,
 };
 
-use lightyear::{server::events::MessageEvent, shared::NetworkTarget};
-
 pub(crate) fn receive_chat_join(
     mut chat: ResMut<ChatManager>,
-    mut join_reader: EventReader<MessageEvent<CSChatJoin>>,
+    mut join_reader: EventReader<ClientMessageEvent>,
     mut net_params: NetworkParamsRW,
     account_q: Query<&AccountInstance>,
 ) {
     for event in join_reader.read() {
-        let client_id = event.context();
-        let client = net_params.context.clients.get(client_id).unwrap();
+        let ClientMessage::CSChatJoin(msg) = &event.message else {
+            continue;
+        };
+
+        let client_id = event.client_id;
+        let client = net_params.context.clients.get(&client_id).unwrap();
         if !client.is_authenticated() {
             info!("unauthenticated client attempted to join chat: {client:?}");
             continue;
@@ -41,56 +43,64 @@ pub(crate) fn receive_chat_join(
             if chat.channel_exists(ChannelId(0)) {
                 chat.add_subscriber(ChannelId(0), client.account_id.unwrap());
 
-                net_params.server.send_message_to_target::<Channel1, _>(
-                    SCChatJoinSuccess(0),
-                    NetworkTarget::Only(vec![*client_id]),
-                );
+                let message =
+                    bincode::serialize(&ServerMessage::SCChatJoinSuccess(SCChatJoinSuccess(0)))
+                        .unwrap();
+                net_params
+                    .server
+                    .send_message(client_id, ServerChannel::Message, message);
             }
         }
     }
 }
 
 pub(crate) fn receive_chat_leave(
-    mut leave_reader: EventReader<MessageEvent<CSChatLeave>>,
+    mut leave_reader: EventReader<ClientMessageEvent>,
     mut net_params: NetworkParamsRW,
 ) {
     for event in leave_reader.read() {
-        let client_id = event.context();
-        let client = net_params.context.clients.get(client_id).unwrap();
+        let ClientMessage::CSChatLeave(msg) = &event.message else {
+            continue;
+        };
+
+        let client_id = event.client_id;
+        let client = net_params.context.clients.get(&client_id).unwrap();
         if !client.is_authenticated() {
             info!("unauthenticated client attempted to leave chat: {client:?}");
             continue;
         }
 
         // TODO Handle rejections for banned accounts etc.
-        net_params.server.send_message_to_target::<Channel1, _>(
-            SCChatLeave,
-            NetworkTarget::Only(vec![*client_id]),
-        );
+        let message = bincode::serialize(&ServerMessage::SCChatLeave(SCChatLeave)).unwrap();
+        net_params
+            .server
+            .send_message(client_id, ServerChannel::Message, message);
     }
 }
 
 pub(crate) fn receive_chat_channel_message(
-    mut message_reader: EventReader<MessageEvent<CSChatChannelMessage>>,
+    mut message_reader: EventReader<ClientMessageEvent>,
     mut net_params: NetworkParamsRW,
     mut chat: ResMut<ChatManager>,
 ) {
     for event in message_reader.read() {
-        let client_id = event.context();
-        let client = net_params.context.clients.get(client_id).unwrap();
+        let ClientMessage::CSChatChannelMessage(msg) = &event.message else {
+            continue;
+        };
+
+        let client_id = event.client_id;
+        let client = net_params.context.clients.get(&client_id).unwrap();
         if !client.is_authenticated() {
             info!("unauthenticated client attempted to message chat: {client:?}");
             continue;
         }
 
-        let channel_msg = event.message();
         // TODO Handle rejections for banned accounts etc.
-
-        let Some(channel) = chat.get_channel(channel_msg.0.channel_id) else {
+        let Some(channel) = chat.get_channel(msg.0.channel_id) else {
             continue;
         };
 
-        let subscriber_ids = channel
+        let subscriber_ids: Vec<_> = channel
             .subscribers
             .iter()
             .map(|s| {
@@ -105,14 +115,17 @@ pub(crate) fn receive_chat_channel_message(
             })
             .collect();
 
-        net_params.server.send_message_to_target::<Channel1, _>(
-            SCChatMessage(Message {
-                channel_id: channel_msg.0.channel_id,
-                id: channel_msg.0.id,
-                sender: channel_msg.0.sender.clone(),
-                message: channel_msg.0.message.clone(),
-            }),
-            NetworkTarget::Only(subscriber_ids),
-        );
+        let message = bincode::serialize(&ServerMessage::SCChatMessage(SCChatMessage(Message {
+            channel_id: msg.0.channel_id,
+            id: msg.0.id,
+            sender: msg.0.sender.clone(),
+            message: msg.0.message.clone(),
+        })))
+        .unwrap();
+        for client_id in subscriber_ids {
+            net_params
+                .server
+                .send_message(client_id, ServerChannel::Message, message.clone());
+        }
     }
 }

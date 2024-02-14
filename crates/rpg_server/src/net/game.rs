@@ -1,4 +1,4 @@
-use super::server::{NetworkParamsRO, NetworkParamsRW};
+use super::server::{ClientMessageEvent, NetworkParamsRO, NetworkParamsRW};
 use crate::{
     account::AccountInstance,
     assets::MetadataResources,
@@ -25,9 +25,6 @@ use bevy::{
     transform::components::Transform,
 };
 
-use lightyear::prelude::server::*;
-use lightyear::prelude::*;
-
 use rpg_core::{game_mode::GameMode, storage::Storage};
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
@@ -41,11 +38,15 @@ use util::math::AabbComponent;
 
 pub(crate) fn receive_player_join(
     mut server_state: ResMut<GameState>,
-    mut join_reader: EventReader<MessageEvent<CSPlayerJoin>>,
+    mut join_reader: EventReader<ClientMessageEvent>,
     net_params: NetworkParamsRO,
 ) {
     for event in join_reader.read() {
-        let client_id = *event.context();
+        let ClientMessage::CSPlayerJoin(msg) = &event.message else {
+            continue;
+        };
+
+        let client_id = event.client_id;
         let client = net_params.context.clients.get(&client_id).unwrap();
         if !client.is_authenticated_player() {
             continue;
@@ -58,14 +59,18 @@ pub(crate) fn receive_player_join(
 pub(crate) fn receive_player_leave(
     mut commands: Commands,
     mut state: ResMut<NextState<AppState>>,
-    mut leave_reader: EventReader<MessageEvent<CSPlayerLeave>>,
+    mut leave_reader: EventReader<ClientMessageEvent>,
     mut game_state: ResMut<GameState>,
     mut net_params: NetworkParamsRW,
     player_q: Query<&Unit>,
     skill_q: Query<(Entity, &SkillOwner), With<SkillUse>>,
 ) {
     for event in leave_reader.read() {
-        let client_id = *event.context();
+        let ClientMessage::CSPlayerLeave(msg) = &event.message else {
+            continue;
+        };
+
+        let client_id = event.client_id;
         let client = net_params.context.clients.get(&client_id).unwrap();
         if !client.is_authenticated_player() {
             continue;
@@ -75,10 +80,11 @@ pub(crate) fn receive_player_leave(
 
         let player = player_q.get(client.entity).unwrap();
 
-        net_params.server.send_message_to_target::<Channel1, _>(
-            SCPlayerLeave(player.uid),
-            NetworkTarget::AllExcept(vec![client_id]),
-        );
+        let message =
+            bincode::serialize(&ServerMessage::SCPlayerLeave(SCPlayerLeave(player.uid))).unwrap();
+        net_params
+            .server
+            .broadcast_message_except(client_id, ServerChannel::Message, message);
 
         // despawn any active skills that the player has cast
         for (entity, owner) in &skill_q {
@@ -104,7 +110,7 @@ pub(crate) fn receive_player_leave(
 /// This is received when the client has completed loading the world and is ready to be spawned
 pub(crate) fn receive_player_loaded(
     mut commands: Commands,
-    mut ready_reader: EventReader<MessageEvent<CSClientReady>>,
+    mut ready_reader: EventReader<ClientMessageEvent>,
     mut net_params: NetworkParamsRW,
     aabbs: Res<AabbResources>,
     game_state: Res<GameState>,
@@ -113,7 +119,11 @@ pub(crate) fn receive_player_loaded(
     hero_q: Query<&Transform, With<Unit>>,
 ) {
     for event in ready_reader.read() {
-        let client_id = *event.context();
+        let ClientMessage::CSClientReady(msg) = &event.message else {
+            continue;
+        };
+
+        let client_id = event.client_id;
         let client = net_params.context.clients.get(&client_id).unwrap();
         if !client.is_authenticated_player() {
             continue;
@@ -151,13 +161,18 @@ pub(crate) fn receive_player_loaded(
             position_is_valid = true;
 
             if attempts % 2 != 0 {
-                spawn_position.x += 2.0;
+                spawn_position.x += 2;
             } else if attempts % 4 != 0 {
-                spawn_position.y += 2.0;
+                spawn_position.y += 2;
             }
 
             for hero_transform in &hero_q {
-                if hero_transform.translation.distance(spawn_position) < 2.0 {
+                if hero_transform.translation.distance(Vec3::new(
+                    spawn_position.x as f32,
+                    0.0,
+                    spawn_position.y as f32,
+                )) < 2.0
+                {
                     position_is_valid = false;
                     break;
                 }
@@ -175,30 +190,36 @@ pub(crate) fn receive_player_loaded(
             return;
         }
 
-        net_params.server.send_message_to_target::<Channel1, _>(
-            SCPlayerSpawn {
-                position: spawn_position,
-            },
-            NetworkTarget::Only(vec![client_id]),
-        );
+        let message = bincode::serialize(&ServerMessage::SCPlayerSpawn(SCPlayerSpawn {
+            position: Vec3::new(spawn_position.x as f32, 0.0, spawn_position.y as f32),
+        }))
+        .unwrap();
+        net_params
+            .server
+            .send_message(client_id, ServerChannel::Message, message);
 
-        net_params.server.send_message_to_target::<Channel1, _>(
-            SCSpawnHero {
-                uid: unit.uid,
-                position: spawn_position,
-                name: unit.name.clone(),
-                class: unit.class,
-                level: unit.level,
-                deaths: None,
-                skills: character.character.skills.clone(),
-                skill_slots: character.character.skill_slots.clone(),
-            },
-            NetworkTarget::AllExcept(vec![client_id]),
-        );
+        let message = bincode::serialize(&ServerMessage::SCSpawnHero(SCSpawnHero {
+            uid: unit.uid,
+            position: Vec3::new(spawn_position.x as f32, 0.0, spawn_position.y as f32),
+            name: unit.name.clone(),
+            class: unit.class,
+            level: unit.level,
+            deaths: None,
+            skills: character.character.skills.clone(),
+            skill_slots: character.character.skill_slots.clone(),
+        }))
+        .unwrap();
+        net_params
+            .server
+            .broadcast_message_except(client_id, ServerChannel::Message, message);
 
         commands.entity(client.entity).insert((
             AabbComponent(aabb),
-            Transform::from_translation(spawn_position),
+            Transform::from_translation(Vec3::new(
+                spawn_position.x as f32,
+                0.0,
+                spawn_position.y as f32,
+            )),
             HeroBundle {
                 unit: UnitBundle::new(
                     Unit(unit),
@@ -215,12 +236,16 @@ pub(crate) fn receive_player_loaded(
 pub(crate) fn receive_player_revive(
     mut commands: Commands,
     server_state: Res<GameState>,
-    mut join_reader: EventReader<MessageEvent<CSPlayerRevive>>,
+    mut join_reader: EventReader<ClientMessageEvent>,
     mut net_params: NetworkParamsRW,
     mut player_q: Query<(&mut Unit, &mut Transform), (With<Hero>, With<Corpse>)>,
 ) {
     for event in join_reader.read() {
-        let client_id = *event.context();
+        let ClientMessage::CSPlayerRevice(msg) = &event.message else {
+            continue;
+        };
+
+        let client_id = event.client_id;
         let client = net_params.context.clients.get(&client_id).unwrap();
         if !client.is_authenticated_player() {
             continue;
@@ -233,9 +258,15 @@ pub(crate) fn receive_player_revive(
         }
 
         // TODO implement xp_loss
+        // The client should always know it's correct max stats
+        // there shouldn't be a need to send it over here...
         let (mut hero, mut transform) = player_q.get_mut(client.entity).unwrap();
-        hero.stats.vitals.stats.get_mut("Hp").unwrap().value =
-            hero.stats.vitals.stats["HpMax"].value;
+        hero.stats.vitals.get_mut_stat("Hp").unwrap().value =
+            hero.stats.vitals.get_stat("HpMax").unwrap().value;
+        hero.stats.vitals.get_mut_stat("Ep").unwrap().value =
+            hero.stats.vitals.get_stat("EpMax").unwrap().value;
+        hero.stats.vitals.get_mut_stat("Mp").unwrap().value =
+            hero.stats.vitals.get_stat("MpMax").unwrap().value;
 
         transform.translation = Vec3::ZERO;
 
@@ -244,21 +275,26 @@ pub(crate) fn receive_player_revive(
         *hero_info.deaths.as_mut().unwrap() = deaths + 1;
         commands.entity(client.entity).remove::<Corpse>();
 
-        net_params.server.send_message_to_target::<Channel1, _>(
-            SCPlayerRevive {
-                position: Vec3::ZERO,
-                deaths: hero_info.deaths.unwrap(),
-                hp: *hero.stats.vitals.stats["HpMax"].value.u32(),
-                xp_total: 0,
-                xp_loss: 0,
-            },
-            NetworkTarget::Only(vec![client_id]),
-        );
+        let message = bincode::serialize(&ServerMessage::SCPlayerRevive(SCPlayerRevive {
+            position: Vec3::ZERO,
+            deaths: hero_info.deaths.unwrap(),
+            hp: *hero.stats.vitals.stats["HpMax"].value.u32(),
+            xp_total: 0,
+            xp_loss: 0,
+        }))
+        .unwrap();
 
-        net_params.server.send_message_to_target::<Channel1, _>(
-            SCHeroRevive(transform.translation),
-            NetworkTarget::AllExcept(vec![client_id]),
-        );
+        net_params
+            .server
+            .send_message(client_id, ServerChannel::Message, message);
+
+        let message = bincode::serialize(&ServerMessage::SCHeroRevive(SCHeroRevive(
+            transform.translation,
+        )))
+        .unwrap();
+        net_params
+            .server
+            .broadcast_message_except(client_id, ServerChannel::Message, message);
         info!("player revive");
     }
 }
@@ -269,12 +305,16 @@ pub(crate) fn receive_player_revive(
 //   that moves for now a naive approach will be taken
 // - FIXME add action request, move message send to action handler
 pub(crate) fn receive_movement(
-    mut movement_reader: EventReader<MessageEvent<CSMovePlayer>>,
+    mut movement_reader: EventReader<ClientMessageEvent>,
     net_params: NetworkParamsRO,
     mut player_q: Query<&mut Actions, With<Hero>>,
 ) {
     for event in movement_reader.read() {
-        let client_id = *event.context();
+        let ClientMessage::CSMovePlayer(msg) = &event.message else {
+            continue;
+        };
+
+        let client_id = event.client_id;
         let client = net_params.context.clients.get(&client_id).unwrap();
         if !client.is_authenticated_player() {
             continue;
@@ -287,12 +327,16 @@ pub(crate) fn receive_movement(
 }
 
 pub(crate) fn receive_movement_end(
-    mut movement_reader: EventReader<MessageEvent<CSMovePlayerEnd>>,
+    mut movement_reader: EventReader<ClientMessageEvent>,
     net_params: NetworkParamsRO,
     mut player_q: Query<&mut Actions, With<Hero>>,
 ) {
     for event in movement_reader.read() {
-        let client_id = *event.context();
+        let ClientMessage::CSMovePlayerEnd(msg) = &event.message else {
+            continue;
+        };
+
+        let client_id = event.client_id;
         let client = net_params.context.clients.get(&client_id).unwrap();
         if !client.is_authenticated_player() {
             continue;
@@ -308,52 +352,57 @@ pub(crate) fn receive_movement_end(
 
 /// Rotate player
 pub(crate) fn receive_rotation(
-    mut rotation_reader: EventReader<MessageEvent<CSRotPlayer>>,
+    mut rotation_reader: EventReader<ClientMessageEvent>,
     net_params: NetworkParamsRO,
     mut player_q: Query<&mut Actions, With<Hero>>,
 ) {
     for event in rotation_reader.read() {
-        let client_id = *event.context();
+        let ClientMessage::CSRotPlayer(msg) = &event.message else {
+            continue;
+        };
+
+        let client_id = event.client_id;
         let client = net_params.context.clients.get(&client_id).unwrap();
         if !client.is_authenticated_player() {
             continue;
         };
 
-        let rot_msg = event.message();
-
         let mut actions = player_q.get_mut(client.entity).unwrap();
-        actions.request(Action::new(ActionData::LookDir(rot_msg.0), None, true));
+        actions.request(Action::new(ActionData::LookDir(msg.0), None, true));
     }
 }
 
 pub(crate) fn receive_skill_use_direct(
-    mut skill_use_reader: EventReader<MessageEvent<CSSkillUseDirect>>,
+    mut skill_use_reader: EventReader<ClientMessageEvent>,
     net_params: NetworkParamsRO,
     metadata: Res<MetadataResources>,
     mut player_q: Query<(&Transform, &mut Actions), With<Hero>>,
 ) {
     for event in skill_use_reader.read() {
-        let client_id = *event.context();
+        let ClientMessage::CSSkillUseDirect(msg) = &event.message else {
+            continue;
+        };
+
+        let client_id = event.client_id;
         let client = net_params.context.clients.get(&client_id).unwrap();
         if !client.is_authenticated_player() {
             continue;
         };
 
         let (transform, mut actions) = player_q.get_mut(client.entity).unwrap();
-        let skill_msg = event.message();
-        // info!("skill use direct: {skill_msg:?}");
+        // info!("skill use direct: {msg:?}");
 
         let skill_target = get_skill_origin(
             &metadata.rpg,
             &transform,
             transform.translation, // FIXMEcursor_position.ground,
-            skill_msg.0,
+            msg.0,
         );
 
         if actions.attack.is_none() && actions.knockback.is_none() {
             actions.request(Action::new(
                 ActionData::Attack(AttackData {
-                    skill_id: skill_msg.0,
+                    skill_id: msg.0,
                     user: transform.translation,
                     skill_target,
                 }),
@@ -365,33 +414,36 @@ pub(crate) fn receive_skill_use_direct(
 }
 
 pub(crate) fn receive_skill_use_targeted(
-    mut skill_use_reader: EventReader<MessageEvent<CSSkillUseTargeted>>,
+    mut skill_use_reader: EventReader<ClientMessageEvent>,
     net_params: NetworkParamsRO,
     metadata: Res<MetadataResources>,
     mut player_q: Query<(&Transform, &mut Actions), With<Hero>>,
 ) {
     for event in skill_use_reader.read() {
-        let client_id = *event.context();
+        let ClientMessage::CSSkillUseTargeted(msg) = &event.message else {
+            continue;
+        };
+
+        let client_id = event.client_id;
         let client = net_params.context.clients.get(&client_id).unwrap();
         if !client.is_authenticated_player() {
             continue;
         };
 
         let (transform, mut actions) = player_q.get_mut(client.entity).unwrap();
-        let skill_msg = event.message();
-        // info!("skill use targeted: {skill_msg:?}");
+        // info!("skill use targeted: {msg:?}");
 
         let skill_target = get_skill_origin(
             &metadata.rpg,
             &transform,
-            skill_msg.target, // FIXMEcursor_position.ground,
-            skill_msg.skill_id,
+            msg.target, // FIXMEcursor_position.ground,
+            msg.skill_id,
         );
 
         if actions.attack.is_none() && actions.knockback.is_none() {
             actions.request(Action::new(
                 ActionData::Attack(AttackData {
-                    skill_id: skill_msg.skill_id,
+                    skill_id: msg.skill_id,
                     user: transform.translation,
                     skill_target,
                 }),
@@ -403,12 +455,16 @@ pub(crate) fn receive_skill_use_targeted(
 }
 
 pub(crate) fn receive_item_drop(
-    mut drop_reader: EventReader<MessageEvent<CSItemDrop>>,
+    mut drop_reader: EventReader<ClientMessageEvent>,
     mut net_params: NetworkParamsRW,
     mut hero_q: Query<(&Transform, &Unit), With<Hero>>,
 ) {
     for event in drop_reader.read() {
-        let client_id = *event.context();
+        let ClientMessage::CSItemDrop(msg) = &event.message else {
+            continue;
+        };
+
+        let client_id = event.client_id;
         let client = net_params.context.clients.get(&client_id).unwrap();
         if !client.is_authenticated_player() {
             continue;
@@ -418,24 +474,26 @@ pub(crate) fn receive_item_drop(
 
 pub(crate) fn receive_item_pickup(
     mut commands: Commands,
-    mut pickup_reader: EventReader<MessageEvent<CSItemPickup>>,
+    mut pickup_reader: EventReader<ClientMessageEvent>,
     mut net_params: NetworkParamsRW,
     mut item_q: Query<(Entity, &mut GroundItem, &Transform)>,
     mut hero_q: Query<(&Transform, &mut UnitStorage), With<Hero>>,
 ) {
     for event in pickup_reader.read() {
-        let client_id = *event.context();
+        let ClientMessage::CSItemPickup(msg) = &event.message else {
+            continue;
+        };
+
+        let client_id = event.client_id;
         let client = net_params.context.clients.get(&client_id).unwrap();
         if !client.is_authenticated_player() {
             continue;
         };
 
-        let pickup_msg = event.message();
-
         let (u_transform, mut u_storage) = hero_q.get_mut(client.entity).unwrap();
 
         for (i_entity, mut i_item, i_transform) in &mut item_q {
-            if i_item.0 != pickup_msg.0 {
+            if i_item.0 != msg.0 {
                 continue;
             }
 
@@ -448,10 +506,12 @@ pub(crate) fn receive_item_pickup(
                 slot.item = i_item.0;
                 */
 
-                net_params.server.send_message_to_target::<Channel1, _>(
-                    SCDespawnItem(pickup_msg.0),
-                    NetworkTarget::All,
-                );
+                let message =
+                    bincode::serialize(&ServerMessage::SCDespawnItem(SCDespawnItem(msg.0)))
+                        .unwrap();
+                net_params
+                    .server
+                    .broadcast_message(ServerChannel::Message, message);
 
                 info!("ground item pickup");
                 commands.entity(i_entity).despawn_recursive();

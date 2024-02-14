@@ -4,19 +4,31 @@ use crate::{game::plugin::GameState, state::AppState};
 use bevy::{
     app::{App, FixedUpdate, Plugin, PreUpdate, Update},
     ecs::{
-        event::EventReader,
+        event::{Event, EventReader, EventWriter},
         schedule::{common_conditions::*, Condition, IntoSystemConfigs, NextState},
         system::{Commands, Res, ResMut, SystemParam},
     },
     log::info,
 };
 
-use lightyear::prelude::server::*;
-use lightyear::prelude::*;
+use bevy_renet::renet::{ClientId, RenetServer, ServerEvent};
+use bevy_renet::{transport::NetcodeServerPlugin, RenetServerPlugin};
+
+use bevy_renet::renet::{
+    transport::{NetcodeServerTransport, ServerAuthentication, ServerConfig},
+    ConnectionConfig,
+};
 
 use rpg_network_protocol::{protocol::*, *};
 
-use std::net::{Ipv4Addr, SocketAddr};
+use std::net::{Ipv4Addr, SocketAddr, UdpSocket};
+use std::time::SystemTime;
+
+#[derive(Event)]
+pub(crate) struct ClientMessageEvent {
+    pub(crate) client_id: ClientId,
+    pub(crate) message: ClientMessage,
+}
 
 pub(crate) struct NetworkServerPlugin {
     pub(crate) port: u16,
@@ -24,36 +36,36 @@ pub(crate) struct NetworkServerPlugin {
 
 impl Plugin for NetworkServerPlugin {
     fn build(&self, app: &mut App) {
-        let server_addr = SocketAddr::new(Ipv4Addr::UNSPECIFIED.into(), self.port);
-        let netcode_config = NetcodeConfig::default()
-            .with_protocol_id(PROTOCOL_ID)
-            .with_key(KEY);
-
-        let transport = TransportConfig::UdpSocket(server_addr);
-
-        #[cfg(feature = "net_debug")]
-        let link_conditioner = LinkConditionerConfig {
-            incoming_latency: Duration::from_millis(10),
-            incoming_jitter: Duration::from_millis(20),
-            incoming_loss: 0.05,
+        let connection_config = ConnectionConfig {
+            available_bytes_per_tick: 1024 * 1024,
+            client_channels_config: ClientChannel::channels_config(),
+            server_channels_config: ServerChannel::channels_config(),
         };
-        #[cfg(feature = "net_debug")]
-        let io =
-            Io::from_config(IoConfig::from_transport(transport)).with_conditioner(link_conditioner);
 
-        #[cfg(not(feature = "net_debug"))]
-        let io = Io::from_config(IoConfig::from_transport(transport));
+        let server = RenetServer::new(connection_config);
 
-        let config = ServerConfig {
-            shared: shared_config(),
-            netcode: netcode_config,
-            ping: PingConfig::default(),
+        let public_addr = "127.0.0.1:4269".parse().unwrap();
+        let socket = UdpSocket::bind(public_addr).unwrap();
+        let current_time: std::time::Duration = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap();
+        let server_config = ServerConfig {
+            current_time,
+            max_clients: 16,
+            protocol_id: PROTOCOL_ID,
+            public_addresses: vec![public_addr],
+            authentication: ServerAuthentication::Unsecure,
         };
-        let plugin_config = PluginConfig::new(config, io, RpgProtocol::new());
 
-        app.add_plugins(server::ServerPlugin::new(plugin_config))
+        let transport = NetcodeServerTransport::new(server_config, socket).unwrap();
+
+        app.add_event::<ClientMessageEvent>()
+            .add_plugins(NetcodeServerPlugin)
+            .add_plugins(RenetServerPlugin)
+            .insert_resource(server)
+            .insert_resource(transport)
             .init_resource::<NetworkContext>()
-            .add_systems(PreUpdate, (handle_connections, handle_disconnections))
+            .add_systems(PreUpdate, (handle_connections, handle_messages).chain())
             .add_systems(
                 FixedUpdate,
                 (
@@ -66,8 +78,7 @@ impl Plugin for NetworkServerPlugin {
                     game::receive_movement_end,
                 )
                     .chain()
-                    .run_if(in_state(AppState::Simulation))
-                    .after(FixedUpdateSet::Main),
+                    .run_if(in_state(AppState::Simulation)),
             )
             .add_systems(
                 Update,
@@ -114,53 +125,61 @@ impl Plugin for NetworkServerPlugin {
 #[derive(SystemParam)]
 #[allow(dead_code)]
 pub(crate) struct NetworkParamsRO<'w> {
-    pub(crate) server: Res<'w, Server>,
+    pub(crate) server: Res<'w, RenetServer>,
     pub(crate) context: Res<'w, NetworkContext>,
 }
 
 #[derive(SystemParam)]
 pub(crate) struct NetworkParamsRW<'w> {
-    pub(crate) server: ResMut<'w, Server>,
+    pub(crate) server: ResMut<'w, RenetServer>,
     pub(crate) context: ResMut<'w, NetworkContext>,
 }
 
-fn handle_disconnections(
+fn handle_connections(
+    mut commands: Commands,
     mut state: ResMut<NextState<AppState>>,
     mut game_state: ResMut<GameState>,
-    mut disconnect_reader: EventReader<DisconnectEvent>,
+    mut connect_reader: EventReader<ServerEvent>,
     mut net_params: NetworkParamsRW,
-    mut commands: Commands,
 ) {
-    for event in disconnect_reader.read() {
-        let client_id = *event.context();
-        game_state.players.retain(|p| p.client_id != client_id);
+    for event in connect_reader.read() {
+        match event {
+            ServerEvent::ClientConnected { client_id } => {
+                net_params.context.add_client(*client_id);
 
-        net_params.context.remove_client(&mut commands, client_id);
+                let message = ServerMessage::SCHello(SCHello);
+                let message = bincode::serialize(&message).unwrap();
+                net_params
+                    .server
+                    .send_message(*client_id, ServerChannel::Message, message);
 
-        if game_state.players.is_empty() {
-            state.set(AppState::Lobby);
-            return;
+                info!("sending hello to {client_id}");
+            }
+            ServerEvent::ClientDisconnected { client_id, reason } => {
+                game_state.players.retain(|p| p.client_id != *client_id);
+
+                net_params.context.remove_client(&mut commands, *client_id);
+
+                if game_state.players.is_empty() {
+                    state.set(AppState::Lobby);
+                }
+            }
         }
     }
 }
 
-fn handle_connections(
-    mut connect_reader: EventReader<ConnectEvent>,
+fn handle_messages(
     mut net_params: NetworkParamsRW,
+    mut message_writer: EventWriter<ClientMessageEvent>,
 ) {
-    for event in connect_reader.read() {
-        let client_id = *event.context();
-
-        net_params.context.add_client(client_id);
-
-        net_params
+    for client_id in net_params.server.clients_id() {
+        while let Some(message) = net_params
             .server
-            .send_message_to_target::<Channel1, SCHello>(
-                SCHello(client_id),
-                NetworkTarget::Only(vec![client_id]),
-            )
-            .unwrap();
+            .receive_message(client_id, ClientChannel::Message)
+        {
+            let message: ClientMessage = bincode::deserialize(&message).unwrap();
 
-        info!("sending hello to {client_id}");
+            message_writer.send(ClientMessageEvent { client_id, message });
+        }
     }
 }

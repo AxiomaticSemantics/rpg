@@ -7,6 +7,7 @@ use crate::{
 };
 
 use rpg_core::game_mode::GameMode;
+use rpg_network_protocol::protocol::*;
 
 use ui_util::style::UiTheme;
 use util::cleanup::CleanupStrategy;
@@ -30,7 +31,7 @@ use bevy::{
     utils::default,
 };
 
-use rpg_network_protocol::protocol::*;
+use bevy_renet::renet::RenetClient;
 
 #[derive(Component)]
 pub struct GameMenuRoot;
@@ -64,7 +65,7 @@ pub(crate) fn toggle_menu(
 pub(crate) fn respawn_button(
     ui_theme: Res<UiTheme>,
     game_state: Res<GameState>,
-    mut net_client: ResMut<Client>,
+    mut net_client: ResMut<RenetClient>,
     mut restart_q: Query<
         (&Interaction, &mut BackgroundColor),
         (With<RespawnButton>, Changed<Interaction>),
@@ -78,7 +79,9 @@ pub(crate) fn respawn_button(
         match interaction {
             Interaction::Pressed => {
                 info!("respawn request");
-                net_client.send_message::<Channel1, _>(CSPlayerRevive);
+                let message =
+                    bincode::serialize(&ClientMessage::CSPlayerRevice(CSPlayerRevive)).unwrap();
+                net_client.send_message(ClientChannel::Message, message);
             }
             Interaction::Hovered => *bg_color = ui_theme.button_theme.hovered_background_color,
             Interaction::None => *bg_color = ui_theme.button_theme.normal_background_color,
@@ -110,7 +113,7 @@ pub(crate) fn exit_button(
 
 pub(crate) fn exit_button(
     mut state: ResMut<NextState<AppState>>,
-    mut net_client: ResMut<Client>,
+    mut net_client: ResMut<RenetClient>,
     exit_button_q: Query<&Interaction, (With<ExitButton>, Changed<Interaction>)>,
 ) {
     let Ok(interaction) = exit_button_q.get_single() else {
@@ -118,7 +121,8 @@ pub(crate) fn exit_button(
     };
 
     if interaction == &Interaction::Pressed {
-        net_client.send_message::<Channel1, _>(CSPlayerLeave);
+        let message = bincode::serialize(&ClientMessage::CSPlayerLeave(CSPlayerLeave)).unwrap();
+        net_client.send_message(ClientChannel::Message, message);
         state.set(AppState::GameCleanup);
     }
 }

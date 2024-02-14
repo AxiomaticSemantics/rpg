@@ -9,9 +9,9 @@ use bevy::{
     log::info,
 };
 
-use lightyear::prelude::*;
-
 use rpg_account::account::AccountId;
+
+use bevy_renet::renet::ClientId;
 
 use std::collections::HashMap;
 

@@ -2,7 +2,7 @@ use crate::game::{assets::RenderResources, plugin::GameSessionCleanup};
 
 use bevy::{
     asset::Handle,
-    ecs::{bundle::Bundle, component::Component, system::Commands},
+    ecs::{bundle::Bundle, component::Component, entity::Entity, system::Commands},
     math::{Quat, Vec3},
     render::mesh::Mesh,
     scene::{Scene, SceneBundle},
@@ -44,30 +44,33 @@ impl PropInfo {
 pub(crate) fn spawn(
     commands: &mut Commands,
     renderables: &RenderResources,
-    key: &'static str,
+    key: &str,
     position: Vec3,
     rotation: Option<Quat>,
-) {
+) -> Entity {
     let PropHandle::Scene(handle) = &renderables.props[key].handle else {
         panic!("bad handle");
     };
 
-    //println!("prop pos: {position}");
+    // debug!("prop pos: {position}");
 
-    let mut transform = Transform::from_translation(position);
+    let mut transform = Transform::from_translation(position + Vec3::Y * 0.25);
     if let Some(rotation) = rotation {
         transform.rotation = rotation;
     }
-    commands.spawn((
-        GameSessionCleanup,
-        CleanupStrategy::DespawnRecursive,
-        StaticPropBundle {
-            prop: StaticProp,
-            scene: SceneBundle {
-                scene: handle.clone_weak(),
-                transform,
-                ..default()
+
+    commands
+        .spawn((
+            GameSessionCleanup,
+            CleanupStrategy::DespawnRecursive,
+            StaticPropBundle {
+                prop: StaticProp,
+                scene: SceneBundle {
+                    scene: handle.clone_weak(),
+                    transform,
+                    ..default()
+                },
             },
-        },
-    ));
+        ))
+        .id()
 }

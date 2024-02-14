@@ -1,4 +1,7 @@
-use super::{client::ClientType, server::NetworkParamsRW};
+use super::{
+    client::ClientType,
+    server::{ClientMessageEvent, NetworkParamsRW},
+};
 use crate::{
     account::{
         AccountInstance, AccountInstanceBundle, AdminAccountInstance, AdminAccountInstanceBundle,
@@ -19,9 +22,6 @@ use bevy::{
     log::info,
     math::Vec3,
 };
-
-use lightyear::prelude::server::*;
-use lightyear::prelude::NetworkTarget;
 
 use rpg_account::{
     account::{Account, AccountInfo, AdminAccount, AdminAccountInfo},
@@ -47,12 +47,18 @@ use std::{env, path::Path};
 pub(crate) fn receive_account_create(
     mut commands: Commands,
     mut server_metadata: ResMut<ServerMetadataResource>,
-    mut account_create_reader: EventReader<MessageEvent<CSCreateAccount>>,
+    mut account_create_reader: EventReader<ClientMessageEvent>,
     mut net_params: NetworkParamsRW,
 ) {
     for event in account_create_reader.read() {
-        let client_id = *event.context();
-        let client = net_params.context.clients.get_mut(&client_id).unwrap();
+        let ClientMessage::CSCreateAccount(msg) = &event.message else {
+            continue;
+        };
+        let client = net_params
+            .context
+            .clients
+            .get_mut(&event.client_id)
+            .unwrap();
         if client.is_authenticated_player() {
             info!("already authenticated client attempted to create account {client:?}");
             continue;
@@ -66,7 +72,7 @@ pub(crate) fn receive_account_create(
         let account_file_path = format!(
             "{}/server/accounts/{}.json",
             std::env::var("RPG_SAVE_ROOT").unwrap(),
-            event.message().name
+            msg.name
         );
         let account_path = Path::new(account_file_path.as_str());
         let account_file = open_read(account_path);
@@ -94,7 +100,7 @@ pub(crate) fn receive_account_create(
             let account = Account {
                 info: AccountInfo {
                     character_slots: 12,
-                    name: event.message().name.clone(),
+                    name: msg.name.clone(),
                     id: server_metadata.0.next_account_id,
                     selected_slot: None,
                 },
@@ -122,22 +128,30 @@ pub(crate) fn receive_account_create(
 
             client.entity = account_entity;
 
-            net_params.server.send_message_to_target::<Channel1, _>(
+            let message = bincode::serialize(&ServerMessage::SCCreateAccountSuccess(
                 SCCreateAccountSuccess(account.clone()),
-                NetworkTarget::Only(vec![client_id]),
-            );
+            ))
+            .unwrap();
+
+            net_params
+                .server
+                .send_message(event.client_id, ServerChannel::Message, message);
         }
     }
 }
 
 pub(crate) fn receive_admin_login(
     mut commands: Commands,
-    mut login_reader: EventReader<MessageEvent<CSLoadAdminAccount>>,
+    mut login_reader: EventReader<ClientMessageEvent>,
     mut net_params: NetworkParamsRW,
 ) {
     for event in login_reader.read() {
-        let client_id = event.context();
-        let client = net_params.context.clients.get_mut(client_id).unwrap();
+        let ClientMessage::CSLoadAdminAccount(msg) = &event.message else {
+            continue;
+        };
+
+        let client_id = event.client_id;
+        let client = net_params.context.clients.get_mut(&client_id).unwrap();
         if client.is_authenticated_player() {
             info!("authenticated player attempted to login to account {client:?}");
             continue;
@@ -149,7 +163,7 @@ pub(crate) fn receive_admin_login(
         let file_path = format!(
             "{}/server/admin_accounts/{}.json",
             env::var("RPG_SAVE_ROOT").unwrap(),
-            event.message().name
+            msg.name
         );
         let path = Path::new(file_path.as_str());
         let file = open_read(path);
@@ -190,12 +204,16 @@ pub(crate) fn receive_admin_login(
 
 pub(crate) fn receive_account_login(
     mut commands: Commands,
-    mut login_reader: EventReader<MessageEvent<CSLoadAccount>>,
+    mut login_reader: EventReader<ClientMessageEvent>,
     mut net_params: NetworkParamsRW,
 ) {
     for event in login_reader.read() {
-        let client_id = event.context();
-        let client = net_params.context.clients.get_mut(client_id).unwrap();
+        let ClientMessage::CSLoadAccount(msg) = &event.message else {
+            continue;
+        };
+
+        let client_id = event.client_id;
+        let client = net_params.context.clients.get_mut(&client_id).unwrap();
         if client.is_authenticated_player() {
             info!("authenticated player attempted to load account {client:?}");
             continue;
@@ -204,7 +222,7 @@ pub(crate) fn receive_account_login(
         let file_path = format!(
             "{}/server/accounts/{}.json",
             env::var("RPG_SAVE_ROOT").unwrap(),
-            event.message().name
+            msg.name
         );
         let path = Path::new(file_path.as_str());
         let file = open_read(path);
@@ -225,10 +243,13 @@ pub(crate) fn receive_account_login(
 
                 client.entity = account_entity;
 
-                net_params.server.send_message_to_target::<Channel1, _>(
+                let message = bincode::serialize(&ServerMessage::SCLoginAccountSuccess(
                     SCLoginAccountSuccess(account.clone()),
-                    NetworkTarget::Only(vec![*client_id]),
-                );
+                ))
+                .unwrap();
+                net_params
+                    .server
+                    .send_message(client_id, ServerChannel::Message, message);
             } else {
                 info!("unable to deserialize account: {file_path}");
             }
@@ -241,45 +262,40 @@ pub(crate) fn receive_account_login(
 pub(crate) fn receive_character_create(
     metadata: Res<MetadataResources>,
     mut server_metadata: ResMut<ServerMetadataResource>,
-    mut character_create_reader: EventReader<MessageEvent<CSCreateCharacter>>,
+    mut character_create_reader: EventReader<ClientMessageEvent>,
     mut net_params: NetworkParamsRW,
     mut account_q: Query<&mut AccountInstance>,
 ) {
     for event in character_create_reader.read() {
-        let client_id = event.context();
-        let client = net_params.context.clients.get(client_id).unwrap();
+        let ClientMessage::CSCreateCharacter(msg) = &event.message else {
+            continue;
+        };
+        let client_id = event.client_id;
+        let client = net_params.context.clients.get(&client_id).unwrap();
         if !client.is_authenticated_player() {
             info!("unauthenticated client attempted to create character {client:?}");
             continue;
         }
 
-        let create_msg = event.message();
-
         for mut account in &mut account_q {
-            if account
-                .0
-                .characters
-                .iter()
-                .any(|c| c.info.slot == event.message().slot)
-            {
+            if account.0.characters.iter().any(|c| c.info.slot == msg.slot) {
                 info!("character already exists");
 
+                let message =
+                    bincode::serialize(&ServerMessage::SCCreateAccountError(SCCreateAccountError))
+                        .unwrap();
                 net_params
                     .server
-                    .send_message_to_target::<Channel1, SCCreateAccountError>(
-                        SCCreateAccountError,
-                        NetworkTarget::Only(vec![*client_id]),
-                    )
-                    .unwrap();
+                    .send_message(client_id, ServerChannel::Message, message);
             } else {
-                let unit_info = UnitInfo::Hero(HeroInfo::new(&metadata.rpg, create_msg.game_mode));
+                let unit_info = UnitInfo::Hero(HeroInfo::new(&metadata.rpg, msg.game_mode));
                 let mut unit = RpgUnit::new(
                     server_metadata.0.next_uid.get(),
-                    create_msg.class,
+                    msg.class,
                     UnitKind::Hero,
                     unit_info,
                     1,
-                    create_msg.name.clone(),
+                    msg.name.clone(),
                     &metadata.rpg,
                 );
                 let mut skills = Vec::new();
@@ -289,10 +305,10 @@ pub(crate) fn receive_character_create(
                 server_metadata.0.next_uid.next();
 
                 let character_info = CharacterInfo {
-                    name: create_msg.name.clone(),
-                    slot: create_msg.slot,
+                    name: msg.name.clone(),
+                    slot: msg.slot,
                     uid: unit.uid,
-                    game_mode: create_msg.game_mode,
+                    game_mode: msg.game_mode,
                 };
 
                 let character = CharacterRecord {
@@ -302,18 +318,19 @@ pub(crate) fn receive_character_create(
                         unit,
                         skills,
                         skill_slots,
-                        passive_tree: UnitPassiveSkills::new(create_msg.class),
+                        passive_tree: UnitPassiveSkills::new(msg.class),
                         storage: UnitStorage::default(),
                     },
                 };
 
+                let message = bincode::serialize(&ServerMessage::SCCreateCharacterSuccess(
+                    SCCreateCharacterSuccess(character.clone()),
+                ))
+                .unwrap();
+
                 net_params
                     .server
-                    .send_message_to_target::<Channel1, SCCreateCharacterSuccess>(
-                        SCCreateCharacterSuccess(character.clone()),
-                        NetworkTarget::Only(vec![*client_id]),
-                    )
-                    .unwrap();
+                    .send_message(client_id, ServerChannel::Message, message);
 
                 account.0.characters.push(character);
 
@@ -352,11 +369,15 @@ pub(crate) fn receive_game_create(
     mut game_state: ResMut<GameState>,
     mut load_writer: EventWriter<LoadZone>,
     mut net_params: NetworkParamsRW,
-    mut create_events: EventReader<MessageEvent<CSCreateGame>>,
+    mut create_events: EventReader<ClientMessageEvent>,
     mut account_q: Query<&mut AccountInstance>,
 ) {
-    for create in create_events.read() {
-        let client_id = *create.context();
+    for event in create_events.read() {
+        let ClientMessage::CSCreateGame(msg) = &event.message else {
+            continue;
+        };
+
+        let client_id = event.client_id;
         let client = net_params.context.clients.get(&client_id).unwrap();
         if !client.is_authenticated_player() {
             continue;
@@ -368,46 +389,48 @@ pub(crate) fn receive_game_create(
             continue;
         }
 
-        let create_msg = create.message();
-        info!("create game {create_msg:?}");
+        info!("create game {msg:?}");
 
         let mut account = account_q.get_mut(client.entity).unwrap();
 
-        let Some(character) = account.get_character_from_slot(create_msg.slot) else {
+        let Some(character) = account.get_character_from_slot(msg.slot) else {
             info!("no character in slot");
             continue;
         };
 
         let hero_info = character.character.unit.info.hero();
-        if hero_info.game_mode != create_msg.game_mode {
+        if hero_info.game_mode != msg.game_mode {
             info!(
                 "a {:?} character cannot create a {:?} game",
-                hero_info.game_mode, create_msg.game_mode
+                hero_info.game_mode, msg.game_mode
             );
             continue;
         }
 
         // add the creator to the player list
         game_state.players.push(PlayerIdInfo {
-            slot: create_msg.slot,
+            slot: msg.slot,
             account_id: account.0.info.id,
             character_id: character.info.uid,
             client_id,
             entity: client.entity,
         });
         game_state.options.max_players = 8;
-        game_state.options.mode = create_msg.game_mode;
+        game_state.options.mode = msg.game_mode;
 
-        net_params.server.send_message_to_target::<Channel1, _>(
-            SCGameCreateSuccess(create_msg.game_mode),
-            NetworkTarget::Only(vec![client_id]),
-        );
+        let message = bincode::serialize(&ServerMessage::SCGameCreateSuccess(SCGameCreateSuccess(
+            msg.game_mode,
+        )))
+        .unwrap();
+        net_params
+            .server
+            .send_message(client_id, ServerChannel::Message, message);
 
-        account.info.selected_slot = Some(create_msg.slot);
+        account.info.selected_slot = Some(msg.slot);
 
         load_writer.send(LoadZone(ZoneId(0)));
-        // FIXME turn this into an event
-        state.set(AppState::SpawnSimulation);
+
+        state.set(AppState::SpawnSimulation); // TODO NEEDED?
     }
 }
 
@@ -415,11 +438,15 @@ pub(crate) fn receive_game_create(
 pub(crate) fn receive_game_join(
     mut game_state: ResMut<GameState>,
     mut net_params: NetworkParamsRW,
-    mut join_events: EventReader<MessageEvent<CSJoinGame>>,
+    mut join_events: EventReader<ClientMessageEvent>,
     account_q: Query<&AccountInstance>,
 ) {
-    for join in join_events.read() {
-        let client_id = *join.context();
+    for event in join_events.read() {
+        let ClientMessage::CSJoinGame(msg) = &event.message else {
+            continue;
+        };
+
+        let client_id = event.client_id;
         let client = net_params.context.clients.get(&client_id).unwrap();
         if !client.is_authenticated_player() {
             continue;
@@ -432,8 +459,7 @@ pub(crate) fn receive_game_join(
             return;
         }
 
-        let join_msg = join.message();
-        info!("join game {join_msg:?}");
+        info!("join game {msg:?}");
 
         let account = account_q.get(client.entity).unwrap();
         if game_state
@@ -442,15 +468,16 @@ pub(crate) fn receive_game_join(
             .any(|a| a.account_id == account.info.id)
         {
             info!("client attempted to join a game while in a game");
-            net_params.server.send_message_to_target::<Channel1, _>(
-                SCGameJoinError,
-                NetworkTarget::Only(vec![client_id]),
-            );
+            let message =
+                bincode::serialize(&ServerMessage::SCGameJoinError(SCGameJoinError)).unwrap();
+            net_params
+                .server
+                .send_message(client_id, ServerChannel::Message, message);
 
             continue;
         }
 
-        let Some(character) = account.get_character_from_slot(join_msg.slot) else {
+        let Some(character) = account.get_character_from_slot(msg.slot) else {
             info!("no character exists in slot");
             continue;
         };
@@ -465,31 +492,36 @@ pub(crate) fn receive_game_join(
 
         // TODO optimize
         // spawn the new player on all connected players
-        net_params.server.send_message_to_target::<Channel1, _>(
-            SCSpawnHero {
-                position: Vec3::ZERO,
-                uid: character.info.uid,
-                class: character.character.unit.class,
-                level: character.character.unit.level,
-                name: character.character.unit.name.clone(),
-                skills: character.character.skills.clone(),
-                deaths: None,
-                skill_slots: character.character.skill_slots.clone(),
-            },
-            NetworkTarget::AllExcept(vec![client_id]),
-        );
+        let message = bincode::serialize(&ServerMessage::SCSpawnHero(SCSpawnHero {
+            position: Vec3::ZERO,
+            uid: character.info.uid,
+            class: character.character.unit.class,
+            level: character.character.unit.level,
+            name: character.character.unit.name.clone(),
+            skills: character.character.skills.clone(),
+            deaths: None,
+            skill_slots: character.character.skill_slots.clone(),
+        }))
+        .unwrap();
+
+        net_params
+            .server
+            .broadcast_message_except(client_id, ServerChannel::Message, message);
 
         game_state.players.push(PlayerIdInfo {
-            slot: join_msg.slot,
+            slot: msg.slot,
             account_id: account.0.info.id,
             character_id: character.info.uid,
             client_id,
             entity: client.entity,
         });
 
-        net_params.server.send_message_to_target::<Channel1, _>(
-            SCGameJoinSuccess(game_state.options.mode),
-            NetworkTarget::Only(vec![client_id]),
-        );
+        let message = bincode::serialize(&ServerMessage::SCGameJoinSuccess(SCGameJoinSuccess(
+            game_state.options.mode,
+        )))
+        .unwrap();
+        net_params
+            .server
+            .send_message(client_id, ServerChannel::Message, message);
     }
 }

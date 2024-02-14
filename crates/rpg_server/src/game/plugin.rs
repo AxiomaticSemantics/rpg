@@ -17,9 +17,6 @@ use bevy::{
     math::{bounding::Aabb3d, Vec3},
 };
 
-use lightyear::netcode::ClientId;
-use lightyear::shared::NetworkTarget;
-
 use rpg_account::{account::AccountId, character::CharacterSlot};
 use rpg_core::{game_mode::GameMode, uid::Uid, villain::VillainId};
 use rpg_network_protocol::protocol::*;
@@ -29,6 +26,8 @@ use rpg_util::{
 };
 
 use util::random::{Rng, SharedRng};
+
+use bevy_renet::renet::ClientId;
 
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -210,8 +209,11 @@ pub(crate) fn transition_to_lobby(mut state: ResMut<NextState<AppState>>) {
 pub(crate) fn join_clients(game_state: ResMut<GameState>, mut net_params: NetworkParamsRW) {
     info!("joining clients to game");
 
-    net_params.server.send_message_to_target::<Channel1, _>(
-        SCPlayerJoinSuccess,
-        NetworkTarget::Only(game_state.client_ids()),
-    );
+    let message =
+        bincode::serialize(&ServerMessage::SCPlayerJoinSuccess(SCPlayerJoinSuccess)).unwrap();
+    for client_id in game_state.client_ids() {
+        net_params
+            .server
+            .send_message(client_id, ServerChannel::Message, message.clone());
+    }
 }

@@ -1,5 +1,6 @@
 use crate::{
     edge::{Edge, EdgeFlags},
+    metadata::Metadata,
     room::Room,
     tile::Tile,
     zone_path::ZonePath,
@@ -10,12 +11,14 @@ use fastrand::Rng;
 use bevy_math::{uvec2, UVec2, Vec2, Vec3};
 use serde_derive::{Deserialize as De, Serialize as Ser};
 
+use std::collections::VecDeque;
+
 #[derive(Ser, De, Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub struct ZoneId(pub u16);
 
 #[derive(Ser, De, Debug, Clone, PartialEq)]
 pub struct TownInfo {
-    pub spawn_position: Vec3,
+    pub spawn_position: UVec2,
 }
 
 #[derive(Ser, De, Debug, Clone, PartialEq)]
@@ -32,9 +35,10 @@ pub enum ZoneInfo {
     Underworld(UnderworldInfo),
 }
 
+#[derive(Debug)]
 pub struct Zone {
     pub id: ZoneId,
-    pub size_info: SizeInfo,
+    pub size: ZoneSize,
     pub kind: Kind,
     pub info: ZoneInfo,
     pub connections: Vec<Connection>,
@@ -42,11 +46,18 @@ pub struct Zone {
     pub tile_route: Vec<UVec2>,
     pub path: ZonePath,
     pub rooms: Vec<Room>,
-    pub rng: Rng, // FIXME the rpg world should own the rng
 }
 
 impl Zone {
-    pub fn new(id: ZoneId, seed: u64, size_info: SizeInfo, kind: Kind, path: ZonePath) -> Self {
+    pub fn new(
+        id: ZoneId,
+        seed: u64,
+        size: ZoneSize,
+        kind: Kind,
+        path: ZonePath,
+        metadata: &Metadata,
+        rng: &mut Rng,
+    ) -> Self {
         let mut room_route = vec![];
         let mut tile_route = vec![];
 
@@ -56,7 +67,7 @@ impl Zone {
                 ((position.y).floor() as u32).clamp(0, 31),
             );
 
-            let room_position = tile_position / size_info.room_size.x;
+            let room_position = tile_position / metadata.zone.size_info.room.x;
 
             //println!("position {position} {x} {y} {i_position} to route");
             if !room_route.iter().any(|v| *v == room_position) {
@@ -113,7 +124,7 @@ impl Zone {
             }
         }*/
 
-        let room_size_vec = size_info.extent;
+        let room_size_vec = size.extent;
 
         let rooms = Vec::with_capacity((room_size_vec.x * room_size_vec.y) as usize);
 
@@ -127,19 +138,14 @@ impl Zone {
         ];
 
         let info = match kind {
-            Kind::OverworldTown => ZoneInfo::OverworldTown(TownInfo {
-                spawn_position: Vec3::ZERO,
-            }),
-            Kind::UnderworldTown => ZoneInfo::OverworldTown(TownInfo {
-                spawn_position: Vec3::ZERO,
-            }),
             Kind::Overworld => ZoneInfo::Overworld(OverworldInfo {}),
             Kind::Underworld => ZoneInfo::Underworld(UnderworldInfo {}),
+            _ => panic!("expected a non-town zone kind"),
         };
 
         Self {
             id,
-            size_info,
+            size,
             kind,
             info,
             connections,
@@ -147,23 +153,47 @@ impl Zone {
             tile_route,
             path,
             rooms,
-            rng: Rng::with_seed(seed),
         }
     }
 
-    pub fn create_rooms(&mut self) {
-        let room_size_vec = self.size_info.extent;
+    pub fn create_town(id: ZoneId, seed: u64, metadata: &Metadata) -> Self {
+        let town_meta = &metadata.zone.towns[&id];
+        let zone_info = match town_meta.kind {
+            Kind::OverworldTown => ZoneInfo::OverworldTown(TownInfo {
+                spawn_position: town_meta.spawn_position,
+            }),
+            Kind::UnderworldTown => ZoneInfo::UnderworldTown(TownInfo {
+                spawn_position: town_meta.spawn_position,
+            }),
+            _ => panic!("town expected"),
+        };
+
+        Self {
+            id,
+            size: ZoneSize::new(town_meta.size),
+            kind: town_meta.kind,
+            info: zone_info,
+            connections: vec![],
+            room_route: vec![],
+            tile_route: vec![],
+            path: ZonePath(VecDeque::new()),
+            rooms: vec![],
+        }
+    }
+
+    pub fn create_rooms(&mut self, metadata: &Metadata) {
+        let room_size_vec = self.size.extent;
         for y in 0..room_size_vec.y {
             for x in 0..room_size_vec.x {
-                let room = Room::new(self, uvec2(x, y), 2);
+                let room = Room::new(metadata, self, uvec2(x, y), 2);
                 self.rooms.push(room);
             }
         }
     }
 
-    pub fn get_tile_from_position(&mut self, position: &UVec2) -> &Tile {
-        let room_position = *position / self.size_info.tile_size;
-        let room_inner = *position % 4;
+    pub fn get_tile_from_position(&mut self, metadata: &Metadata, position: &UVec2) -> &Tile {
+        let room_position = *position / metadata.zone.size_info.tile;
+        let room_inner = *position % metadata.zone.size_info.room;
 
         //println!("{position} room_pos {room_position} room_inner {room_inner}");
         let room = self
@@ -175,9 +205,13 @@ impl Zone {
         &room.tiles[(room_inner.y * 4 + room_inner.x) as usize]
     }
 
-    pub fn get_tile_from_position_mut(&mut self, position: &UVec2) -> &mut Tile {
-        let room_position = *position / self.size_info.tile_size;
-        let room_inner = *position % 4;
+    pub fn get_tile_from_position_mut(
+        &mut self,
+        metadata: &Metadata,
+        position: &UVec2,
+    ) -> &mut Tile {
+        let room_position = *position / metadata.zone.size_info.tile;
+        let room_inner = *position % metadata.zone.size_info.room;
 
         //println!("{position} room_pos {room_position} room_inner {room_inner}");
         let room = self
@@ -189,8 +223,8 @@ impl Zone {
         &mut room.tiles[(room_inner.y * 4 + room_inner.x) as usize]
     }
 
-    pub fn make_tile_barriers(&mut self, next_edge: Edge, position: &UVec2) {
-        let tile = self.get_tile_from_position_mut(position);
+    pub fn make_tile_barriers(&mut self, metadata: &Metadata, next_edge: Edge, position: &UVec2) {
+        let tile = self.get_tile_from_position_mut(metadata, position);
         match next_edge {
             Edge::Top => {
                 let bottom = tile.get_edge_mut(Edge::Bottom);
@@ -258,7 +292,7 @@ impl Zone {
         }
     }
 
-    pub fn set_tile_path(&mut self) {
+    pub fn set_tile_path(&mut self, metadata: &Metadata) {
         let len = self.tile_route.len();
 
         let mut tile_route = self.tile_route.clone();
@@ -267,13 +301,13 @@ impl Zone {
         while let Some((index, position)) = path_iter.next() {
             if index == 0 {
                 if let ConnectionKind::Edge(edge) = self.connections[0].kind {
-                    let tile = self.get_tile_from_position_mut(position);
+                    let tile = self.get_tile_from_position_mut(metadata, position);
                     tile.set_edge_flag(edge, EdgeFlags::Open);
                 }
             } else if index == len - 1 {
                 let edge = match self.connections[1].kind {
                     ConnectionKind::Edge(edge) => {
-                        let tile = self.get_tile_from_position_mut(position);
+                        let tile = self.get_tile_from_position_mut(metadata, position);
                         let tile_edge = tile.get_edge_mut(edge);
 
                         if !tile_edge.edge_flags_empty() {
@@ -289,7 +323,7 @@ impl Zone {
                     }
                 };
 
-                self.make_tile_barriers(edge, position);
+                self.make_tile_barriers(metadata, edge, position);
                 continue;
             }
 
@@ -311,12 +345,12 @@ impl Zone {
                     continue; //Edge::Top
                 };
 
-                let next_tile = self.get_tile_from_position_mut(next.1);
+                let next_tile = self.get_tile_from_position_mut(metadata, next.1);
                 next_tile.set_edge_flag(next_edge.opposite(), EdgeFlags::Open);
 
-                let tile = self.get_tile_from_position_mut(position);
+                let tile = self.get_tile_from_position_mut(metadata, position);
                 tile.set_edge_flag(next_edge, EdgeFlags::Open);
-                self.make_tile_barriers(next_edge, position);
+                self.make_tile_barriers(metadata, next_edge, position);
             }
             // println!("pos {position}");
         }
@@ -324,20 +358,20 @@ impl Zone {
         self.tile_route = tile_route;
     }
 
-    pub fn generate_position(&mut self, room: &Room) -> Vec3 {
-        let room_world_size = self.size_info.room_world_size();
-        let world_offset = self.size_info.zone_world_offset();
+    pub fn generate_position(&self, rng: &mut Rng, metadata: &Metadata, room: &Room) -> Vec3 {
+        let room_world_size = self.size.room_world_size(metadata);
+        let world_offset = self.size.zone_world_offset(metadata);
         let world_pos = world_offset + (room.position * room_world_size).as_vec2();
 
         Vec3::new(
-            world_pos.x + self.rng.u32(1..(room_world_size.x - 1)) as f32,
+            world_pos.x + rng.u32(1..(room_world_size.x - 1)) as f32,
             0.,
-            world_pos.y + self.rng.u32(1..(room_world_size.y - 1)) as f32,
+            world_pos.y + rng.u32(1..(room_world_size.y - 1)) as f32,
         )
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Ser, De, Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Kind {
     OverworldTown,
     UnderworldTown,
@@ -365,32 +399,28 @@ pub enum ConnectionKind {
 }
 
 #[derive(Default, Debug)]
-pub struct SizeInfo {
+pub struct ZoneSize {
     pub extent: UVec2,
     pub half_extent: UVec2,
-    pub room_size: UVec2,
-    pub tile_size: UVec2,
 }
 
-impl SizeInfo {
-    pub fn new(extent: UVec2, room_size: UVec2, tile_size: UVec2) -> Self {
+impl ZoneSize {
+    pub fn new(extent: UVec2) -> Self {
         Self {
             extent,
             half_extent: extent / 2,
-            room_size,
-            tile_size,
         }
     }
 
-    pub fn zone_world_offset(&self) -> Vec2 {
-        -(self.half_extent.as_vec2()) * self.room_world_size().as_vec2()
+    pub fn zone_world_offset(&self, metadata: &Metadata) -> Vec2 {
+        -(self.half_extent.as_vec2()) * self.room_world_size(metadata).as_vec2()
     }
 
-    pub fn zone_world_size(&self) -> UVec2 {
-        self.extent * self.room_world_size()
+    pub fn zone_world_size(&self, metadata: &Metadata) -> UVec2 {
+        self.extent * self.room_world_size(metadata)
     }
 
-    pub fn room_world_size(&self) -> UVec2 {
-        self.room_size * self.tile_size
+    pub fn room_world_size(&self, metadata: &Metadata) -> UVec2 {
+        metadata.zone.size_info.room * metadata.zone.size_info.tile
     }
 }

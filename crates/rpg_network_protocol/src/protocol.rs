@@ -1,6 +1,5 @@
-use bevy::math::Vec3;
+use glam::Vec3;
 
-use lightyear::prelude::*;
 use serde_derive::{Deserialize, Serialize};
 
 // TODO split these up into multiple protocols once the basic design is settled
@@ -22,42 +21,91 @@ use rpg_core::{
 use rpg_lobby::lobby::{Lobby, LobbyId, LobbyMessage};
 use rpg_world::zone::ZoneId;
 
+use bevy_ecs::event::Event;
+use renet::{ChannelConfig, SendType};
+
+use std::time::Duration;
+
 // Channels
 
-#[derive(Channel)]
-pub struct Channel1;
+pub enum ClientChannel {
+    Message,
+}
+pub enum ServerChannel {
+    Message,
+}
+
+impl From<ClientChannel> for u8 {
+    fn from(channel_id: ClientChannel) -> Self {
+        match channel_id {
+            ClientChannel::Message => 0,
+        }
+    }
+}
+
+impl ClientChannel {
+    pub fn channels_config() -> Vec<ChannelConfig> {
+        vec![ChannelConfig {
+            channel_id: Self::Message.into(),
+            max_memory_usage_bytes: 5 * 1024 * 1024,
+            send_type: SendType::ReliableOrdered {
+                resend_time: Duration::ZERO,
+            },
+        }]
+    }
+}
+
+impl From<ServerChannel> for u8 {
+    fn from(channel_id: ServerChannel) -> Self {
+        match channel_id {
+            ServerChannel::Message => 0,
+        }
+    }
+}
+
+impl ServerChannel {
+    pub fn channels_config() -> Vec<ChannelConfig> {
+        vec![ChannelConfig {
+            channel_id: Self::Message.into(),
+            max_memory_usage_bytes: 10 * 1024 * 1024,
+            send_type: SendType::ReliableOrdered {
+                resend_time: Duration::from_millis(200),
+            },
+        }]
+    }
+}
 
 // Messages
 
 // Client -> Server
 
 // Account Messages
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSConnectPlayer;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSConnectAdmin;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSLoadAccount {
     pub name: String,
     pub password: String,
 }
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSLoadAdminAccount {
     pub name: String,
     pub password: String,
 }
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSCreateAccount {
     pub name: String,
     pub email: String,
     pub password: String,
 }
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSCreateCharacter {
     pub name: String,
     pub slot: CharacterSlot,
@@ -65,216 +113,216 @@ pub struct CSCreateCharacter {
     pub game_mode: GameMode,
 }
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSLobbyCreate {
     pub game_mode: GameMode,
     pub name: String,
 }
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSLobbyJoin(pub LobbyId);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSLobbyLeave;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSLobbyMessage {
     pub id: LobbyId,
     pub message: String,
 }
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSCreateGame {
     pub game_mode: GameMode,
     pub slot: CharacterSlot,
 }
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSJoinGame {
     pub game_mode: GameMode,
     pub slot: CharacterSlot,
 }
 
 // Chat Messages
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSChatJoin;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSChatLeave;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSChatChannelMessage(pub ChatMessage);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSChatChannelCreate(pub String);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSChatChannelJoin(pub String);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSChatChannelLeave(pub ChannelId);
 
 // Game Messages
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSClientReady;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSPlayerLeave;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSPlayerJoin;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSJoinZone(pub ZoneId);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSMovePlayer;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSMovePlayerEnd;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSRotPlayer(pub Vec3);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSSkillUseDirect(pub SkillId);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSSkillUseTargeted {
     pub skill_id: SkillId,
     pub target: Vec3,
 }
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSItemDrop(pub Uid);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSItemPickup(pub Uid);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CSPlayerRevive;
 
 // Server -> Client
 
 // Account Messages
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCHello(pub ClientId);
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCHello;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCCreateAccountSuccess(pub Account);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCCreateAccountError;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCLoginAccountSuccess(pub Account);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCLoginAccountError;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCCreateCharacterSuccess(pub CharacterRecord);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCCreateCharacterError;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCAccount(pub Account);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCAccountInfo(pub AccountInfo);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCCharacter(pub CharacterRecord);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCCharacterInfo(pub CharacterInfo);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCLobbyCreateSuccess(pub Lobby);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCLobbyCreateError;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCLobbyJoinSuccess(pub Lobby);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCLobbyJoinError;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCLobbyLeaveSuccess;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCLobbyLeaveError;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCLobbyMessage(pub LobbyMessage);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCLobbyMessageSuccess;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCLobbyMessageError;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCGameCreateSuccess(pub GameMode);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCGameCreateError;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCGameJoinSuccess(pub GameMode);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCGameJoinError;
 
 // Chat Messages
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCChatJoinSuccess(pub u64);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCChatJoinError;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCChatLeave;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCChatChannelJoinSuccess {
     pub recent_messages: Vec<ChatMessage>,
 }
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCChatChannelJoinError;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCChatChannelLeave;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCChatChannelMessageSuccess;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCChatChannelMessageError;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCChatMessage(pub ChatMessage);
 
 // Game Messages
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCPlayerJoinSuccess;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCPlayerJoinError;
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCPlayerLeave(pub Uid);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCPlayerSpawn {
     pub position: Vec3,
 }
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCPlayerRevive {
     pub position: Vec3,
     pub hp: u32,
@@ -283,65 +331,65 @@ pub struct SCPlayerRevive {
     pub deaths: u32,
 }
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCMovePlayer(pub Vec3);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCMovePlayerEnd(pub Vec3);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCRotPlayer(pub Vec3);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCMoveUnit {
     pub uid: Uid,
     pub position: Vec3,
 }
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCMoveUnitEnd {
     pub uid: Uid,
     pub position: Vec3,
 }
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCRotUnit {
     pub uid: Uid,
     pub direction: Vec3,
 }
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCStatUpdate(pub StatUpdate);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCStatUpdates(pub Vec<StatUpdate>);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCSpawnSkill {
     pub id: SkillId,
     pub uid: Uid,
     pub target: SkillTarget,
 }
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCDespawnSkill(pub Uid);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCSpawnItem {
     pub position: Vec3,
     pub items: ItemDrops,
 }
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCSpawnItems {
     pub position: Vec3,
     pub items: ItemDrops,
 }
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCDespawnItem(pub Uid);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCSpawnHero {
     pub position: Vec3,
     pub uid: Uid,
@@ -353,7 +401,7 @@ pub struct SCSpawnHero {
     pub skill_slots: Vec<SkillSlot>,
 }
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCSpawnVillain {
     pub position: Vec3,
     pub direction: Vec3,
@@ -364,43 +412,57 @@ pub struct SCSpawnVillain {
     pub skill_slots: Vec<SkillSlot>,
 }
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCHeroDeath(pub Uid);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCVillainDeath(pub Uid);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCHeroRevive(pub Vec3);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCDespawnCorpse(pub Uid);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCCombatResult(pub CombatResult);
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCUnitAnim {
     pub uid: Uid,
     pub anim: u8,
 }
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCUnitAttack {
     pub uid: Uid,
     pub skill_id: SkillId,
 }
 
-#[derive(Message, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCDamage {
     pub uid: Uid,
     pub damage: DamageResult,
 }
 
-#[message_protocol(protocol = "RpgProtocol")]
-pub enum Messages {
-    // Server -> Client
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCItemPickup(pub Uid);
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCItemDrop(pub Uid);
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCItemStore(pub Uid);
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCZoneLoad(pub ZoneId);
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SCZoneUnload(pub ZoneId);
+
+/// Server -> Client
+#[derive(Event, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub enum ServerMessage {
     // Account Messages
     SCHello(SCHello),
     SCCreateAccountSuccess(SCCreateAccountSuccess),
@@ -467,9 +529,16 @@ pub enum Messages {
     SCDamage(SCDamage),
     SCUnitAnim(SCUnitAnim),
     SCUnitAttack(SCUnitAttack),
+    SCItemPickup(SCItemPickup),
+    SCItemDrop(SCItemDrop),
+    SCItemStore(SCItemStore),
+    SCZoneLoad(SCZoneLoad),
+    SCZoneUnload(SCZoneUnload),
+}
 
-    // Client -> Server
-
+/// Client -> Server
+#[derive(Event, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub enum ClientMessage {
     // Account Messages
     CSConnectPlayer(CSConnectPlayer),
     CSConnectAdmin(CSConnectAdmin),
@@ -505,23 +574,4 @@ pub enum Messages {
     CSMovePlayerEnd(CSMovePlayerEnd),
     CSSkillUseDirect(CSSkillUseDirect),
     CSSkillUseTargeted(CSSkillUseTargeted),
-}
-
-// Protocol
-
-protocolize! {
-    Self = RpgProtocol,
-    Message = Messages,
-}
-
-impl RpgProtocol {
-    pub fn new() -> Self {
-        let mut protocol = RpgProtocol::default();
-        protocol.add_channel::<Channel1>(ChannelSettings {
-            mode: ChannelMode::OrderedReliable(ReliableSettings::default()),
-            direction: ChannelDirection::Bidirectional,
-        });
-
-        protocol
-    }
 }

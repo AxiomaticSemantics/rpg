@@ -26,6 +26,8 @@ use bevy::{
     utils::default,
 };
 
+use bevy_renet::renet::RenetClient;
+
 #[derive(Component)]
 pub struct CreateMode(pub GameMode);
 
@@ -299,7 +301,7 @@ pub fn select_class(
 }
 
 pub fn create_button(
-    mut net_client: ResMut<Client>,
+    mut net_client: ResMut<RenetClient>,
     selected_class: Res<SelectedClass>,
     selected_character: Res<SelectedCharacter>,
     interaction_q: Query<&Interaction, (Changed<Interaction>, With<CreateButton>)>,
@@ -331,15 +333,16 @@ pub fn create_button(
 
         let game_mode = game_mode_q.single();
 
-        let create_msg = CSCreateCharacter {
+        player_name_text.sections[0].value.clear();
+
+        let message = bincode::serialize(&ClientMessage::CSCreateCharacter(CSCreateCharacter {
             name: player_name_text.sections[0].value.clone(),
             class: *selected_class,
             game_mode: game_mode.0,
             slot: selected_character.slot,
-        };
+        }))
+        .unwrap();
 
-        player_name_text.sections[0].value.clear();
-
-        net_client.send_message::<Channel1, _>(create_msg).unwrap();
+        net_client.send_message(ClientChannel::Message, message);
     }
 }

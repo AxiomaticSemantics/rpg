@@ -18,8 +18,6 @@ use rpg_util::{
 
 use util::{cleanup::CleanupStrategy, math::AabbComponent, random::SharedRng};
 
-use lightyear::shared::NetworkTarget;
-
 use bevy::{
     ecs::{
         component::Component,
@@ -185,20 +183,22 @@ pub(crate) fn remote_spawn(
                 .context
                 .get_client_from_account_id(account.0.info.id)
                 .unwrap()
-                .id;
+                .client_id;
 
-            net_params.server.send_message_to_target::<Channel1, _>(
-                SCSpawnVillain {
-                    position: transform.translation,
-                    direction: *transform.forward(),
-                    info: villain_info,
-                    level: unit.level,
-                    uid: unit.uid,
-                    skills: skills.0.clone(),
-                    skill_slots: skill_slots.slots.clone(),
-                },
-                NetworkTarget::Only(vec![client_id]),
-            );
+            let message = bincode::serialize(&ServerMessage::SCSpawnVillain(SCSpawnVillain {
+                position: transform.translation,
+                direction: *transform.forward(),
+                info: villain_info,
+                level: unit.level,
+                uid: unit.uid,
+                skills: skills.0.clone(),
+                skill_slots: skill_slots.slots.clone(),
+            }))
+            .unwrap();
+
+            net_params
+                .server
+                .send_message(client_id, ServerChannel::Message, message);
         }
     }
 }

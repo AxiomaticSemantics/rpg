@@ -10,6 +10,7 @@ use super::{
     item::{self, CursorItem},
     metadata::MetadataResources,
     passive_tree, state_saver, ui, world,
+    world::{LoadZone, RpgWorld},
 };
 
 use rpg_account::character_statistics::CharacterStatistics;
@@ -31,6 +32,7 @@ use bevy::{
     audio::{AudioSink, PlaybackSettings},
     core_pipeline::{bloom::BloomSettings, core_3d::Camera3dBundle, tonemapping::Tonemapping},
     ecs::{
+        change_detection::DetectChanges,
         component::Component,
         entity::Entity,
         query::{With, Without},
@@ -49,6 +51,8 @@ use bevy::{
     },
     utils::default,
 };
+
+use bevy_renet::renet::RenetClient;
 
 #[derive(Clone, Copy, Component)]
 pub struct GameSessionCleanup;
@@ -116,11 +120,13 @@ impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         debug!("initializing");
 
-        app.init_resource::<Controls>()
+        app.add_event::<LoadZone>()
+            .init_resource::<Controls>()
             .init_resource::<CursorPosition>()
             .init_resource::<CursorItem>()
             .init_resource::<GroundItemDrops>()
             .init_resource::<GameState>()
+            .init_resource::<world::RpgWorld>()
             .insert_resource(SharedRng(Rng::with_seed(1234)))
             .insert_resource(DirectionalLightShadowMap { size: 2048 })
             .insert_resource(AmbientLight {
@@ -131,20 +137,26 @@ impl Plugin for GamePlugin {
             .add_systems(
                 OnEnter(AppState::GameSpawn),
                 (
-                    (setup, setup_audio, world::zone::setup, environment::setup).chain(),
-                    send_client_ready,
-                    (
-                        ui::hud::setup,
-                        ui::hero::setup,
-                        ui::inventory::setup,
-                        ui::menu::setup,
-                        passive_tree::setup,
-                        passive_tree::setup_ui,
-                    )
-                        .after(environment::setup)
-                        .before(send_client_ready),
+                    (setup, setup_audio).chain(),
+                    ui::hud::setup,
+                    ui::hero::setup,
+                    ui::inventory::setup,
+                    ui::menu::setup,
+                    passive_tree::setup,
+                    passive_tree::setup_ui,
                 ),
             )
+            .add_systems(
+                Update,
+                (
+                    world::zone::load_zone,
+                    environment::prepare_environment,
+                    transition_game_join,
+                )
+                    .chain()
+                    .run_if(in_state(AppState::GameSpawn)),
+            )
+            .add_systems(OnEnter(AppState::GameJoin), send_client_ready)
             // Game
             /*.add_systems(
                 First,
@@ -268,9 +280,16 @@ pub(crate) fn background_audio(
     }
 }
 
-fn send_client_ready(mut net_client: ResMut<Client>) {
+fn transition_game_join(mut state: ResMut<NextState<AppState>>, rpg_world: Res<RpgWorld>) {
+    if rpg_world.active_zone.is_some() && rpg_world.env_loaded {
+        state.set(AppState::GameJoin);
+    }
+}
+
+fn send_client_ready(mut net_client: ResMut<RenetClient>, rpg_world: Res<RpgWorld>) {
     info!("sending client ready message");
-    net_client.send_message::<Channel1, _>(CSClientReady);
+    let message = bincode::serialize(&ClientMessage::CSClientReady(CSClientReady)).unwrap();
+    net_client.send_message(ClientChannel::Message, message);
 }
 
 fn is_loading(game_state: Res<GameState>) -> bool {

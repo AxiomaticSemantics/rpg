@@ -10,8 +10,6 @@ use rpg_core::game_mode::GameMode;
 use rpg_lobby::lobby::{LobbyId, LobbyMessage, LobbyPlayer};
 use rpg_network_protocol::protocol::*;
 
-use lightyear::client::events::MessageEvent;
-
 pub(crate) struct LobbyInfo {
     pub(crate) id: LobbyId,
     pub(crate) name: String,
@@ -25,9 +23,13 @@ pub(crate) struct Lobby(pub(crate) Option<LobbyInfo>);
 
 pub(crate) fn receive_join_success(
     mut lobby: ResMut<Lobby>,
-    mut join_events: EventReader<MessageEvent<SCLobbyJoinSuccess>>,
+    mut join_events: EventReader<ServerMessage>,
 ) {
     for event in join_events.read() {
+        let ServerMessage::SCLobbyJoinSuccess(msg) = event else {
+            continue;
+        };
+
         if let Some(_) = &mut lobby.0 {
             info!("received join lobby while already in lobby?");
             join_events.clear();
@@ -36,31 +38,35 @@ pub(crate) fn receive_join_success(
 
         info!("lobby join success");
 
-        let join_msg = event.message();
         lobby.0 = Some(LobbyInfo {
-            id: join_msg.0.id,
-            name: join_msg.0.name.clone(),
-            game_mode: join_msg.0.game_mode,
-            players: join_msg.0.players.clone(),
-            messages: join_msg.0.messages.clone(),
+            id: msg.0.id,
+            name: msg.0.name.clone(),
+            game_mode: msg.0.game_mode,
+            players: msg.0.players.clone(),
+            messages: msg.0.messages.clone(),
         });
-
-        join_events.clear();
-        return;
     }
 }
 
-pub(crate) fn receive_join_error(mut join_events: EventReader<MessageEvent<SCLobbyJoinError>>) {
-    for _ in join_events.read() {
+pub(crate) fn receive_join_error(mut join_events: EventReader<ServerMessage>) {
+    for event in join_events.read() {
+        let ServerMessage::SCLobbyJoinError(msg) = event else {
+            continue;
+        };
+
         info!("lobby join error");
     }
 }
 
 pub(crate) fn receive_create_success(
     mut lobby: ResMut<Lobby>,
-    mut create_events: EventReader<MessageEvent<SCLobbyCreateSuccess>>,
+    mut create_events: EventReader<ServerMessage>,
 ) {
     for event in create_events.read() {
+        let ServerMessage::SCLobbyCreateSuccess(msg) = event else {
+            continue;
+        };
+
         if let Some(_) = &mut lobby.0 {
             info!("received create lobby while already in lobby?");
 
@@ -68,49 +74,52 @@ pub(crate) fn receive_create_success(
             return;
         }
 
-        let create_msg = event.message();
-
         info!("lobby create success");
 
         lobby.0 = Some(LobbyInfo {
-            id: create_msg.0.id,
-            name: create_msg.0.name.clone(),
-            game_mode: create_msg.0.game_mode,
-            players: create_msg.0.players.clone(),
+            id: msg.0.id,
+            name: msg.0.name.clone(),
+            game_mode: msg.0.game_mode,
+            players: msg.0.players.clone(),
             messages: vec![],
         });
-
-        create_events.clear();
-        return;
     }
 }
 
-pub(crate) fn receive_create_error(
-    mut create_events: EventReader<MessageEvent<SCLobbyCreateError>>,
-) {
-    for _ in create_events.read() {
+pub(crate) fn receive_create_error(mut create_events: EventReader<ServerMessage>) {
+    for event in create_events.read() {
+        let ServerMessage::SCLobbyCreateError(msg) = event else {
+            continue;
+        };
+
         info!("lobby create error");
     }
 }
 
 pub(crate) fn receive_leave_success(
     mut lobby: ResMut<Lobby>,
-    mut leave_events: EventReader<MessageEvent<SCLobbyLeaveSuccess>>,
+    mut leave_events: EventReader<ServerMessage>,
 ) {
-    for _ in leave_events.read() {
+    for event in leave_events.read() {
+        let ServerMessage::SCLobbyLeaveSuccess(msg) = event else {
+            continue;
+        };
+
         info!("lobby leave");
 
         lobby.0 = None;
-        leave_events.clear();
-        return;
     }
 }
 
 pub(crate) fn receive_leave_error(
     mut lobby: ResMut<Lobby>,
-    mut leave_events: EventReader<MessageEvent<SCLobbyLeaveError>>,
+    mut leave_events: EventReader<ServerMessage>,
 ) {
-    for _ in leave_events.read() {
+    for event in leave_events.read() {
+        let ServerMessage::SCLobbyLeaveError(msg) = event else {
+            continue;
+        };
+
         lobby.0 = None;
         info!("lobby leave error");
     }
@@ -118,24 +127,25 @@ pub(crate) fn receive_leave_error(
 
 pub(crate) fn receive_lobby_message(
     mut lobby: ResMut<Lobby>,
-    mut message_events: EventReader<MessageEvent<SCLobbyMessage>>,
+    mut message_events: EventReader<ServerMessage>,
 ) {
     for event in message_events.read() {
-        let lobby_message = event.message();
+        let ServerMessage::SCLobbyMessage(msg) = event else {
+            continue;
+        };
 
         let Some(lobby) = &mut lobby.0 else {
             info!("received lobby message while not in a lobby");
-            message_events.clear();
             return;
         };
 
-        info!("lobby message: {lobby_message:?}");
+        info!("lobby message: {msg:?}");
 
         lobby.messages.push(LobbyMessage {
-            id: lobby_message.0.id,
-            message: lobby_message.0.message.clone(),
-            sender_id: lobby_message.0.sender_id,
-            sender: lobby_message.0.sender.clone(),
+            id: msg.0.id,
+            message: msg.0.message.clone(),
+            sender_id: msg.0.sender_id,
+            sender: msg.0.sender.clone(),
         });
     }
 }

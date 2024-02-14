@@ -2,6 +2,7 @@ use super::prop::metadata::Metadata as PropMetadata;
 use crate::assets::JsonAssets;
 
 use rpg_core::metadata::Metadata;
+use rpg_world::metadata::Metadata as WorldMetadata;
 use util::assets::json::JsonSource;
 
 use bevy::{
@@ -17,6 +18,7 @@ use serde_json::from_slice;
 #[derive(Resource)]
 pub(crate) struct MetadataResources {
     pub(crate) rpg: Metadata,
+    pub(crate) world: WorldMetadata,
     pub(crate) props: PropMetadata,
 }
 
@@ -32,6 +34,7 @@ impl FromWorld for MetadataResources {
         let stat = from_slice(json_sources.get(&json.stat).unwrap().0.as_slice()).unwrap();
         let modifier = from_slice(json_sources.get(&json.modifier).unwrap().0.as_slice()).unwrap();
 
+        let zone = from_slice(json_sources.get(&json.zone).unwrap().0.as_slice()).unwrap();
         // Passive tree metadata
         let passive_tree =
             from_slice(json_sources.get(&json.passive_tree).unwrap().0.as_slice()).unwrap();
@@ -46,6 +49,7 @@ impl FromWorld for MetadataResources {
                 modifier,
                 passive_tree,
             },
+            world: WorldMetadata { zone },
             //passive_tree: PassiveTreeMetadata { passive_tree },
             props: PropMetadata::default(),
         }

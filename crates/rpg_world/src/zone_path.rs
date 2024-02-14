@@ -5,6 +5,7 @@ use bevy_math::{
 
 use std::collections::VecDeque;
 
+#[derive(Debug)]
 pub struct ZonePath(pub VecDeque<CubicCurve<Vec2>>);
 
 impl ZonePath {

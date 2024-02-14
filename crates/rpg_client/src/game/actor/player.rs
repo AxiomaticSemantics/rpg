@@ -3,7 +3,7 @@ use crate::game::{
     environment::PlayerSpotLight,
     metadata::MetadataResources,
     plugin::GameCamera,
-    world::zone::Zone,
+    world::RpgWorld,
 };
 
 use rpg_core::skill::SkillInfo;
@@ -30,6 +30,8 @@ use bevy::{
     time::Time,
     transform::components::Transform,
 };
+
+use bevy_renet::renet::RenetClient;
 
 /// Marker to denote the local player in the client
 #[derive(Component)]
@@ -75,12 +77,18 @@ pub fn update_debug_lines(
     // debug!("nearest {nearest_distance:?} {nearest:?}");
 }
 
-pub fn update_debug_gizmos(zone: Res<Zone>, mut gizmos: Gizmos) {
+pub fn update_debug_gizmos(rpg_world: Res<RpgWorld>, mut gizmos: Gizmos) {
+    let Some(active_zone) = rpg_world.active_zone else {
+        return;
+    };
+
+    let path = &rpg_world.zones[&active_zone].path.0;
+    if path.is_empty() {
+        return;
+    }
+
     gizmos.linestrip(
-        zone.zone
-            .path
-            .0
-            .front()
+        path.front()
             .unwrap()
             .iter_positions(256)
             .map(|v| Vec3::new(-64. + v.x * 4. + 2., 0., -64. + v.y * 4. + 2.)),
@@ -89,7 +97,7 @@ pub fn update_debug_gizmos(zone: Res<Zone>, mut gizmos: Gizmos) {
 }
 
 pub fn input_actions(
-    mut net_client: ResMut<Client>,
+    mut net_client: ResMut<RenetClient>,
     controls: Res<Controls>,
     cursor_position: Res<CursorPosition>,
     metadata: Res<MetadataResources>,
@@ -106,21 +114,35 @@ pub fn input_actions(
 
         let skill_meta = &metadata.rpg.skill.skills[&skill_id];
 
-        let _ = match &skill_meta.info {
+        match &skill_meta.info {
             SkillInfo::Direct(_) => {
-                net_client.send_message::<Channel1, _>(CSSkillUseDirect(skill_id))
+                let message = bincode::serialize(&ClientMessage::CSSkillUseDirect(
+                    CSSkillUseDirect(skill_id),
+                ))
+                .unwrap();
+                net_client.send_message(ClientChannel::Message, message);
             }
             SkillInfo::Projectile(_) => {
-                net_client.send_message::<Channel1, _>(CSSkillUseTargeted {
-                    skill_id,
-                    target: cursor_position.ground,
-                })
+                let message =
+                    bincode::serialize(&ClientMessage::CSSkillUseTargeted(CSSkillUseTargeted {
+                        skill_id,
+                        target: cursor_position.ground,
+                    }))
+                    .unwrap();
+
+                net_client.send_message(ClientChannel::Message, message);
             }
-            SkillInfo::Area(_) => net_client.send_message::<Channel1, _>(CSSkillUseTargeted {
-                skill_id,
-                target: cursor_position.ground,
-            }),
-        };
+            SkillInfo::Area(_) => {
+                let message =
+                    bincode::serialize(&ClientMessage::CSSkillUseTargeted(CSSkillUseTargeted {
+                        skill_id,
+                        target: cursor_position.ground,
+                    }))
+                    .unwrap();
+
+                net_client.send_message(ClientChannel::Message, message);
+            }
+        }
 
         /*let (origin, target) =
             get_skill_origin(&metadata.rpg, transform, cursor_position.ground, skill_id);
@@ -144,10 +166,12 @@ pub fn input_actions(
 
     if controls.mouse_secondary.just_pressed || controls.gamepad_a.just_pressed {
         //actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
-        net_client.send_message::<Channel1, _>(CSMovePlayer);
+        let message = bincode::serialize(&ClientMessage::CSMovePlayer(CSMovePlayer)).unwrap();
+        net_client.send_message(ClientChannel::Message, message);
     } else if controls.mouse_secondary.just_released || controls.gamepad_a.just_released {
         //actions.request(Action::new(ActionData::MoveEnd, None, true));
-        net_client.send_message::<Channel1, _>(CSMovePlayerEnd);
+        let message = bincode::serialize(&ClientMessage::CSMovePlayerEnd(CSMovePlayerEnd)).unwrap();
+        net_client.send_message(ClientChannel::Message, message);
     }
 
     /*if controls.gamepad_axis_left != Vec2::ZERO {
