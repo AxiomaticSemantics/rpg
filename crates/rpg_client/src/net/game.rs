@@ -55,18 +55,13 @@ use rpg_util::{
 use audio_manager::plugin::AudioActions;
 use util::random::SharedRng;
 
-pub(crate) fn receive_player_join_success(
-    mut state: ResMut<NextState<AppState>>,
-    mut join_events: EventReader<ServerMessage>,
-) {
+pub(crate) fn receive_player_join_success(mut join_events: EventReader<ServerMessage>) {
     for event in join_events.read() {
         let ServerMessage::SCPlayerJoinSuccess(msg) = event else {
             continue;
         };
 
         info!("player joined game {msg:?}");
-
-        //state.set(AppState::GameSpawn);
 
         return;
     }
@@ -77,7 +72,7 @@ pub(crate) fn receive_player_join_error(
     mut join_events: EventReader<ServerMessage>,
 ) {
     for event in join_events.read() {
-        let ServerMessage::SCPlayerJoinError(msg) = event else {
+        let ServerMessage::SCPlayerJoinError(_) = event else {
             continue;
         };
 
@@ -472,7 +467,7 @@ pub(crate) fn receive_despawn_skill(
 
         for entity in &skill_q {
             // TODO
-            // commands.entity(despawn_msg.0);
+            //commands.entity(msg.0).despawn_recursive();
         }
     }
 }
@@ -577,7 +572,6 @@ pub(crate) fn receive_spawn_villain(
 }
 
 pub(crate) fn receive_combat_result(
-    metadata: Res<MetadataResources>,
     mut combat_reader: EventReader<ServerMessage>,
     mut player_q: Query<(&mut Unit, &mut AudioActions, &mut AnimationState), With<Player>>,
 ) {

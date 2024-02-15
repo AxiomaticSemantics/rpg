@@ -9,6 +9,7 @@ use bevy::{
         system::{Res, ResMut, Resource},
         world::{FromWorld, World},
     },
+    log::info,
     prelude::{Deref, DerefMut},
     time::{Fixed, Time, Timer, TimerMode},
 };
@@ -43,9 +44,6 @@ impl Plugin for NetworkClientPlugin {
     fn build(&self, app: &mut App) {
         let server_addr = SocketAddr::new(self.config.server_addr.into(), self.config.server_port);
 
-        app.add_plugins(NetcodeClientPlugin)
-            .add_plugins(RenetClientPlugin);
-
         let connection_config = ConnectionConfig {
             available_bytes_per_tick: 1024 * 1024,
             client_channels_config: ClientChannel::channels_config(),
@@ -54,8 +52,12 @@ impl Plugin for NetworkClientPlugin {
 
         let client = RenetClient::new(connection_config);
 
-        // FIXME
-        let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
+        info!("connecting to {server_addr:?}");
+        let socket = UdpSocket::bind(SocketAddr::new(
+            Ipv4Addr::UNSPECIFIED.into(),
+            self.config.client_port,
+        ))
+        .unwrap();
         let current_time = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap();
@@ -70,6 +72,9 @@ impl Plugin for NetworkClientPlugin {
         let transport = NetcodeClientTransport::new(current_time, authentication, socket).unwrap();
 
         app.add_event::<ServerMessage>()
+            .add_plugins(NetcodeClientPlugin)
+            .add_plugins(RenetClientPlugin)
+            .add_event::<ServerMessage>()
             .insert_resource(client)
             .insert_resource(transport)
             .insert_resource(Time::<Fixed>::from_seconds(1.0 / 60.))
@@ -97,6 +102,8 @@ impl Plugin for NetworkClientPlugin {
                         (
                             lobby::receive_join_success,
                             lobby::receive_join_error,
+                            lobby::receive_leave_success,
+                            lobby::receive_leave_error,
                             lobby::receive_create_success,
                             lobby::receive_create_error,
                             lobby::receive_lobby_message,

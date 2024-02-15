@@ -94,7 +94,10 @@ fn main() -> Result<(), Error> {
             .init_resource::<LobbyManager>()
             .add_systems(Startup, chat::setup)
             .add_systems(Update, load_metadata.run_if(in_state(AppState::Loading)))
-            .add_plugins(NetworkServerPlugin { port: cli.port })
+            .add_plugins(NetworkServerPlugin {
+                addr: cli.addr,
+                port: cli.port,
+            })
             .add_plugins(GamePlugin)
             .run();
     });
