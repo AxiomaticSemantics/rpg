@@ -18,7 +18,11 @@ use bevy::{
 };
 
 use rpg_account::{account::AccountId, character::CharacterSlot};
-use rpg_core::{game_mode::GameMode, uid::Uid, villain::VillainId};
+use rpg_core::{
+    game_mode::GameMode,
+    uid::{NextInstanceUid, Uid},
+    villain::VillainId,
+};
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     item::GroundItemDrops,
@@ -51,6 +55,7 @@ pub(crate) struct PlayerIdInfo {
 pub(crate) struct GameState {
     pub(crate) players: Vec<PlayerIdInfo>,
     pub(crate) options: GameOptions,
+    pub(crate) next_instance_uid: NextInstanceUid,
 }
 
 #[derive(Default, Resource)]

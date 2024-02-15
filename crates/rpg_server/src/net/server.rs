@@ -45,12 +45,7 @@ impl Plugin for NetworkServerPlugin {
 
         let server = RenetServer::new(connection_config);
 
-        let listen_addr = if self.addr == Ipv4Addr::UNSPECIFIED {
-            SocketAddr::new(self.addr.into(), self.port)
-            //SocketAddr::new(Ipv4Addr::LOCALHOST.into(), self.port)
-        } else {
-            SocketAddr::new(self.addr.into(), self.port)
-        };
+        let listen_addr = SocketAddr::new(self.addr.into(), self.port);
         info!("listening on {listen_addr:?}");
 
         let socket = UdpSocket::bind(listen_addr).unwrap();

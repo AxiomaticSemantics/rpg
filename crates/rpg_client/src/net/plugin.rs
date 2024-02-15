@@ -14,7 +14,7 @@ use bevy::{
     time::{Fixed, Time, Timer, TimerMode},
 };
 
-use rpg_network_protocol::{protocol::*, KEY, PROTOCOL_ID};
+use rpg_network_protocol::{protocol::*, PROTOCOL_ID};
 
 use bevy_renet::{
     renet::{

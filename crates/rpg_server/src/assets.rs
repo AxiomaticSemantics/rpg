@@ -17,7 +17,6 @@ use util::assets::json::JsonSource;
 
 use serde_json::from_slice;
 
-// FIXME dedup
 #[derive(Resource)]
 pub struct JsonAssets {
     pub item: Handle<JsonSource>,

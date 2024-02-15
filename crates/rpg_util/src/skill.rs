@@ -17,7 +17,7 @@ use rpg_core::{
     damage::DamageDescriptor,
     metadata::Metadata,
     skill::{effect::*, OriginKind, Skill, SkillId, SkillInstance, SkillSlot, SkillTarget},
-    uid::Uid,
+    uid::{InstanceUid, Uid},
     unit::UnitKind,
 };
 
@@ -56,6 +56,7 @@ pub struct Skills(pub Vec<Skill>);
 
 #[derive(Debug, Component)]
 pub struct SkillUse {
+    pub instance_uid: InstanceUid,
     pub owner: Uid,
     pub id: SkillId,
     pub damage: DamageDescriptor,
@@ -66,6 +67,7 @@ pub struct SkillUse {
 
 impl SkillUse {
     pub fn new(
+        instance_uid: InstanceUid,
         owner: Uid,
         id: SkillId,
         damage: DamageDescriptor,
@@ -73,6 +75,7 @@ impl SkillUse {
         effects: Vec<EffectInstance>,
     ) -> Self {
         Self {
+            instance_uid,
             owner,
             id,
             damage,

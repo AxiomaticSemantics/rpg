@@ -10,7 +10,7 @@ use rpg_core::{
         skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData, ProjectileInstance,
         ProjectileShape, SkillId, SkillInfo, SkillInstance, SkillTarget, TimerDescriptor,
     },
-    uid::Uid,
+    uid::{InstanceUid, Uid},
 };
 use rpg_util::skill::*;
 
@@ -37,6 +37,7 @@ use bevy::{
 use std::borrow::Cow;
 
 pub(crate) fn prepare_skill(
+    instance_uid: InstanceUid,
     owner: Uid,
     target: &SkillTarget,
     renderables: &mut RenderResources,
@@ -227,6 +228,7 @@ pub(crate) fn prepare_skill(
     };
 
     let instance = SkillUse::new(
+        instance_uid,
         owner,
         skill_id,
         skill_info.base_damage.clone(),

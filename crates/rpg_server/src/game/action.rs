@@ -1,4 +1,8 @@
-use super::{plugin::AabbResources, skill, unit::can_move};
+use super::{
+    plugin::{AabbResources, GameState},
+    skill,
+    unit::can_move,
+};
 use crate::{account::AccountInstance, assets::MetadataResources, net::server::NetworkParamsRW};
 
 use rpg_core::{skill::SkillUseResult, unit::UnitKind};
@@ -14,7 +18,7 @@ use util::math::AabbComponent;
 use bevy::{
     ecs::{
         entity::Entity,
-        query::{Changed, With, Without},
+        query::{Changed, Without},
         system::{Commands, Query, Res, ResMut, Resource},
     },
     log::info,
@@ -32,6 +36,7 @@ pub(crate) struct MovingUnits(pub(crate) Vec<Entity>);
 pub(crate) fn action(
     mut commands: Commands,
     mut net_params: NetworkParamsRW,
+    mut game_state: ResMut<GameState>,
     mut moving_units: ResMut<MovingUnits>,
     time: Res<Time>,
     metadata: Res<MetadataResources>,
@@ -154,9 +159,19 @@ pub(crate) fn action(
                         state.session_stats.villain_attacks += 1;
                     }*/
 
+                    let instance_uid = game_state.next_instance_uid.get();
+
                     let (skill_aabb, skill_transform, skill_use, timer) = skill::prepare_skill(
-                        &attack, &mut aabbs, skill_info, skill, &unit, &transform,
+                        &attack,
+                        &mut aabbs,
+                        skill_info,
+                        skill,
+                        &unit,
+                        &transform,
+                        instance_uid,
                     );
+
+                    game_state.next_instance_uid.next();
 
                     // debug!("spawning skill");
                     skill::spawn_instance(
@@ -170,8 +185,9 @@ pub(crate) fn action(
                     );
 
                     let message = bincode::serialize(&ServerMessage::SCSpawnSkill(SCSpawnSkill {
+                        instance_uid,
                         id: skill.id,
-                        uid: unit.uid,
+                        owner_uid: unit.uid,
                         target: attack.skill_target.clone(),
                     }))
                     .unwrap();
