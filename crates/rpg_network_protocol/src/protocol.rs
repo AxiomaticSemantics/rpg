@@ -15,7 +15,7 @@ use rpg_core::{
     item::ItemDrops,
     skill::{Skill, SkillId, SkillSlot, SkillTarget},
     stat::StatUpdate,
-    uid::Uid,
+    uid::{InstanceUid, Uid},
     unit::VillainInfo,
 };
 use rpg_lobby::lobby::{Lobby, LobbyId, LobbyMessage};
@@ -366,13 +366,14 @@ pub struct SCStatUpdates(pub Vec<StatUpdate>);
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCSpawnSkill {
+    pub instance_uid: InstanceUid,
     pub id: SkillId,
-    pub uid: Uid,
+    pub owner_uid: Uid,
     pub target: SkillTarget,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct SCDespawnSkill(pub Uid);
+pub struct SCDespawnSkill(pub InstanceUid);
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct SCSpawnItem {

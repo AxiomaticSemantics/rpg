@@ -13,6 +13,7 @@ use rpg_core::{
         effect::*, skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData,
         ProjectileInstance, ProjectileShape, Skill, SkillInfo, SkillInstance, TimerDescriptor,
     },
+    uid::InstanceUid,
     unit::UnitKind,
 };
 use rpg_network_protocol::protocol::*;
@@ -97,6 +98,7 @@ pub(crate) fn prepare_skill(
     skill: &Skill,
     unit: &Unit,
     unit_transform: &Transform,
+    instance_uid: InstanceUid,
 ) -> (Aabb3d, Transform, SkillUse, Option<SkillTimer>) {
     //let target = get_target_info(unit_transform, skill_meta, attack_data);
 
@@ -222,6 +224,7 @@ pub(crate) fn prepare_skill(
     };
 
     let instance = SkillUse::new(
+        instance_uid,
         unit.uid,
         skill.id,
         skill.damage.clone(),
@@ -529,6 +532,7 @@ pub fn handle_contacts(
             _ => debug!("combat error"),
         }
 
+        // TODO this should probably be moved elsewhere
         if let Some(mut timer) = timer {
             if let SkillTimer::Tickable(ref mut tickable) = &mut *timer {
                 tickable.can_damage = false;

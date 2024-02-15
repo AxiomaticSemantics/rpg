@@ -31,6 +31,7 @@ pub(crate) struct ClientMessageEvent {
 }
 
 pub(crate) struct NetworkServerPlugin {
+    pub(crate) addr: Ipv4Addr,
     pub(crate) port: u16,
 }
 
@@ -44,8 +45,10 @@ impl Plugin for NetworkServerPlugin {
 
         let server = RenetServer::new(connection_config);
 
-        let public_addr = "127.0.0.1:4269".parse().unwrap();
-        let socket = UdpSocket::bind(public_addr).unwrap();
+        let listen_addr = SocketAddr::new(self.addr.into(), self.port);
+        info!("listening on {listen_addr:?}");
+
+        let socket = UdpSocket::bind(listen_addr).unwrap();
         let current_time: std::time::Duration = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap();
@@ -53,7 +56,7 @@ impl Plugin for NetworkServerPlugin {
             current_time,
             max_clients: 16,
             protocol_id: PROTOCOL_ID,
-            public_addresses: vec![public_addr],
+            public_addresses: vec![listen_addr],
             authentication: ServerAuthentication::Unsecure,
         };
 
@@ -156,6 +159,7 @@ fn handle_connections(
                 info!("sending hello to {client_id}");
             }
             ServerEvent::ClientDisconnected { client_id, reason } => {
+                info!("client disconnected: {reason:?}");
                 game_state.players.retain(|p| p.client_id != *client_id);
 
                 net_params.context.remove_client(&mut commands, *client_id);

@@ -50,7 +50,7 @@ pub(crate) fn receive_join_success(
 
 pub(crate) fn receive_join_error(mut join_events: EventReader<ServerMessage>) {
     for event in join_events.read() {
-        let ServerMessage::SCLobbyJoinError(msg) = event else {
+        let ServerMessage::SCLobbyJoinError(_) = event else {
             continue;
         };
 
@@ -88,7 +88,7 @@ pub(crate) fn receive_create_success(
 
 pub(crate) fn receive_create_error(mut create_events: EventReader<ServerMessage>) {
     for event in create_events.read() {
-        let ServerMessage::SCLobbyCreateError(msg) = event else {
+        let ServerMessage::SCLobbyCreateError(_) = event else {
             continue;
         };
 
@@ -101,7 +101,7 @@ pub(crate) fn receive_leave_success(
     mut leave_events: EventReader<ServerMessage>,
 ) {
     for event in leave_events.read() {
-        let ServerMessage::SCLobbyLeaveSuccess(msg) = event else {
+        let ServerMessage::SCLobbyLeaveSuccess(_) = event else {
             continue;
         };
 
@@ -116,7 +116,7 @@ pub(crate) fn receive_leave_error(
     mut leave_events: EventReader<ServerMessage>,
 ) {
     for event in leave_events.read() {
-        let ServerMessage::SCLobbyLeaveError(msg) = event else {
+        let ServerMessage::SCLobbyLeaveError(_) = event else {
             continue;
         };
 

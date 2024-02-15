@@ -9,13 +9,9 @@ use bevy::{
         system::Resource,
         world::{FromWorld, World},
     },
-    math::{bounding::Aabb3d, Vec2, Vec3},
+    math::{bounding::Aabb3d, primitives::Rectangle, Vec3},
     pbr::{AlphaMode, StandardMaterial},
-    render::{
-        color::Color,
-        mesh::{shape, Mesh},
-        texture::Image,
-    },
+    render::{color::Color, mesh::Mesh, texture::Image},
     sprite::ColorMaterial,
     utils::default,
 };
@@ -38,10 +34,10 @@ impl FromWorld for RenderResources {
         let mut meshes = HashMap::<Cow<'static, str>, Handle<Mesh>>::new();
 
         let mut mesh_assets = world.resource_mut::<Assets<Mesh>>();
-        let bar_mesh_outer = mesh_assets.add(shape::Quad::new(Vec2::new(0.792857, 0.102857)));
+        let bar_mesh_outer = mesh_assets.add(Rectangle::new(0.792857, 0.102857));
         meshes.insert(Cow::Owned("bar_outer".into()), bar_mesh_outer);
 
-        let bar_mesh_inner = mesh_assets.add(shape::Quad::new(Vec2::new(0.75, 0.06)));
+        let bar_mesh_inner = mesh_assets.add(Rectangle::new(0.75, 0.06));
         meshes.insert(Cow::Owned("bar_inner".into()), bar_mesh_inner);
 
         let mut aabbs = HashMap::new();

@@ -17,7 +17,7 @@ use rpg_core::{
     damage::DamageDescriptor,
     metadata::Metadata,
     skill::{effect::*, OriginKind, Skill, SkillId, SkillInstance, SkillSlot, SkillTarget},
-    uid::Uid,
+    uid::{InstanceUid, Uid},
     unit::UnitKind,
 };
 
@@ -56,6 +56,7 @@ pub struct Skills(pub Vec<Skill>);
 
 #[derive(Debug, Component)]
 pub struct SkillUse {
+    pub instance_uid: InstanceUid,
     pub owner: Uid,
     pub id: SkillId,
     pub damage: DamageDescriptor,
@@ -66,6 +67,7 @@ pub struct SkillUse {
 
 impl SkillUse {
     pub fn new(
+        instance_uid: InstanceUid,
         owner: Uid,
         id: SkillId,
         damage: DamageDescriptor,
@@ -73,6 +75,7 @@ impl SkillUse {
         effects: Vec<EffectInstance>,
     ) -> Self {
         Self {
+            instance_uid,
             owner,
             id,
             damage,
@@ -203,8 +206,7 @@ pub fn update_skill(
                 // The skill would have been destroyed if it was expired, advance it
                 if let Some(orbit) = &info.orbit {
                     let rotation = Quat::from_rotation_y(
-                        ((info.info.speed as f32 / 100.) * time.elapsed_seconds())
-                            % std::f32::consts::TAU,
+                        ((info.info.speed as f32 / 100.) * dt) % std::f32::consts::TAU,
                     );
 
                     let mut target =
@@ -215,7 +217,7 @@ pub fn update_skill(
                     };
 
                     target.translation += target.forward() * (orbit_info.range as f32 / 100.);
-                    target.rotate_x(dt.sin());
+                    target.rotate_x(5. * dt);
 
                     transform.translation = target.translation;
                     transform.rotate_y(dt.cos());

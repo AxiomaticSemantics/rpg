@@ -20,9 +20,9 @@ pub struct JsonAssets {
     pub stat: Handle<JsonSource>,
     pub modifier: Handle<JsonSource>,
     pub level: Handle<JsonSource>,
-    pub prop: Handle<JsonSource>,
     pub passive_tree: Handle<JsonSource>,
     pub zone: Handle<JsonSource>,
+    pub prop: Handle<JsonSource>,
 }
 
 impl FromWorld for JsonAssets {
@@ -36,9 +36,9 @@ impl FromWorld for JsonAssets {
             stat: server.load("metadata/stats.json"),
             modifier: server.load("metadata/modifiers.json"),
             level: server.load("metadata/level.json"),
-            prop: server.load("metadata/prop.json"),
             passive_tree: server.load("metadata/passive_tree.json"),
             zone: server.load("metadata/zone.json"),
+            prop: server.load("metadata/prop.json"),
         }
     }
 }

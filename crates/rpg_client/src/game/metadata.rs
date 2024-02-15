@@ -1,4 +1,4 @@
-use super::prop::metadata::Metadata as PropMetadata;
+use super::prop::metadata::PropMetadata;
 use crate::assets::JsonAssets;
 
 use rpg_core::metadata::Metadata;
@@ -19,7 +19,7 @@ use serde_json::from_slice;
 pub(crate) struct MetadataResources {
     pub(crate) rpg: Metadata,
     pub(crate) world: WorldMetadata,
-    pub(crate) props: PropMetadata,
+    pub(crate) prop: PropMetadata,
 }
 
 impl FromWorld for MetadataResources {
@@ -27,6 +27,7 @@ impl FromWorld for MetadataResources {
         let json_sources = world.resource::<Assets<JsonSource>>();
         let json = world.resource::<JsonAssets>();
 
+        // Game metadata
         let item = from_slice(json_sources.get(&json.item).unwrap().0.as_slice()).unwrap();
         let unit = from_slice(json_sources.get(&json.unit).unwrap().0.as_slice()).unwrap();
         let skill = from_slice(json_sources.get(&json.skill).unwrap().0.as_slice()).unwrap();
@@ -34,10 +35,14 @@ impl FromWorld for MetadataResources {
         let stat = from_slice(json_sources.get(&json.stat).unwrap().0.as_slice()).unwrap();
         let modifier = from_slice(json_sources.get(&json.modifier).unwrap().0.as_slice()).unwrap();
 
+        // World metadata
         let zone = from_slice(json_sources.get(&json.zone).unwrap().0.as_slice()).unwrap();
+
         // Passive tree metadata
         let passive_tree =
             from_slice(json_sources.get(&json.passive_tree).unwrap().0.as_slice()).unwrap();
+
+        let prop = from_slice(json_sources.get(&json.prop).unwrap().0.as_slice()).unwrap();
 
         Self {
             rpg: Metadata {
@@ -50,8 +55,7 @@ impl FromWorld for MetadataResources {
                 passive_tree,
             },
             world: WorldMetadata { zone },
-            //passive_tree: PassiveTreeMetadata { passive_tree },
-            props: PropMetadata::default(),
+            prop: PropMetadata { prop },
         }
     }
 }

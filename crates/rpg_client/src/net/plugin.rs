@@ -9,17 +9,17 @@ use bevy::{
         system::{Res, ResMut, Resource},
         world::{FromWorld, World},
     },
+    log::info,
     prelude::{Deref, DerefMut},
     time::{Fixed, Time, Timer, TimerMode},
 };
 
-use rpg_network_protocol::{protocol::*, KEY, PROTOCOL_ID};
+use rpg_network_protocol::{protocol::*, PROTOCOL_ID};
 
 use bevy_renet::{
-    client_connected,
     renet::{
         transport::{ClientAuthentication, NetcodeClientTransport},
-        ClientId, ConnectionConfig, RenetClient,
+        ConnectionConfig, RenetClient,
     },
     transport::NetcodeClientPlugin,
     RenetClientPlugin,
@@ -44,9 +44,6 @@ impl Plugin for NetworkClientPlugin {
     fn build(&self, app: &mut App) {
         let server_addr = SocketAddr::new(self.config.server_addr.into(), self.config.server_port);
 
-        app.add_plugins(NetcodeClientPlugin)
-            .add_plugins(RenetClientPlugin);
-
         let connection_config = ConnectionConfig {
             available_bytes_per_tick: 1024 * 1024,
             client_channels_config: ClientChannel::channels_config(),
@@ -55,8 +52,12 @@ impl Plugin for NetworkClientPlugin {
 
         let client = RenetClient::new(connection_config);
 
-        let server_addr = "127.0.0.1:4269".parse().unwrap();
-        let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
+        info!("connecting to {server_addr:?}");
+        let socket = UdpSocket::bind(SocketAddr::new(
+            Ipv4Addr::UNSPECIFIED.into(),
+            self.config.client_port,
+        ))
+        .unwrap();
         let current_time = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap();
@@ -71,6 +72,9 @@ impl Plugin for NetworkClientPlugin {
         let transport = NetcodeClientTransport::new(current_time, authentication, socket).unwrap();
 
         app.add_event::<ServerMessage>()
+            .add_plugins(NetcodeClientPlugin)
+            .add_plugins(RenetClientPlugin)
+            .add_event::<ServerMessage>()
             .insert_resource(client)
             .insert_resource(transport)
             .insert_resource(Time::<Fixed>::from_seconds(1.0 / 60.))
@@ -98,6 +102,8 @@ impl Plugin for NetworkClientPlugin {
                         (
                             lobby::receive_join_success,
                             lobby::receive_join_error,
+                            lobby::receive_leave_success,
+                            lobby::receive_leave_error,
                             lobby::receive_create_success,
                             lobby::receive_create_error,
                             lobby::receive_lobby_message,
@@ -192,9 +198,10 @@ fn sync_client(
     }
 }
 
+// FIXME renet automatically connects when a transport is created and a new transport must created in order to reconnect
 fn connect(
     time: Res<Time>,
-    mut net_client: ResMut<RenetClient>,
+    net_client: ResMut<RenetClient>,
     mut connection_timer: ResMut<ConnectionTimer>,
 ) {
     if net_client.is_connected() {
@@ -219,9 +226,7 @@ fn connect(
     }
 }
 
-fn receive_server_hello(
-    _net_client: Res<RenetClient>,
-    mut hello_events: EventReader<ServerMessage>,
-) {
+// FIXME Move or remove this
+fn receive_server_hello(_net_client: Res<RenetClient>, _hello_events: EventReader<ServerMessage>) {
     // TODO use this to disallow login/creation?
 }

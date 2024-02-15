@@ -4,7 +4,7 @@ use crate::{
     assets::MetadataResources,
     game::{
         item::GroundItem,
-        plugin::{AabbResources, GameState, PlayerIdInfo},
+        plugin::{AabbResources, GameState},
         skill::SkillOwner,
     },
     state::AppState,

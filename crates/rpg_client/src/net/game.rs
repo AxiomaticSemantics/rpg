@@ -55,18 +55,13 @@ use rpg_util::{
 use audio_manager::plugin::AudioActions;
 use util::random::SharedRng;
 
-pub(crate) fn receive_player_join_success(
-    mut state: ResMut<NextState<AppState>>,
-    mut join_events: EventReader<ServerMessage>,
-) {
+pub(crate) fn receive_player_join_success(mut join_events: EventReader<ServerMessage>) {
     for event in join_events.read() {
         let ServerMessage::SCPlayerJoinSuccess(msg) = event else {
             continue;
         };
 
         info!("player joined game {msg:?}");
-
-        //state.set(AppState::GameSpawn);
 
         return;
     }
@@ -77,7 +72,7 @@ pub(crate) fn receive_player_join_error(
     mut join_events: EventReader<ServerMessage>,
 ) {
     for event in join_events.read() {
-        let ServerMessage::SCPlayerJoinError(msg) = event else {
+        let ServerMessage::SCPlayerJoinError(_) = event else {
             continue;
         };
 
@@ -192,16 +187,7 @@ pub(crate) fn receive_player_revive(
 pub(crate) fn receive_hero_revive(
     mut commands: Commands,
     mut revive_reader: EventReader<ServerMessage>,
-    mut player_q: Query<
-        (
-            Entity,
-            &mut Transform,
-            &mut Unit,
-            &mut AnimationState,
-            &HealthBar,
-        ),
-        With<Hero>,
-    >,
+    mut player_q: Query<(Entity, &mut Transform, &mut AnimationState, &HealthBar), With<Hero>>,
     mut bar_q: Query<&mut Visibility, With<HealthBarFrame>>,
 ) {
     for event in revive_reader.read() {
@@ -209,8 +195,8 @@ pub(crate) fn receive_hero_revive(
             continue;
         };
 
-        info!("revive player {msg:?}");
-        let (entity, mut transform, mut unit, mut anim, health_bar) = player_q.single_mut();
+        info!("revive hero {msg:?}");
+        let (entity, mut transform, mut anim, health_bar) = player_q.single_mut();
         transform.translation = msg.0;
 
         let mut bar = bar_q.get_mut(health_bar.bar_entity).unwrap();
@@ -437,7 +423,8 @@ pub(crate) fn receive_spawn_skill(
         let skill_meta = &metadata.rpg.skill.skills[&skill_id];
 
         let (aabb, transform, instance, mesh, material, timer) = skill::prepare_skill(
-            msg.uid,
+            msg.instance_uid,
+            msg.owner_uid,
             &msg.target,
             &mut renderables,
             &mut meshes,
@@ -463,16 +450,20 @@ pub(crate) fn receive_spawn_skill(
 pub(crate) fn receive_despawn_skill(
     mut commands: Commands,
     mut despawn_reader: EventReader<ServerMessage>,
-    skill_q: Query<Entity, With<SkillUse>>,
+    skill_q: Query<(Entity, &SkillUse)>,
 ) {
     for event in despawn_reader.read() {
         let ServerMessage::SCDespawnSkill(msg) = event else {
             continue;
         };
 
-        for entity in &skill_q {
+        for (entity, skill_use) in &skill_q {
+            if skill_use.instance_uid != msg.0 {
+                continue;
+            }
+
             // TODO
-            // commands.entity(despawn_msg.0);
+            commands.entity(entity).despawn_recursive();
         }
     }
 }
@@ -577,7 +568,6 @@ pub(crate) fn receive_spawn_villain(
 }
 
 pub(crate) fn receive_combat_result(
-    metadata: Res<MetadataResources>,
     mut combat_reader: EventReader<ServerMessage>,
     mut player_q: Query<(&mut Unit, &mut AudioActions, &mut AnimationState), With<Player>>,
 ) {

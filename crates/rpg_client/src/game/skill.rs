@@ -10,7 +10,7 @@ use rpg_core::{
         skill_tables::SkillTableEntry, AreaInstance, DirectInstance, OrbitData, ProjectileInstance,
         ProjectileShape, SkillId, SkillInfo, SkillInstance, SkillTarget, TimerDescriptor,
     },
-    uid::Uid,
+    uid::{InstanceUid, Uid},
 };
 use rpg_util::skill::*;
 
@@ -21,15 +21,13 @@ use bevy::{
     ecs::system::Commands,
     gizmos::aabb::ShowAabbGizmo,
     log::debug,
-    math::{bounding::Aabb3d, Vec3},
-    pbr::{MaterialMeshBundle, PbrBundle, StandardMaterial},
-    render::{
-        mesh::{
-            shape::{Circle, Icosphere},
-            Mesh,
-        },
-        prelude::SpatialBundle,
+    math::{
+        bounding::Aabb3d,
+        primitives::{Circle, Sphere},
+        Vec3,
     },
+    pbr::{MaterialMeshBundle, PbrBundle, StandardMaterial},
+    render::{mesh::Mesh, prelude::SpatialBundle},
     scene::SceneBundle,
     time::{Timer, TimerMode},
     transform::components::Transform,
@@ -39,6 +37,7 @@ use bevy::{
 use std::borrow::Cow;
 
 pub(crate) fn prepare_skill(
+    instance_uid: InstanceUid,
     owner: Uid,
     target: &SkillTarget,
     renderables: &mut RenderResources,
@@ -124,7 +123,7 @@ pub(crate) fn prepare_skill(
 
                     (handle, aabb)
                 } else {
-                    let mesh = Mesh::try_from(Icosphere {
+                    let mesh = Mesh::try_from(Sphere {
                         radius,
                         ..default()
                     })
@@ -229,6 +228,7 @@ pub(crate) fn prepare_skill(
     };
 
     let instance = SkillUse::new(
+        instance_uid,
         owner,
         skill_id,
         skill_info.base_damage.clone(),

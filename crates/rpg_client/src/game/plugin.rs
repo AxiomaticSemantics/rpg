@@ -32,7 +32,6 @@ use bevy::{
     audio::{AudioSink, PlaybackSettings},
     core_pipeline::{bloom::BloomSettings, core_3d::Camera3dBundle, tonemapping::Tonemapping},
     ecs::{
-        change_detection::DetectChanges,
         component::Component,
         entity::Entity,
         query::{With, Without},
@@ -233,6 +232,7 @@ impl Plugin for GamePlugin {
             .add_systems(
                 OnEnter(AppState::GameCleanup),
                 (
+                    world::cleanup,
                     util::cleanup::cleanup::<GameSessionCleanup>,
                     environment::cleanup,
                     cleanup,
@@ -286,7 +286,7 @@ fn transition_game_join(mut state: ResMut<NextState<AppState>>, rpg_world: Res<R
     }
 }
 
-fn send_client_ready(mut net_client: ResMut<RenetClient>, rpg_world: Res<RpgWorld>) {
+fn send_client_ready(mut net_client: ResMut<RenetClient>) {
     info!("sending client ready message");
     let message = bincode::serialize(&ClientMessage::CSClientReady(CSClientReady)).unwrap();
     net_client.send_message(ClientChannel::Message, message);
