@@ -232,6 +232,7 @@ impl Plugin for GamePlugin {
             .add_systems(
                 OnEnter(AppState::GameCleanup),
                 (
+                    world::cleanup,
                     util::cleanup::cleanup::<GameSessionCleanup>,
                     environment::cleanup,
                     cleanup,

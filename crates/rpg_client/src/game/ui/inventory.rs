@@ -4,12 +4,10 @@ use crate::assets::TextureAssets;
 
 use crate::game::{
     actor::player::Player,
-    assets::RenderResources,
     controls::Controls,
     item::{self, CursorItem, GroundItemHover, GroundItemStats},
     metadata::MetadataResources,
     plugin::GameSessionCleanup,
-    prop::PropHandle,
 };
 
 use rpg_core::{
@@ -38,9 +36,7 @@ use bevy::{
     },
     hierarchy::{BuildChildren, ChildBuilder, Children},
     input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
-    math::Vec3,
-    render::{color::Color, primitives::Aabb},
-    scene::SceneBundle,
+    render::color::Color,
     text::Text,
     transform::components::Transform,
     ui::{
@@ -184,9 +180,6 @@ pub(crate) fn hover_storage(
 }
 
 pub(crate) fn update_cursor_item(
-    mut commands: Commands,
-    metadata: Res<MetadataResources>,
-    renderables: Res<RenderResources>,
     mut net_client: ResMut<RenetClient>,
     mut cursor_item: ResMut<CursorItem>,
     input: Res<ButtonInput<MouseButton>>,
@@ -197,7 +190,6 @@ pub(crate) fn update_cursor_item(
     mut text_q: Query<&mut Text>,
 ) {
     let player_transform = player_q.single();
-    let mut storage = storage_q.single_mut();
 
     if cursor_item.is_some() {
         let item_slot = &cursor_item.as_ref().unwrap();
