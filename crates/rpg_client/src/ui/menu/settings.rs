@@ -171,7 +171,7 @@ pub fn spawn(builder: &mut ChildBuilder, ui_theme: &UiTheme, button: &ButtonBund
             );
 
             p.spawn(NodeBundle {
-                style: ui_theme.row_style.clone(),
+                style: ui_theme.col_style.clone(),
                 ..default()
             })
             .with_children(|p| {
@@ -200,24 +200,19 @@ pub fn spawn(builder: &mut ChildBuilder, ui_theme: &UiTheme, button: &ButtonBund
                             ui_theme.text_style_small.clone(),
                         ));
                     });
+                });
 
+                p.spawn(NodeBundle {
+                    style: ui_theme.col_style.clone(),
+                    ..default()
+                })
+                .with_children(|p| {
                     p.spawn((button.clone(), CancelButton)).with_children(|p| {
                         p.spawn(TextBundle::from_section(
                             "Cancel",
                             ui_theme.text_style_small.clone(),
                         ));
                     });
-                });
-
-                p.spawn(NodeBundle {
-                    style: ui_theme.row_style.clone(),
-                    ..default()
-                })
-                .with_children(|p| {
-                    p.spawn(
-                        TextBundle::from_section("Foo", ui_theme.text_style_regular.clone())
-                            .with_style(ui_theme.row_style.clone()),
-                    );
                 });
             });
         });
