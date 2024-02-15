@@ -84,7 +84,11 @@ impl Plugin for MenuPlugin {
                     ),
                     (
                         menu::settings::cancel_button,
+                        menu::settings::cancel_controls_button,
+                        menu::settings::cancel_audio_button,
+                        menu::settings::cancel_video_button,
                         menu::settings::controls_button,
+                        menu::settings::video_button,
                         menu::settings::audio_button,
                     ),
                     menu::credits::cancel_button,
@@ -94,7 +98,7 @@ impl Plugin for MenuPlugin {
                         lobby::lobby_send_message,
                         lobby::leave_button,
                         lobby::update_lobby_messages,
-                        lobby::update_players_container,
+                        lobby::update_lobby,
                     ),
                 )
                     .run_if(in_state(AppState::Menu)),
@@ -200,6 +204,9 @@ fn spawn(
             menu::account::spawn_list(&textures, p, &ui_theme, &button_bundle, &frame_hidden);
             menu::create::spawn(&textures, p, &ui_theme, &button_bundle, &frame_hidden);
             menu::settings::spawn(p, &ui_theme, &button_bundle, &frame_hidden);
+            menu::settings::spawn_control_settings(p, &ui_theme, &button_bundle, &frame_hidden);
+            menu::settings::spawn_audio_settings(p, &ui_theme, &button_bundle, &frame_hidden);
+            menu::settings::spawn_video_settings(p, &ui_theme, &button_bundle, &frame_hidden);
             menu::credits::spawn(p, &ui_theme, &button_bundle, &frame_hidden);
 
             // FIXME these are here temporarily
