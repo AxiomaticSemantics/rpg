@@ -47,8 +47,6 @@ use bevy::{
     transform::{components::Transform, TransformBundle},
 };
 
-use lightyear::shared::NetworkTarget;
-
 use std::borrow::Cow;
 
 #[derive(Debug, Component)]
@@ -380,13 +378,14 @@ pub fn handle_contacts(
                     game_state.session_stats.times_blocked += 1;
                 }*/
 
-                net_params.server.send_message_to_target::<Channel1, _>(
-                    SCUnitAnim {
-                        uid: defender.uid,
-                        anim: 1,
-                    },
-                    NetworkTarget::All,
-                );
+                let message = bincode::serialize(&ServerMessage::SCUnitAnim(SCUnitAnim {
+                    uid: defender.uid,
+                    anim: 1,
+                }))
+                .unwrap();
+                net_params
+                    .server
+                    .broadcast_message(ServerChannel::Message, message);
 
                 match &skill_use.instance {
                     SkillInstance::Direct(_) | SkillInstance::Projectile(_) => {
@@ -403,13 +402,14 @@ pub fn handle_contacts(
                 } else {
                     game_state.session_stats.times_dodged += 1;
                 }*/
-                net_params.server.send_message_to_target::<Channel1, _>(
-                    SCUnitAnim {
-                        uid: defender.uid,
-                        anim: 0,
-                    },
-                    NetworkTarget::All,
-                );
+                let message = bincode::serialize(&ServerMessage::SCUnitAnim(SCUnitAnim {
+                    uid: defender.uid,
+                    anim: 0,
+                }))
+                .unwrap();
+                net_params
+                    .server
+                    .broadcast_message(ServerChannel::Message, message);
             }
             CombatResult::Damage(damage) => {
                 /*if defender.kind == UnitKind::Villain {
@@ -421,18 +421,24 @@ pub fn handle_contacts(
                 if defender.kind == UnitKind::Hero {
                     let id_info = game_state.get_id_info_from_uid(defender.uid).unwrap();
 
-                    net_params.server.send_message_to_target::<Channel1, _>(
+                    let message = bincode::serialize(&ServerMessage::SCCombatResult(
                         SCCombatResult(combat_result.clone()),
-                        NetworkTarget::Only(vec![id_info.client_id]),
+                    ))
+                    .unwrap();
+                    net_params.server.send_message(
+                        id_info.client_id,
+                        ServerChannel::Message,
+                        message,
                     );
                 } else if defender.kind == UnitKind::Villain {
-                    net_params.server.send_message_to_target::<Channel1, _>(
-                        SCDamage {
-                            uid: defender.uid,
-                            damage: damage.clone(),
-                        },
-                        NetworkTarget::All,
-                    );
+                    let message = bincode::serialize(&ServerMessage::SCDamage(SCDamage {
+                        uid: defender.uid,
+                        damage: damage.clone(),
+                    }))
+                    .unwrap();
+                    net_params
+                        .server
+                        .broadcast_message(ServerChannel::Message, message);
                 }
 
                 if let SkillInstance::Projectile(_) = &skill_use.instance {
@@ -455,15 +461,14 @@ pub fn handle_contacts(
 
                 // game_state.session_stats.villain_hits += 1;
 
-                net_params.server.send_message_to_target::<Channel1, _>(
-                    SCHeroDeath(defender.uid),
-                    NetworkTarget::All,
-                );
+                let message =
+                    bincode::serialize(&ServerMessage::SCHeroDeath(SCHeroDeath(defender.uid)))
+                        .unwrap();
+                net_params
+                    .server
+                    .broadcast_message(ServerChannel::Message, message);
 
-                commands.entity(event.defender).insert((
-                    Corpse,
-                    CorpseTimer(Timer::from_seconds(600., TimerMode::Once)),
-                ));
+                commands.entity(event.defender).insert((Corpse,));
             }
             CombatResult::VillainDeath(death) => {
                 debug!("villain death");
@@ -488,30 +493,37 @@ pub fn handle_contacts(
 
                     ground_drops.0.push(drops.clone());
 
-                    net_params.server.send_message_to_target::<Channel1, _>(
-                        SCSpawnItems {
-                            position: d_transform.translation,
-                            items: drops,
-                        },
-                        NetworkTarget::All,
-                    );
+                    let message = bincode::serialize(&ServerMessage::SCSpawnItems(SCSpawnItems {
+                        position: d_transform.translation,
+                        items: drops,
+                    }))
+                    .unwrap();
+                    net_params
+                        .server
+                        .broadcast_message(ServerChannel::Message, message);
                 }
 
                 let id_info = game_state.get_id_info_from_uid(attacker.uid).unwrap();
 
-                net_params.server.send_message_to_target::<Channel1, _>(
-                    SCCombatResult(combat_result.clone()),
-                    NetworkTarget::Only(vec![id_info.client_id]),
-                );
+                let message = bincode::serialize(&ServerMessage::SCCombatResult(SCCombatResult(
+                    combat_result.clone(),
+                )))
+                .unwrap();
+                net_params
+                    .server
+                    .send_message(id_info.client_id, ServerChannel::Message, message);
 
-                net_params.server.send_message_to_target::<Channel1, _>(
-                    SCVillainDeath(defender.uid),
-                    NetworkTarget::All,
-                );
+                let message = bincode::serialize(&ServerMessage::SCVillainDeath(SCVillainDeath(
+                    defender.uid,
+                )))
+                .unwrap();
+                net_params
+                    .server
+                    .broadcast_message(ServerChannel::Message, message);
 
                 commands.entity(event.defender).insert((
                     Corpse,
-                    CorpseTimer(Timer::from_seconds(60., TimerMode::Once)),
+                    CorpseTimer(Timer::from_seconds(300., TimerMode::Once)),
                 ));
             }
             _ => debug!("combat error"),

@@ -40,6 +40,8 @@ use bevy::{
     transform::components::Transform,
 };
 
+use bevy_renet::renet::RenetClient;
+
 pub(crate) fn unit_audio(
     mut commands: Commands,
     tracks: Res<AudioAssets>,
@@ -135,7 +137,7 @@ pub fn update_health_bars(
 pub fn pick_storable_items(
     mouse_input: Res<ButtonInput<MouseButton>>,
     key_input: Res<ButtonInput<KeyCode>>,
-    mut net_client: ResMut<Client>,
+    mut net_client: ResMut<RenetClient>,
     mut item_q: Query<(&Transform, &GroundItem)>,
     mut hero_q: Query<
         &Transform,
@@ -161,7 +163,9 @@ pub fn pick_storable_items(
                 || mouse_input.just_pressed(MouseButton::Left))
             && distance < 0.5
         {
-            net_client.send_message::<Channel1, _>(CSItemPickup(i_item.uid));
+            let message =
+                bincode::serialize(&ClientMessage::CSItemPickup(CSItemPickup(i_item.uid))).unwrap();
+            net_client.send_message(ClientChannel::Message, message);
 
             /* FIXME move to message handler
             u_audio.push("item_pickup".into());
@@ -173,7 +177,7 @@ pub fn pick_storable_items(
 }
 
 pub fn action(
-    mut net_client: ResMut<Client>,
+    mut net_client: ResMut<RenetClient>,
     time: Res<Time>,
     metadata: Res<MetadataResources>,
     mut rng: ResMut<SharedRng>,
@@ -304,7 +308,10 @@ pub fn action(
                 transform.rotation = lerped;
             }
 
-            net_client.send_message::<Channel1, _>(CSRotPlayer(*wanted.forward()));
+            let message =
+                bincode::serialize(&ClientMessage::CSRotPlayer(CSRotPlayer(*wanted.forward())))
+                    .unwrap();
+            net_client.send_message(ClientChannel::Message, message);
 
             action.state = State::Completed;
         }

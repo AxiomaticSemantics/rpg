@@ -51,6 +51,8 @@ use bevy::{
     utils::default,
 };
 
+use bevy_renet::renet::RenetClient;
+
 #[derive(Component)]
 pub(crate) struct InventoryRoot;
 
@@ -185,7 +187,7 @@ pub(crate) fn update_cursor_item(
     mut commands: Commands,
     metadata: Res<MetadataResources>,
     renderables: Res<RenderResources>,
-    mut net_client: ResMut<Client>,
+    mut net_client: ResMut<RenetClient>,
     mut cursor_item: ResMut<CursorItem>,
     input: Res<ButtonInput<MouseButton>>,
     player_q: Query<&Transform, With<Player>>,
@@ -202,7 +204,9 @@ pub(crate) fn update_cursor_item(
         let mut style = cursor_ui_q.single_mut();
         if input.just_pressed(MouseButton::Right) {
             if let Some(uid) = cursor_item.0 {
-                net_client.send_message::<Channel1, _>(CSItemDrop(uid));
+                let message =
+                    bincode::serialize(&ClientMessage::CSItemDrop(CSItemDrop(uid))).unwrap();
+                net_client.send_message(ClientChannel::Message, message);
             }
 
             /* FIXME

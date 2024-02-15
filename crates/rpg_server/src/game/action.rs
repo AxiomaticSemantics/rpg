@@ -11,8 +11,6 @@ use rpg_util::{
 
 use util::math::AabbComponent;
 
-use lightyear::shared::NetworkTarget;
-
 use bevy::{
     ecs::{
         entity::Entity,
@@ -117,21 +115,14 @@ pub(crate) fn action(
                         }
                     }
 
-                    if net_params
+                    let message = bincode::serialize(&ServerMessage::SCUnitAttack(SCUnitAttack {
+                        uid: unit.uid,
+                        skill_id,
+                    }))
+                    .unwrap();
+                    net_params
                         .server
-                        .send_message_to_target::<Channel1, _>(
-                            SCUnitAttack {
-                                uid: unit.uid,
-                                skill_id,
-                            },
-                            NetworkTarget::All,
-                        )
-                        .is_err()
-                    {
-                        // TODO remove client, despawn it
-                        action.state = State::Completed;
-                        continue;
-                    }
+                        .broadcast_message(ServerChannel::Message, message);
 
                     let duration = skill_info.use_duration_secs
                         * unit.stats.vitals.stats["Cooldown"].value.f32();
@@ -178,14 +169,16 @@ pub(crate) fn action(
                         timer,
                     );
 
-                    net_params.server.send_message_to_target::<Channel1, _>(
-                        SCSpawnSkill {
-                            id: skill.id,
-                            uid: unit.uid,
-                            target: attack.skill_target.clone(),
-                        },
-                        NetworkTarget::All,
-                    );
+                    let message = bincode::serialize(&ServerMessage::SCSpawnSkill(SCSpawnSkill {
+                        id: skill.id,
+                        uid: unit.uid,
+                        target: attack.skill_target.clone(),
+                    }))
+                    .unwrap();
+
+                    net_params
+                        .server
+                        .broadcast_message(ClientChannel::Message, message);
 
                     // The action is completed at this point
                     action.state = State::Completed;
@@ -224,26 +217,32 @@ pub(crate) fn action(
                     .get_client_from_account_id(account.as_ref().unwrap().0.info.id)
                     .unwrap();
 
-                net_params.server.send_message_to_target::<Channel1, _>(
-                    SCRotPlayer(*direction),
-                    NetworkTarget::Only(vec![client.id]),
-                );
+                let message =
+                    bincode::serialize(&ServerMessage::SCRotPlayer(SCRotPlayer(*direction)))
+                        .unwrap();
+                net_params
+                    .server
+                    .send_message(client.client_id, ServerChannel::Message, message);
 
-                net_params.server.send_message_to_target::<Channel1, _>(
-                    SCRotUnit {
-                        uid: unit.uid,
-                        direction: *direction,
-                    },
-                    NetworkTarget::AllExcept(vec![client.id]),
+                let message = bincode::serialize(&ServerMessage::SCRotUnit(SCRotUnit {
+                    uid: unit.uid,
+                    direction: *direction,
+                }))
+                .unwrap();
+                net_params.server.broadcast_message_except(
+                    client.client_id,
+                    ServerChannel::Message,
+                    message,
                 );
             } else {
-                net_params.server.send_message_to_target::<Channel1, _>(
-                    SCRotUnit {
-                        uid: unit.uid,
-                        direction: *direction,
-                    },
-                    NetworkTarget::All,
-                );
+                let message = bincode::serialize(&ServerMessage::SCRotUnit(SCRotUnit {
+                    uid: unit.uid,
+                    direction: *direction,
+                }))
+                .unwrap();
+                net_params
+                    .server
+                    .broadcast_message(ServerChannel::Message, message);
             }
 
             action.state = State::Completed;
@@ -358,49 +357,63 @@ pub(crate) fn move_units(
                 .unwrap();
 
             if action.state == State::Finalize {
-                net_params.server.send_message_to_target::<Channel1, _>(
-                    SCMovePlayerEnd(m_t.translation),
-                    NetworkTarget::Only(vec![client.id]),
-                );
+                let message = bincode::serialize(&ServerMessage::SCMovePlayerEnd(SCMovePlayerEnd(
+                    m_t.translation,
+                )))
+                .unwrap();
+                net_params
+                    .server
+                    .send_message(client.client_id, ServerChannel::Message, message);
 
-                net_params.server.send_message_to_target::<Channel1, _>(
-                    SCMoveUnitEnd {
-                        uid: m_unit.uid,
-                        position: m_t.translation,
-                    },
-                    NetworkTarget::AllExcept(vec![client.id]),
+                let message = bincode::serialize(&ServerMessage::SCMoveUnitEnd(SCMoveUnitEnd {
+                    uid: m_unit.uid,
+                    position: m_t.translation,
+                }))
+                .unwrap();
+
+                net_params.server.broadcast_message_except(
+                    client.client_id,
+                    ServerChannel::Message,
+                    message,
                 );
             } else {
-                net_params.server.send_message_to_target::<Channel1, _>(
-                    SCMovePlayer(m_t.translation),
-                    NetworkTarget::Only(vec![client.id]),
-                );
+                let message =
+                    bincode::serialize(&ServerMessage::SCMovePlayer(SCMovePlayer(m_t.translation)))
+                        .unwrap();
+                net_params
+                    .server
+                    .send_message(client.client_id, ServerChannel::Message, message);
 
-                net_params.server.send_message_to_target::<Channel1, _>(
-                    SCMoveUnit {
-                        uid: m_unit.uid,
-                        position: m_t.translation,
-                    },
-                    NetworkTarget::AllExcept(vec![client.id]),
+                let message = bincode::serialize(&ServerMessage::SCMoveUnit(SCMoveUnit {
+                    uid: m_unit.uid,
+                    position: m_t.translation,
+                }))
+                .unwrap();
+                net_params.server.broadcast_message_except(
+                    client.client_id,
+                    ServerChannel::Message,
+                    message,
                 );
             }
         } else {
             if action.state == State::Finalize {
-                net_params.server.send_message_to_target::<Channel1, _>(
-                    SCMoveUnitEnd {
-                        uid: m_unit.uid,
-                        position: m_t.translation,
-                    },
-                    NetworkTarget::All,
-                );
+                let message = bincode::serialize(&ServerMessage::SCMoveUnitEnd(SCMoveUnitEnd {
+                    uid: m_unit.uid,
+                    position: m_t.translation,
+                }))
+                .unwrap();
+                net_params
+                    .server
+                    .broadcast_message(ServerChannel::Message, message);
             } else {
-                net_params.server.send_message_to_target::<Channel1, _>(
-                    SCMoveUnit {
-                        uid: m_unit.uid,
-                        position: m_t.translation,
-                    },
-                    NetworkTarget::All,
-                );
+                let message = bincode::serialize(&ServerMessage::SCMoveUnit(SCMoveUnit {
+                    uid: m_unit.uid,
+                    position: m_t.translation,
+                }))
+                .unwrap();
+                net_params
+                    .server
+                    .broadcast_message(ServerChannel::Message, message);
             }
         }
 

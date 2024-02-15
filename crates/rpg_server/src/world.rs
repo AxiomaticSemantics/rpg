@@ -1,18 +1,19 @@
-use crate::state::AppState;
+use crate::{assets::MetadataResources, net::server::NetworkParamsRW, state::AppState};
 
 use bevy::{
     app::{App, Plugin, Update},
     ecs::{
         event::{Event, EventReader},
         schedule::{common_conditions::in_state, IntoSystemConfigs},
-        system::{ResMut, Resource},
+        system::{Res, ResMut, Resource},
     },
     log::info,
     math::uvec2,
 };
 
+use rpg_network_protocol::protocol::*;
 use rpg_world::{
-    zone::{Kind, SizeInfo, Zone, ZoneId},
+    zone::{Kind, Zone, ZoneId, ZoneSize},
     zone_path::ZonePath,
 };
 
@@ -55,23 +56,34 @@ impl Plugin for WorldPlugin {
     }
 }
 
-pub(crate) fn spawn_world(mut rpg_world: ResMut<RpgWorld>, mut load_zone: EventReader<LoadZone>) {
+pub(crate) fn spawn_world(
+    mut rpg_world: ResMut<RpgWorld>,
+    metadata: Res<MetadataResources>,
+    mut load_zone: EventReader<LoadZone>,
+    mut net_params: NetworkParamsRW,
+) {
     for load_zone_request in load_zone.read() {
-        if rpg_world.zones.contains_key(&load_zone_request.0) {
+        let zone_id = load_zone_request.0;
+        let message = bincode::serialize(&ServerMessage::SCZoneLoad(SCZoneLoad(zone_id))).unwrap();
+        if rpg_world.zones.contains_key(&zone_id) {
             // ..
             info!("zone is already loaded");
+            net_params
+                .server
+                .broadcast_message(ServerChannel::Message, message);
             continue;
         }
 
-        info!("loading zone {:?}", load_zone_request.0);
+        let zone_meta = &metadata.world.zone.towns[&zone_id];
 
-        let zone = Zone::new(
-            load_zone_request.0,
-            1234,
-            SizeInfo::new(uvec2(8, 8), uvec2(8, 8), uvec2(4, 4)),
-            Kind::OverworldTown,
-            ZonePath::generate(),
-        );
+        let zone_id = load_zone_request.0;
+        info!("loading zone {zone_id:?}");
+        let zone = match zone_meta.kind {
+            Kind::OverworldTown | Kind::UnderworldTown => {
+                Zone::create_town(zone_id, 1234, &metadata.world)
+            }
+            _ => panic!("not now"),
+        };
 
         let zone = RpgZone {
             zone: Some(zone),
@@ -79,6 +91,11 @@ pub(crate) fn spawn_world(mut rpg_world: ResMut<RpgWorld>, mut load_zone: EventR
                 load_status: ZoneLoadStatus::Loading,
             },
         };
-        rpg_world.zones.insert(load_zone_request.0, zone);
+
+        net_params
+            .server
+            .broadcast_message(ServerChannel::Message, message);
+
+        rpg_world.zones.insert(zone_id, zone);
     }
 }

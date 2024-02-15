@@ -1,23 +1,30 @@
-use super::zone::Zone;
-
 use crate::game::{assets::RenderResources, prop};
 
 use bevy::{
     ecs::system::Commands,
+    hierarchy::BuildChildren,
     log::debug,
     math::{Quat, Vec3},
+    pbr::{PointLight, PointLightBundle},
+    render::color::Color,
+    utils::default,
 };
 
 use rpg_world::{
     edge::{Edge, EdgeFlags},
+    metadata::Metadata as WorldMetadata,
     room::Room,
+    zone::Zone,
 };
+
+use fastrand::Rng;
 
 pub trait RoomSpawn {
     fn spawn_wall_section(
         &self,
         commands: &mut Commands,
         zone: &Zone,
+        metadata: &WorldMetadata,
         renderables: &RenderResources,
         tile: u8,
     ) -> usize;
@@ -26,7 +33,9 @@ pub trait RoomSpawn {
         &self,
         commands: &mut Commands,
         renderables: &RenderResources,
-        zone: &mut Zone,
+        zone: &Zone,
+        rng: &mut Rng,
+        metadata: &WorldMetadata,
     );
 }
 
@@ -35,16 +44,17 @@ impl RoomSpawn for Room {
         &self,
         commands: &mut Commands,
         zone: &Zone,
+        metadata: &WorldMetadata,
         renderables: &RenderResources,
         tile: u8,
     ) -> usize {
         let tile = &self.tiles[tile as usize];
         let tile_position = tile.position();
 
-        let room_world_size = zone.zone.size_info.room_world_size();
+        let room_world_size = zone.size.room_world_size(metadata);
         let tile_offset =
-            self.position * room_world_size + zone.zone.size_info.tile_size * tile_position;
-        let world_offset = zone.zone.size_info.zone_world_offset();
+            self.position * room_world_size + metadata.zone.size_info.tile * tile_position;
+        let world_offset = zone.size.zone_world_offset(metadata);
 
         // debug!("room pos {} world_off {world_offset} room_world_size {room_world_size} tile_off {tile_offset}", self.position);
 
@@ -77,22 +87,41 @@ impl RoomSpawn for Room {
         &self,
         commands: &mut Commands,
         renderables: &RenderResources,
-        zone: &mut Zone,
+        zone: &Zone,
+        rng: &mut Rng,
+        metadata: &WorldMetadata,
     ) {
         use std::f32::consts;
 
-        let key = match zone.zone.rng.usize(0..2) {
+        let key = match rng.usize(0..2) {
             0 => "rock_1",
             _ => "ground_lamp_1",
         };
-        let rot_y = consts::TAU * (0.5 - zone.zone.rng.f32());
+        let rot_y = consts::TAU * (0.5 - rng.f32());
 
-        prop::spawn(
+        let position = zone.generate_position(rng, metadata, self);
+
+        let id = prop::spawn(
             commands,
             renderables,
             key,
-            zone.zone.generate_position(self),
+            position,
             Some(Quat::from_rotation_y(rot_y)),
         );
+
+        if key == "ground_lamp_1" {
+            let point = commands
+                .spawn(PointLightBundle {
+                    point_light: PointLight {
+                        color: Color::rgb(0.96, 0.92, 0.73),
+                        intensity: 600.,
+                        ..default()
+                    },
+                    ..default()
+                })
+                .id();
+
+            commands.entity(point).set_parent(id);
+        }
     }
 }

@@ -31,6 +31,8 @@ use bevy::{
     utils::default,
 };
 
+use bevy_renet::renet::RenetClient;
+
 #[derive(Component)]
 pub(crate) struct LobbyRoot;
 
@@ -286,7 +288,7 @@ pub(crate) fn lobby_send_message(
     lobby: Res<Lobby>,
     focused: Res<FocusedElement>,
     key_input: Res<ButtonInput<KeyCode>>,
-    mut net_client: ResMut<Client>,
+    mut net_client: ResMut<RenetClient>,
     button_q: Query<&Interaction, (Changed<Interaction>, With<LobbyMessageButton>)>,
     mut text_q: Query<(Entity, &mut Text), With<LobbySendMessageText>>,
 ) {
@@ -302,10 +304,13 @@ pub(crate) fn lobby_send_message(
             info!("no message to send");
             return;
         }
-        net_client.send_message::<Channel1, _>(CSLobbyMessage {
+
+        let message = bincode::serialize(&ClientMessage::CSLobbyMessage(CSLobbyMessage {
             id: lobby.id,
             message: text.sections[0].value.clone(),
-        });
+        }))
+        .unwrap();
+        net_client.send_message(ClientChannel::Message, message);
 
         text.sections[0].value.clear();
     } else if key_input.just_pressed(KeyCode::Enter) {
@@ -327,10 +332,14 @@ pub(crate) fn lobby_send_message(
             info!("no message to send");
             return;
         }
-        net_client.send_message::<Channel1, _>(CSLobbyMessage {
+
+        let message = bincode::serialize(&ClientMessage::CSLobbyMessage(CSLobbyMessage {
             id: lobby.id,
             message: text.sections[0].value.clone(),
-        });
+        }))
+        .unwrap();
+
+        net_client.send_message(ClientChannel::Message, message);
 
         text.sections[0].value.clear();
     }
@@ -339,7 +348,7 @@ pub(crate) fn lobby_send_message(
 pub(crate) fn game_create_button(
     selected_character: Res<SelectedCharacter>,
     lobby: Res<Lobby>,
-    mut net_client: ResMut<Client>,
+    mut net_client: ResMut<RenetClient>,
     mut account_q: Query<&mut RpgAccount>,
     button_q: Query<&Interaction, (Changed<Interaction>, With<GameCreateButton>)>,
     mut menu_set: ParamSet<(
@@ -359,10 +368,13 @@ pub(crate) fn game_create_button(
             return;
         };
 
-        net_client.send_message::<Channel1, _>(CSCreateGame {
+        let message = bincode::serialize(&ClientMessage::CSCreateGame(CSCreateGame {
             game_mode: lobby.game_mode,
             slot: slot_character.slot,
-        });
+        }))
+        .unwrap();
+
+        net_client.send_message(ClientChannel::Message, message);
 
         // FIXME temp hack
         account_q.single_mut().0.info.selected_slot = Some(slot_character.slot);
@@ -375,7 +387,7 @@ pub(crate) fn game_create_button(
 pub(crate) fn game_join_button(
     selected_character: Res<SelectedCharacter>,
     lobby: Res<Lobby>,
-    mut net_client: ResMut<Client>,
+    mut net_client: ResMut<RenetClient>,
     mut account_q: Query<&mut RpgAccount>,
     button_q: Query<&Interaction, (Changed<Interaction>, With<GameJoinButton>)>,
     mut menu_set: ParamSet<(
@@ -395,10 +407,13 @@ pub(crate) fn game_join_button(
             return;
         };
 
-        net_client.send_message::<Channel1, _>(CSJoinGame {
+        let message = bincode::serialize(&ClientMessage::CSJoinGame(CSJoinGame {
             game_mode: lobby.game_mode,
             slot: slot_character.slot,
-        });
+        }))
+        .unwrap();
+
+        net_client.send_message(ClientChannel::Message, message);
 
         // FIXME temp hack
         account_q.single_mut().0.info.selected_slot = Some(slot_character.slot);
@@ -409,7 +424,7 @@ pub(crate) fn game_join_button(
 }
 
 pub(crate) fn leave_button(
-    mut net_client: ResMut<Client>,
+    mut net_client: ResMut<RenetClient>,
     button_q: Query<&Interaction, (Changed<Interaction>, With<LeaveButton>)>,
     mut menu_set: ParamSet<(
         Query<&mut Style, With<AccountListRoot>>,
@@ -418,7 +433,8 @@ pub(crate) fn leave_button(
 ) {
     let interaction = button_q.get_single();
     if let Ok(Interaction::Pressed) = interaction {
-        net_client.send_message::<Channel1, _>(CSLobbyLeave);
+        let message = bincode::serialize(&ClientMessage::CSLobbyLeave(CSLobbyLeave)).unwrap();
+        net_client.send_message(ClientChannel::Message, message);
 
         menu_set.p0().single_mut().display = Display::Flex;
         menu_set.p1().single_mut().display = Display::None;

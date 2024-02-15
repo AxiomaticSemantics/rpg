@@ -1,11 +1,14 @@
-use super::room::RoomSpawn;
+use super::{room::RoomSpawn, LoadZone, RpgWorld};
 
-use crate::game::{assets::RenderResources, plugin::GameSessionCleanup};
+use crate::game::{
+    assets::RenderResources, metadata::MetadataResources, plugin::GameSessionCleanup, prop,
+};
 
 use rpg_world::{
     edge::{Edge, EdgeFlags},
+    metadata::Metadata as WorldMetadata,
     room::Room,
-    zone::{self, Connection, ConnectionKind, Kind, SizeInfo, ZoneId},
+    zone::{self, Connection, ConnectionKind, Kind, Zone, ZoneId, ZoneSize},
     zone_path::ZonePath,
 };
 use util::cleanup::CleanupStrategy;
@@ -14,76 +17,81 @@ use bevy::{
     asset::Assets,
     ecs::{
         component::Component,
-        system::{Commands, Res, ResMut, Resource},
+        event::EventReader,
+        system::{Commands, Res, ResMut},
     },
+    hierarchy::BuildChildren,
     log::debug,
     math::{uvec2, Quat, UVec2, Vec2, Vec3},
-    pbr::{PbrBundle, StandardMaterial},
-    render::mesh::{shape::Quad, Mesh},
+    pbr::{PbrBundle, PointLight, PointLightBundle, StandardMaterial},
+    render::{
+        color::Color,
+        mesh::{shape::Quad, Mesh},
+    },
     transform::components::Transform,
     utils::default,
 };
+
+use fastrand::Rng;
 
 use std::f32::consts::{FRAC_PI_2, PI};
 
 #[derive(Component)]
 pub struct Ground;
 
-#[derive(Debug, Default)]
-pub struct ZoneDebugOptions {
-    pub room_debug: bool,
-    pub tile_debug: bool,
-    pub tile_edge_debug: bool,
-}
+#[derive(Component)]
+pub struct TileNode;
 
-#[derive(Resource)]
-pub struct Zone {
-    pub zone: zone::Zone,
-    pub debug_options: Option<ZoneDebugOptions>,
-}
-
-pub fn setup(
+pub fn load_zone(
     mut commands: Commands,
+    metadata: Res<MetadataResources>,
     renderables: Res<RenderResources>,
+    mut rpg_world: ResMut<RpgWorld>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut load_reader: EventReader<LoadZone>,
 ) {
-    let path = ZonePath::generate();
+    // FIXME temp hack
+    if rpg_world.active_zone.is_some() {
+        return;
+    }
 
-    //println!("curve {curve:?}");
+    for event in load_reader.read() {
+        debug!("loading zone");
+        let zone_id = event.0;
+        let mut zone = Zone::create_town(zone_id, 1234, &metadata.world);
+        zone.create_rooms(&metadata.world);
+
+        build_zone(
+            &mut zone,
+            &mut rpg_world.rng,
+            &mut commands,
+            &renderables,
+            &mut meshes,
+            &metadata.world,
+        );
+        rpg_world.active_zone = Some(zone_id);
+        rpg_world.zones.insert(zone_id, zone);
+    }
+    /*
+    let path = ZonePath::generate();
     let size_info = SizeInfo::new(uvec2(8, 8), uvec2(4, 4), uvec2(4, 4));
     let mut zone = zone::Zone::new(ZoneId(0), 1234, size_info, Kind::Overworld, path);
     zone.create_rooms();
     zone.set_tile_path();
-
-    let debug_options = Some(ZoneDebugOptions {
-        room_debug: true,
-        tile_debug: true,
-        tile_edge_debug: true,
-    });
-
-    let mut zone = Zone {
-        zone,
-        debug_options,
-    };
-
-    build_zone(&mut zone, &mut commands, &renderables, &mut meshes);
-
-    commands.insert_resource(zone);
-}
-
-pub fn cleanup(mut zone: ResMut<Zone>) {
-    zone.zone.rooms.clear();
+    */
 }
 
 fn build_zone(
     zone: &mut Zone,
+    rng: &mut Rng,
     commands: &mut Commands,
     renderables: &RenderResources,
     meshes: &mut Assets<Mesh>,
+    metadata: &WorldMetadata,
 ) {
-    let room_world_size = zone.zone.size_info.room_world_size();
-    let world_offset = zone.zone.size_info.zone_world_offset();
+    let room_world_size = zone.size.room_world_size(metadata);
+    let world_offset = zone.size.zone_world_offset(metadata);
 
     /*
     let tile_edge_debug_mesh = meshes.add(
@@ -114,67 +122,102 @@ fn build_zone(
     );
     */
 
-    match zone.zone.kind {
-        Kind::Overworld => {
-            // Hedge = 4m
-            let mut count = 0;
+    /*match zone.kind {
+    Kind::Overworld => {}
+    Kind::OverworldTown => {}
+    Kind::UnderworldTown => {}
+    Kind::Underworld => {}*/
+    // Hedge = 4m
+    let mut count = 0;
 
-            zone.zone.rooms.iter().for_each(|room| {
-                let room_world_offset = room.position * room_world_size;
-                let room_world_pos = room_world_offset + room_world_size / 2;
-                let room_world_float = Vec2::new(
-                    world_offset.x + room_world_pos.x as f32,
-                    world_offset.y + room_world_pos.y as f32,
-                );
+    zone.rooms.iter().for_each(|room| {
+        let room_world_offset = room.position * room_world_size;
+        let room_world_pos = room_world_offset + room_world_size / 2;
+        let room_world_float = Vec2::new(
+            world_offset.x + room_world_pos.x as f32,
+            world_offset.y + room_world_pos.y as f32,
+        );
 
-                /* spawn_debug_connections(zone, room) */
+        /* spawn_debug_connections(zone, room) */
 
-                commands.spawn((
-                    GameSessionCleanup,
-                    CleanupStrategy::Despawn,
-                    Ground,
-                    PbrBundle {
-                        mesh: room_plane.clone(),
-                        material: renderables.materials["tile"].clone_weak(),
-                        transform: Transform::from_translation(Vec3::new(
-                            room_world_float.x,
-                            0.001,
-                            room_world_float.y,
-                        ))
-                        .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
+        commands.spawn((
+            GameSessionCleanup,
+            CleanupStrategy::Despawn,
+            Ground,
+            PbrBundle {
+                mesh: room_plane.clone(),
+                material: renderables.materials["tile"].clone_weak(),
+                transform: Transform::from_translation(Vec3::new(
+                    room_world_float.x,
+                    0.001,
+                    room_world_float.y,
+                ))
+                .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
+                ..default()
+            },
+        ));
+    });
+
+    /*
+    spawn_debug_tiles(
+        &mut commands,
+        &renderables,
+        &world_offset,
+    );
+    */
+
+    let zone_info = &metadata.zone.towns[&zone.id];
+    for prop in &zone_info.props {
+        use std::f32::consts;
+
+        let rot_y = consts::TAU * (0.5 - rng.f32());
+
+        let position = prop.position;
+
+        let id = prop::spawn(
+            commands,
+            renderables,
+            prop.key.as_str(),
+            Vec3::new(position.x as f32, 0.5, position.y as f32),
+            Some(Quat::from_rotation_y(rot_y)),
+        );
+
+        if prop.key == "ground_lamp_1" {
+            let point = commands
+                .spawn(PointLightBundle {
+                    point_light: PointLight {
+                        color: Color::rgb(0.96, 0.92, 0.78),
+                        intensity: 666.,
                         ..default()
                     },
-                ));
-            });
+                    ..default()
+                })
+                .id();
 
-            /*
-            spawn_debug_tiles(
-                &mut commands,
-                &renderables,
-                &world_offset,
-            );
-            */
-
-            println!("spawned {count} walls");
-
-            for room in zone.zone.rooms.iter() {
-                for _ in 0..room.props {
-                    //room.spawn_random_prop(commands, &renderables, zone);
-                }
-                for tile in &room.tiles {
-                    count += room.spawn_wall_section(commands, zone, renderables, tile.index);
-                }
-            }
+            commands.entity(point).set_parent(id);
         }
-        Kind::OverworldTown => {}
-        Kind::UnderworldTown => {}
-        Kind::Underworld => {}
+
+        // room.spawn_random_prop(commands, renderables, zone, rng, metadata);
     }
+
+    for room in zone.rooms.iter() {
+        //    for _ in 0..zone_info.props {
+        //        room.spawn_random_prop(commands, renderables, zone, rng, metadata);
+        //    }
+        for tile in &room.tiles {
+            count += room.spawn_wall_section(commands, zone, metadata, renderables, tile.index);
+        }
+    }
+    /*}
+    Kind::OverworldTown => {}
+    Kind::UnderworldTown => {}
+    Kind::Underworld => {}*/
+    //}
 }
 
+/*
 fn spawn_debug_connections(commands: &mut Commands, zone: &Zone, room: &Room) {
     let connections: Vec<_> = zone
-        .zone
         .connections
         .iter()
         .filter(|v| v.position / 4 == room.position)
@@ -182,7 +225,7 @@ fn spawn_debug_connections(commands: &mut Commands, zone: &Zone, room: &Room) {
 
     if !connections.is_empty() && zone.debug_options.as_ref().is_some_and(|v| v.room_debug) {
         debug!("room has connection: {connections:?} {}", room.position);
-        /*
+
         commands.spawn((
             GameSessionCleanup,
             CleanupStrategy::Despawn,
@@ -199,9 +242,8 @@ fn spawn_debug_connections(commands: &mut Commands, zone: &Zone, room: &Room) {
                 ..default()
             },
         ));
-        */
-    } else if let Some(pos) = zone.zone.room_route.iter().find(|v| **v == room.position) {
-        /*
+    } else
+    if let Some(pos) = zone.room_route.iter().find(|v| **v == room.position) {
         commands.spawn((
             GameSessionCleanup,
             CleanupStrategy::Despawn,
@@ -218,25 +260,24 @@ fn spawn_debug_connections(commands: &mut Commands, zone: &Zone, room: &Room) {
                 ..default()
             },
         ));
-        */
     }
 }
 
 fn spawn_debug_tiles(
     commands: &mut Commands,
     renderables: &RenderResources,
+    metadata: &WorldMetadata,
     zone: &Zone,
     room: &Room,
     room_world_offset: &UVec2,
     world_offset: &Vec2,
 ) {
-    let tile_size = zone.zone.size_info.tile_size;
+    let tile_size = metadata.zone.size_info.tile;
     for tile in &room.tiles {
         let tile_position = tile.position();
         let tile_spawn = *room_world_offset + tile_position * tile_size;
         //println!("room world {room_world_offset} {tile_position} {tile_spawn}");
 
-        /*
         commands.spawn((
             GameSessionCleanup,
             CleanupStrategy::Despawn,
@@ -253,7 +294,6 @@ fn spawn_debug_tiles(
                 ..default()
             },
         ));
-        */
 
         for edge in tile.edges {
             //println!("edge {edge:?}");
@@ -326,14 +366,12 @@ fn spawn_debug_tiles(
         }
 
         let key = if zone
-            .zone
             .connections
             .iter()
             .any(|v| v.position == *room_world_offset / 4 + tile_position)
         {
             "tile_red"
         } else if zone
-            .zone
             .tile_route
             .iter()
             .any(|pos| *pos == *room_world_offset / 4 + tile_position)
@@ -343,4 +381,4 @@ fn spawn_debug_tiles(
             "tile_orange"
         };
     }
-}
+}*/

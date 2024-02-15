@@ -17,13 +17,11 @@ use bevy::{
     },
     hierarchy::DespawnRecursiveExt,
     log::info,
-    math::{Quat, Vec3},
+    math::{Quat, UVec2, Vec3},
     prelude::{Deref, DerefMut},
     time::{Time, Timer},
     transform::components::Transform,
 };
-
-use lightyear::shared::NetworkTarget;
 
 #[derive(Component, Default, Debug, Deref, DerefMut)]
 pub struct CorpseTimer(pub Timer);
@@ -48,10 +46,11 @@ pub(crate) fn upkeep(
         if !updates.is_empty() {
             // debug!("{updates:?}");
 
-            net_params.server.send_message_to_target::<Channel1, _>(
-                SCStatUpdates(updates),
-                NetworkTarget::Only(vec![client.id]),
-            );
+            let message =
+                bincode::serialize(&ServerMessage::SCStatUpdates(SCStatUpdates(updates))).unwrap();
+            net_params
+                .server
+                .send_message(client.client_id, ServerChannel::Message, message);
         }
     }
 }
@@ -65,11 +64,13 @@ pub(crate) fn remove_corpses(
     for (entity, unit, mut timer) in &mut unit_q {
         timer.tick(time.delta());
         if timer.just_finished() {
+            let message =
+                bincode::serialize(&ServerMessage::SCDespawnCorpse(SCDespawnCorpse(unit.uid)))
+                    .unwrap();
             // TODO tell the client to despawn the entity
-            net_params.server.send_message_to_target::<Channel1, _>(
-                SCDespawnCorpse(unit.uid),
-                NetworkTarget::All,
-            );
+            net_params
+                .server
+                .broadcast_message(ServerChannel::Message, message);
 
             commands.entity(entity).despawn_recursive();
         }
@@ -104,17 +105,5 @@ pub fn collide_units(
                 t1.translation -= offset;
             }
         }
-    }
-}
-
-pub(crate) fn get_spawn_position(rpg_world: &RpgWorld) -> Option<Vec3> {
-    //
-    let Some(zone) = rpg_world.zones[&ZoneId(0)].zone.as_ref() else {
-        return None;
-    };
-
-    match &zone.info {
-        ZoneInfo::OverworldTown(info) | ZoneInfo::UnderworldTown(info) => Some(info.spawn_position),
-        _ => None,
     }
 }

@@ -4,7 +4,7 @@ use crate::state::AppState;
 use bevy::{
     app::{App, FixedPreUpdate, FixedUpdate, Plugin, Startup, Update},
     ecs::{
-        event::EventReader,
+        event::{EventReader, EventWriter},
         schedule::{common_conditions::*, Condition, IntoSystemConfigs},
         system::{Res, ResMut, Resource},
         world::{FromWorld, World},
@@ -13,21 +13,20 @@ use bevy::{
     time::{Fixed, Time, Timer, TimerMode},
 };
 
-use lightyear::{
-    client::{
-        config::ClientConfig,
-        events::MessageEvent,
-        interpolation::plugin::{InterpolationConfig, InterpolationDelay},
-        plugin::{ClientPlugin, PluginConfig},
-        resource::Authentication,
-        sync::SyncConfig,
-    },
-    shared::{ping::manager::PingConfig, sets::FixedUpdateSet},
-    transport::io::*,
-};
 use rpg_network_protocol::{protocol::*, KEY, PROTOCOL_ID};
 
-use std::net::{Ipv4Addr, SocketAddr};
+use bevy_renet::{
+    client_connected,
+    renet::{
+        transport::{ClientAuthentication, NetcodeClientTransport},
+        ClientId, ConnectionConfig, RenetClient,
+    },
+    transport::NetcodeClientPlugin,
+    RenetClientPlugin,
+};
+
+use std::net::{Ipv4Addr, SocketAddr, UdpSocket};
+use std::time::SystemTime;
 
 #[derive(Debug, Clone)]
 pub struct NetworkClientConfig {
@@ -44,27 +43,36 @@ pub struct NetworkClientPlugin {
 impl Plugin for NetworkClientPlugin {
     fn build(&self, app: &mut App) {
         let server_addr = SocketAddr::new(self.config.server_addr.into(), self.config.server_port);
-        let auth = Authentication::Manual {
-            server_addr,
-            client_id: self.config.client_seed,
-            private_key: KEY,
+
+        app.add_plugins(NetcodeClientPlugin)
+            .add_plugins(RenetClientPlugin);
+
+        let connection_config = ConnectionConfig {
+            available_bytes_per_tick: 1024 * 1024,
+            client_channels_config: ClientChannel::channels_config(),
+            server_channels_config: ServerChannel::channels_config(),
+        };
+
+        let client = RenetClient::new(connection_config);
+
+        let server_addr = "127.0.0.1:4269".parse().unwrap();
+        let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
+        let current_time = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap();
+        let client_id = current_time.as_millis() as u64;
+        let authentication = ClientAuthentication::Unsecure {
+            client_id,
             protocol_id: PROTOCOL_ID,
+            server_addr,
+            user_data: None,
         };
-        let client_addr = SocketAddr::new(Ipv4Addr::UNSPECIFIED.into(), self.config.client_port);
-        let transport = TransportConfig::UdpSocket(client_addr);
-        let io = Io::from_config(IoConfig::from_transport(transport));
 
-        let config = ClientConfig {
-            shared: rpg_network_protocol::shared_config(),
-            netcode: Default::default(),
-            ping: PingConfig::default(),
-            sync: SyncConfig::default(),
-            interpolation: InterpolationConfig::default()
-                .with_delay(InterpolationDelay::default().with_send_interval_ratio(2.0)),
-        };
-        let plugin_config = PluginConfig::new(config, io, RpgProtocol::new(), auth);
+        let transport = NetcodeClientTransport::new(current_time, authentication, socket).unwrap();
 
-        app.add_plugins(ClientPlugin::new(plugin_config))
+        app.add_event::<ServerMessage>()
+            .insert_resource(client)
+            .insert_resource(transport)
             .insert_resource(Time::<Fixed>::from_seconds(1.0 / 60.))
             .init_resource::<ConnectionTimer>()
             .add_systems(Startup, connect)
@@ -107,24 +115,35 @@ impl Plugin for NetworkClientPlugin {
                         game::receive_player_spawn,
                         game::receive_player_join_success,
                         game::receive_player_join_error,
+                        game::receive_zone_load,
+                        game::receive_zone_unload,
                     )
-                        .run_if(in_state(AppState::Game).or_else(in_state(AppState::GameSpawn))),
+                        .run_if(in_state(AppState::Game).or_else(
+                            in_state(AppState::GameJoin).or_else(in_state(AppState::GameSpawn)),
+                        )),
                 ),
             )
             .add_systems(
                 FixedPreUpdate,
                 (
-                    game::receive_despawn_corpse,
-                    game::receive_despawn_item,
-                    game::receive_despawn_skill,
-                    game::receive_spawn_item,
-                    game::receive_spawn_items,
-                    game::receive_spawn_villain,
-                    game::receive_spawn_hero,
-                    game::receive_spawn_skill,
-                    game::receive_player_revive,
-                    game::receive_hero_revive,
-                ),
+                    sync_client,
+                    (
+                        game::receive_despawn_corpse,
+                        game::receive_despawn_item,
+                        game::receive_despawn_skill,
+                        game::receive_spawn_item,
+                        game::receive_spawn_items,
+                        game::receive_spawn_villain,
+                        game::receive_spawn_hero,
+                        game::receive_spawn_skill,
+                        game::receive_player_revive,
+                        game::receive_hero_revive,
+                        game::receive_item_pickup,
+                        game::receive_item_drop,
+                        game::receive_item_store,
+                    ),
+                )
+                    .chain(),
             )
             .add_systems(
                 FixedUpdate,
@@ -149,8 +168,7 @@ impl Plugin for NetworkClientPlugin {
                     )
                         .chain()
                         .after(game::receive_damage),
-                )
-                    .after(FixedUpdateSet::Main),
+                ),
             );
     }
 }
@@ -164,9 +182,19 @@ impl FromWorld for ConnectionTimer {
     }
 }
 
+fn sync_client(
+    mut net_client: ResMut<RenetClient>,
+    mut message_writer: EventWriter<ServerMessage>,
+) {
+    while let Some(message) = net_client.receive_message(ServerChannel::Message) {
+        let server_message: ServerMessage = bincode::deserialize(&message).unwrap();
+        message_writer.send(server_message);
+    }
+}
+
 fn connect(
     time: Res<Time>,
-    mut net_client: ResMut<Client>,
+    mut net_client: ResMut<RenetClient>,
     mut connection_timer: ResMut<ConnectionTimer>,
 ) {
     if net_client.is_connected() {
@@ -179,7 +207,6 @@ fn connect(
 
     let dt = time.delta();
     if connection_timer.paused() {
-        net_client.connect();
         connection_timer.reset();
         connection_timer.unpause();
         return;
@@ -189,15 +216,12 @@ fn connect(
 
     if connection_timer.just_finished() {
         connection_timer.reset();
-        net_client.connect();
     }
 }
 
 fn receive_server_hello(
-    _net_client: Res<Client>,
-    mut hello_events: EventReader<MessageEvent<SCHello>>,
+    _net_client: Res<RenetClient>,
+    mut hello_events: EventReader<ServerMessage>,
 ) {
     // TODO use this to disallow login/creation?
-
-    hello_events.clear();
 }

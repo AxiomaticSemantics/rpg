@@ -1,4 +1,4 @@
-use crate::{tile::Tile, zone::Zone};
+use crate::{metadata::Metadata, tile::Tile, zone::Zone};
 
 use bevy_math::UVec2;
 
@@ -10,8 +10,9 @@ pub struct Room {
 }
 
 impl Room {
-    pub fn new(zone: &Zone, position: UVec2, props: u32) -> Self {
-        let tile_count: u8 = (zone.size_info.tile_size.x * zone.size_info.tile_size.y) as u8;
+    pub fn new(metadata: &Metadata, zone: &Zone, position: UVec2, props: u32) -> Self {
+        let tile_count: u8 =
+            (metadata.zone.size_info.tile.x * metadata.zone.size_info.tile.y) as u8;
         let mut tiles = Vec::with_capacity(tile_count as usize);
         for i in 0..tile_count {
             tiles.push(Tile::new(i));

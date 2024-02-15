@@ -2,13 +2,10 @@
 resolver = "2"
 name = "rpg_server"
 version = "0.1.0"
-description = "A server for rpg_client"
+description = "A game server for rpg_client"
 license = "MIT OR Apache-2.0"
 authors.workspace = true
 edition.workspace = true
-
-[lints]
-workspace = true
 
 [dependencies]
 rpg_network_protocol = { path = "../rpg_network_protocol" }
@@ -29,9 +26,8 @@ serde_json = { workspace = true }
 
 clap = { version = "4.4.13", features = ["derive"] }
 signal-hook = { version = "0.3.17", features = ["extended-siginfo"] }
-
-[dependencies.lightyear]
-git = "https://github.com/AxiomaticSemantics/lightyear"
+bevy_renet = { version = "0.0.10", git = "https://github.com/AxiomaticSemantics/renet", features = ["serde"] }
+bincode = "1.3.3"
 
 [dependencies.bevy]
 git = "https://github.com/AxiomaticSemantics/bevy"
