@@ -203,8 +203,7 @@ pub fn update_skill(
                 // The skill would have been destroyed if it was expired, advance it
                 if let Some(orbit) = &info.orbit {
                     let rotation = Quat::from_rotation_y(
-                        ((info.info.speed as f32 / 100.) * time.elapsed_seconds())
-                            % std::f32::consts::TAU,
+                        ((info.info.speed as f32 / 100.) * dt) % std::f32::consts::TAU,
                     );
 
                     let mut target =
@@ -215,7 +214,7 @@ pub fn update_skill(
                     };
 
                     target.translation += target.forward() * (orbit_info.range as f32 / 100.);
-                    target.rotate_x(dt.sin());
+                    target.rotate_x(5. * dt);
 
                     transform.translation = target.translation;
                     transform.rotate_y(dt.cos());

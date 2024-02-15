@@ -1,6 +1,10 @@
 {
-	"props": [
-		{ "hedge_1" },
-		{ "lamp_1" }
-	]
+  "prop": {
+    "hedge_1": {
+      "key": "hedge_1"
+    },
+    "lamp_1": {
+      "key": "lamp_1"
+    }
+  }
 }

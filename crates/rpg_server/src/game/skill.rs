@@ -529,6 +529,7 @@ pub fn handle_contacts(
             _ => debug!("combat error"),
         }
 
+        // TODO this should probably be moved elsewhere
         if let Some(mut timer) = timer {
             if let SkillTimer::Tickable(ref mut tickable) = &mut *timer {
                 tickable.can_damage = false;

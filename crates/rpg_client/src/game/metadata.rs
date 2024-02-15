@@ -55,7 +55,6 @@ impl FromWorld for MetadataResources {
                 passive_tree,
             },
             world: WorldMetadata { zone },
-            //passive_tree: PassiveTreeMetadata { passive_tree },
             prop: PropMetadata { prop },
         }
     }

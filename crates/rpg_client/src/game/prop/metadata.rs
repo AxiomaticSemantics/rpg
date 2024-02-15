@@ -5,10 +5,14 @@ use serde_derive::Deserialize as De;
 
 #[derive(De)]
 pub(crate) struct PropDescriptor {
-    pub key: Cow<'static, str>,
+    pub(crate) key: Cow<'static, str>,
 }
 
-#[derive(Default, De)]
+#[derive(De)]
+pub(crate) struct PropTable {
+    pub(crate) prop: HashMap<Cow<'static, str>, PropDescriptor>,
+}
+
 pub(crate) struct PropMetadata {
-    pub prop: HashMap<Cow<'static, str>, PropDescriptor>,
+    pub(crate) prop: PropTable,
 }
