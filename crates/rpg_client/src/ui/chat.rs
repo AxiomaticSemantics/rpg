@@ -1,4 +1,4 @@
-use crate::{assets::TextureAssets, game::plugin::GameState};
+use crate::assets::TextureAssets;
 
 use ui_util::{
     style::{UiRoot, UiTheme},

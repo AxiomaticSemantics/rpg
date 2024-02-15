@@ -21,7 +21,7 @@ use bevy::{
     },
     hierarchy::{BuildChildren, ChildBuilder, Children, DespawnRecursiveExt},
     input::{keyboard::KeyCode, ButtonInput},
-    log::info,
+    log::{debug, info},
     render::color::Color,
     text::Text,
     ui::{
@@ -38,6 +38,9 @@ pub(crate) struct LobbyRoot;
 
 #[derive(Component)]
 pub(crate) struct PlayersContainer;
+
+#[derive(Component)]
+pub(crate) struct LobbyNameText;
 
 #[derive(Component)]
 pub(crate) struct LobbyMessageText;
@@ -101,6 +104,18 @@ pub(crate) fn spawn(
                     ..default()
                 })
                 .with_children(|p| {
+                    p.spawn(NodeBundle {
+                        style: ui_theme.col_style.clone(),
+                        ..default()
+                    })
+                    .with_children(|p| {
+                        p.spawn((
+                            LobbyNameText,
+                            TextBundle::from_section("", ui_theme.text_style_regular.clone())
+                                .with_style(ui_theme.row_style.clone()),
+                        ));
+                    });
+
                     p.spawn(NodeBundle {
                         style: ui_theme.col_style.clone(),
                         ..default()
@@ -456,7 +471,7 @@ pub(crate) fn update_lobby_messages(
     };
 
     let len = lobby.messages.len();
-    info!("updating lobby messages {}", len);
+    debug!("updating lobby messages {}", len);
 
     let mut count = len.saturating_sub(10);
     let children = lobby_messages_q.single();
@@ -476,17 +491,23 @@ pub(crate) fn update_lobby_messages(
     }
 }
 
-pub(crate) fn update_players_container(
+pub(crate) fn update_lobby(
     mut commands: Commands,
     ui_theme: Res<UiTheme>,
     lobby: Res<Lobby>,
     players_container_q: Query<(Entity, Option<&Children>), With<PlayersContainer>>,
+    mut lobby_name_q: Query<&mut Text, With<LobbyNameText>>,
 ) {
-    if !lobby.is_changed() {
+    if !lobby.is_changed() || lobby.0.is_none() {
         return;
     }
 
-    info!("lobby changed, updating players container");
+    debug!("lobby changed, updating");
+
+    let mut lobby_name = lobby_name_q.single_mut();
+    if lobby_name.sections[0].value != lobby.0.as_ref().unwrap().name {
+        lobby_name.sections[0].value = lobby.0.as_ref().unwrap().name.clone();
+    }
 
     let (entity, children) = players_container_q.single();
 
