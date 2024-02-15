@@ -26,15 +26,15 @@ use bevy::{
     hierarchy::{BuildChildren, Parent},
     input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
     log::debug,
-    math::{Vec2, Vec3},
+    math::{
+        primitives::{Circle, Rectangle},
+        Vec2, Vec3,
+    },
     prelude::{Deref, DerefMut},
     render::{
         camera::{Camera, ClearColorConfig, OrthographicProjection},
         color::Color,
-        mesh::{
-            shape::{Circle, Quad},
-            Mesh,
-        },
+        mesh::Mesh,
         view::RenderLayers,
     },
     sprite::{ColorMaterial, MaterialMesh2dBundle, Mesh2dHandle},
@@ -94,7 +94,7 @@ pub(crate) fn setup(
 
     let node_info = &metadata.rpg.passive_tree.node_info;
 
-    let line_mesh = meshes.add(Quad::new(Vec2::new(1., 0.125) * 100.));
+    let line_mesh = meshes.add(Rectangle::new(100., 12.5));
     let circle_root = meshes.add(Circle::new(node_info.root_size * 100.));
     let circle_major = meshes.add(Circle::new(node_info.major_size * 100.));
     let circle_minor = meshes.add(Circle::new(node_info.minor_size * 100.));

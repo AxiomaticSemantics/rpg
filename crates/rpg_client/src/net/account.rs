@@ -49,7 +49,7 @@ pub(crate) fn receive_account_create_success(
 
 pub(crate) fn receive_account_create_error(mut account_events: EventReader<ServerMessage>) {
     for event in account_events.read() {
-        let ServerMessage::SCCreateAccountError(msg) = event else {
+        let ServerMessage::SCCreateAccountError(_) = event else {
             continue;
         };
 
@@ -81,7 +81,7 @@ pub(crate) fn receive_account_login_success(
 
 pub(crate) fn receive_account_login_error(mut login_reader: EventReader<ServerMessage>) {
     for event in login_reader.read() {
-        let ServerMessage::SCLoginAccountError(msg) = event else {
+        let ServerMessage::SCLoginAccountError(_) = event else {
             continue;
         };
 
@@ -124,7 +124,7 @@ pub(crate) fn receive_character_create_success(
 
 pub(crate) fn receive_character_create_error(mut create_reader: EventReader<ServerMessage>) {
     for event in create_reader.read() {
-        let ServerMessage::SCCreateCharacterError(msg) = event else {
+        let ServerMessage::SCCreateCharacterError(_) = event else {
             continue;
         };
 
@@ -153,7 +153,7 @@ pub(crate) fn receive_game_join_success(
 
 pub(crate) fn receive_game_join_error(mut join_events: EventReader<ServerMessage>) {
     for event in join_events.read() {
-        let ServerMessage::SCGameJoinError(msg) = event else {
+        let ServerMessage::SCGameJoinError(_) = event else {
             continue;
         };
 
@@ -183,7 +183,7 @@ pub(crate) fn receive_game_create_success(
 
 pub(crate) fn receive_game_create_error(mut create_events: EventReader<ServerMessage>) {
     for event in create_events.read() {
-        let ServerMessage::SCGameCreateError(msg) = event else {
+        let ServerMessage::SCGameCreateError(_) = event else {
             continue;
         };
 

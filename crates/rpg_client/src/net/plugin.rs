@@ -16,10 +16,9 @@ use bevy::{
 use rpg_network_protocol::{protocol::*, KEY, PROTOCOL_ID};
 
 use bevy_renet::{
-    client_connected,
     renet::{
         transport::{ClientAuthentication, NetcodeClientTransport},
-        ClientId, ConnectionConfig, RenetClient,
+        ConnectionConfig, RenetClient,
     },
     transport::NetcodeClientPlugin,
     RenetClientPlugin,
@@ -55,7 +54,7 @@ impl Plugin for NetworkClientPlugin {
 
         let client = RenetClient::new(connection_config);
 
-        let server_addr = "127.0.0.1:4269".parse().unwrap();
+        // FIXME
         let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
         let current_time = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
@@ -192,9 +191,10 @@ fn sync_client(
     }
 }
 
+// FIXME renet automatically connects when a transport is created and a new transport must created in order to reconnect
 fn connect(
     time: Res<Time>,
-    mut net_client: ResMut<RenetClient>,
+    net_client: ResMut<RenetClient>,
     mut connection_timer: ResMut<ConnectionTimer>,
 ) {
     if net_client.is_connected() {
@@ -219,9 +219,7 @@ fn connect(
     }
 }
 
-fn receive_server_hello(
-    _net_client: Res<RenetClient>,
-    mut hello_events: EventReader<ServerMessage>,
-) {
+// FIXME Move or remove this
+fn receive_server_hello(_net_client: Res<RenetClient>, _hello_events: EventReader<ServerMessage>) {
     // TODO use this to disallow login/creation?
 }

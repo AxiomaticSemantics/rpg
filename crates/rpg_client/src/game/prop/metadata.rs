@@ -1,6 +1,14 @@
+use std::borrow::Cow;
 use std::collections::HashMap;
 
-#[derive(Default)]
-pub(crate) struct Metadata {
-    props: HashMap<&'static str, &'static str>,
+use serde_derive::Deserialize as De;
+
+#[derive(De)]
+pub(crate) struct PropDescriptor {
+    pub key: Cow<'static, str>,
+}
+
+#[derive(Default, De)]
+pub(crate) struct PropMetadata {
+    pub prop: HashMap<Cow<'static, str>, PropDescriptor>,
 }

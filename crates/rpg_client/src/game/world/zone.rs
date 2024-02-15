@@ -4,13 +4,7 @@ use crate::game::{
     assets::RenderResources, metadata::MetadataResources, plugin::GameSessionCleanup, prop,
 };
 
-use rpg_world::{
-    edge::{Edge, EdgeFlags},
-    metadata::Metadata as WorldMetadata,
-    room::Room,
-    zone::{self, Connection, ConnectionKind, Kind, Zone, ZoneId, ZoneSize},
-    zone_path::ZonePath,
-};
+use rpg_world::{metadata::Metadata as WorldMetadata, zone::Zone, zone_path::ZonePath};
 use util::cleanup::CleanupStrategy;
 
 use bevy::{
@@ -22,12 +16,9 @@ use bevy::{
     },
     hierarchy::BuildChildren,
     log::debug,
-    math::{uvec2, Quat, UVec2, Vec2, Vec3},
+    math::{primitives::Rectangle, Quat, Vec2, Vec3},
     pbr::{PbrBundle, PointLight, PointLightBundle, StandardMaterial},
-    render::{
-        color::Color,
-        mesh::{shape::Quad, Mesh},
-    },
+    render::{color::Color, mesh::Mesh},
     transform::components::Transform,
     utils::default,
 };
@@ -103,11 +94,10 @@ fn build_zone(
     );
     */
 
-    let mut room_plane = Mesh::from(Quad {
-        size: room_world_size.as_vec2(),
-        ..default()
-    });
-
+    let mut room_plane = Mesh::from(Rectangle::new(
+        room_world_size.x as f32,
+        room_world_size.y as f32,
+    ));
     room_plane.generate_tangents().unwrap();
 
     let room_plane = meshes.add(room_plane);

@@ -1,4 +1,4 @@
-pub mod metadata;
+pub(crate) mod metadata;
 mod prop_internal;
 
-pub use prop_internal::*;
+pub(crate) use prop_internal::*;

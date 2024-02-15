@@ -21,15 +21,13 @@ use bevy::{
     ecs::system::Commands,
     gizmos::aabb::ShowAabbGizmo,
     log::debug,
-    math::{bounding::Aabb3d, Vec3},
-    pbr::{MaterialMeshBundle, PbrBundle, StandardMaterial},
-    render::{
-        mesh::{
-            shape::{Circle, Icosphere},
-            Mesh,
-        },
-        prelude::SpatialBundle,
+    math::{
+        bounding::Aabb3d,
+        primitives::{Circle, Sphere},
+        Vec3,
     },
+    pbr::{MaterialMeshBundle, PbrBundle, StandardMaterial},
+    render::{mesh::Mesh, prelude::SpatialBundle},
     scene::SceneBundle,
     time::{Timer, TimerMode},
     transform::components::Transform,
@@ -124,7 +122,7 @@ pub(crate) fn prepare_skill(
 
                     (handle, aabb)
                 } else {
-                    let mesh = Mesh::try_from(Icosphere {
+                    let mesh = Mesh::try_from(Sphere {
                         radius,
                         ..default()
                     })

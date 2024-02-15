@@ -1,8 +1,5 @@
 use bevy::{
-    ecs::{
-        event::EventReader,
-        system::{Query, Resource},
-    },
+    ecs::{event::EventReader, system::Resource},
     log::info,
 };
 
@@ -13,7 +10,7 @@ pub(crate) struct Chat;
 
 pub(crate) fn receive_join_success(mut join_events: EventReader<ServerMessage>) {
     for event in join_events.read() {
-        let ServerMessage::SCChatJoinSuccess(msg) = event else {
+        let ServerMessage::SCChatJoinSuccess(_) = event else {
             continue;
         };
 
@@ -23,7 +20,7 @@ pub(crate) fn receive_join_success(mut join_events: EventReader<ServerMessage>) 
 
 pub(crate) fn receive_join_error(mut join_events: EventReader<ServerMessage>) {
     for event in join_events.read() {
-        let ServerMessage::SCChatJoinError(msg) = event else {
+        let ServerMessage::SCChatJoinError(_) = event else {
             continue;
         };
 
@@ -33,7 +30,7 @@ pub(crate) fn receive_join_error(mut join_events: EventReader<ServerMessage>) {
 
 pub(crate) fn receive_channel_join_success(mut join_events: EventReader<ServerMessage>) {
     for event in join_events.read() {
-        let ServerMessage::SCChatChannelJoinSuccess(msg) = event else {
+        let ServerMessage::SCChatChannelJoinSuccess(_) = event else {
             continue;
         };
 
@@ -43,7 +40,7 @@ pub(crate) fn receive_channel_join_success(mut join_events: EventReader<ServerMe
 
 pub(crate) fn receive_channel_join_error(mut join_events: EventReader<ServerMessage>) {
     for event in join_events.read() {
-        let ServerMessage::SCChatChannelJoinError(msg) = event else {
+        let ServerMessage::SCChatChannelJoinError(_) = event else {
             continue;
         };
 
