@@ -1,4 +1,4 @@
-use bevy::{ecs::entity::Entity, log::info};
+use bevy::ecs::entity::Entity;
 
 use bevy_renet::renet::ClientId;
 

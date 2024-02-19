@@ -1,10 +1,41 @@
 {
   "prop": {
-    "hedge_1": {
-      "key": "hedge_1"
+    "bolt_01": {
+      "key": "bolt_01",
+      "kind": "GlbMesh"
     },
-    "lamp_1": {
-      "key": "lamp_1"
+    "waypoint": {
+      "key": "waypoint",
+      "kind": "GlbMesh"
+    },
+    "hedge_1": {
+      "key": "hedge_1",
+      "kind": "GlbMesh"
+    },
+    "rock_1": {
+      "key": "rock_1",
+      "kind": "GlbMesh"
+    },
+    "item_gem": {
+      "key": "item_gem",
+      "kind": "GlbMesh"
+    },
+    "item_potion_hp": {
+      "key": "item_potion_hp",
+      "kind": "GlbMesh"
+    },
+    "item_potion_ep": {
+      "key": "item_potion_ep",
+      "kind": "GlbMesh"
+    },
+    "item_potion_mp": {
+      "key": "item_potion_mp",
+      "kind": "GlbMesh"
+    },
+    "ground_lamp_1": {
+      "key": "ground_lamp_1",
+      "kind": "GlbMesh",
+      "offset": [0, 0.25, 0]
     }
   }
 }

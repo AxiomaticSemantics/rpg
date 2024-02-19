@@ -58,6 +58,10 @@ impl FromWorld for TextureAssets {
         icons.insert("transparent", server.load("textures/icons/transparent.png"));
         icons.insert("frame", server.load("ui/frame.png"));
         icons.insert("p_circle", server.load("ui/circle_512.png"));
+        icons.insert(
+            "border_patch1",
+            server.load("ui/border_single/border/panel-border-017.png"),
+        );
 
         TextureAssets {
             icons,

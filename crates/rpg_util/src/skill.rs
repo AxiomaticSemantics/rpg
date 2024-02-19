@@ -168,7 +168,7 @@ pub fn get_skill_origin(
     match skill_meta.origin_kind {
         OriginKind::Direct => SkillTarget {
             origin: unit_transform.translation + skill_meta.origin * *unit_transform.forward(),
-            target: unit_transform.translation + skill_meta.origin * *unit_transform.forward(),
+            target,
         },
         OriginKind::Remote => SkillTarget {
             origin: unit_transform.translation + skill_meta.origin,
@@ -177,7 +177,7 @@ pub fn get_skill_origin(
 
         OriginKind::Locked => SkillTarget {
             origin: unit_transform.translation + skill_meta.origin,
-            target: unit_transform.translation + skill_meta.origin,
+            target,
         },
     }
 }
@@ -209,19 +209,7 @@ pub fn update_skill(
                         ((info.info.speed as f32 / 100.) * dt) % std::f32::consts::TAU,
                     );
 
-                    let mut target =
-                        Transform::from_translation(orbit.origin).with_rotation(rotation);
-
-                    let Some(orbit_info) = &info.info.orbit else {
-                        panic!("expected orbit info");
-                    };
-
-                    target.translation += target.forward() * (orbit_info.range as f32 / 100.);
-                    target.rotate_x(5. * dt);
-
-                    transform.translation = target.translation;
-                    transform.rotate_y(dt.cos());
-                    transform.rotate_z(dt.sin());
+                    transform.translate_around(orbit.origin, rotation);
                 } else if let Some(_aerial) = &info.info.aerial {
                     transform.translation = transform.translation
                         + transform.forward() * dt * (info.info.speed as f32 / 100.);

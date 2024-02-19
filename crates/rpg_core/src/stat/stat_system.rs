@@ -362,9 +362,7 @@ impl Stats {
         self.clear_item_stats();
 
         for node in storage.storage.iter() {
-            if node.index == StorageIndex(STORAGE_INVENTORY)
-                || node.index == StorageIndex(STORAGE_STASH)
-            {
+            if node.index == STORAGE_ID_INVENTORY || node.index == STORAGE_ID_STASH {
                 continue;
             }
 

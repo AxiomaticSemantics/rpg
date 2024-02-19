@@ -25,10 +25,16 @@ impl NetworkContext {
         self.clients.get(&id)
     }
 
+    pub(crate) fn get_authenticated_account(&self, id: ClientId) -> Option<&Client> {
+        self.clients
+            .get(&id)
+            .filter(|c| c.is_authenticated_player())
+    }
+
     pub(crate) fn get_client_from_account_id(&self, id: AccountId) -> Option<&Client> {
         self.clients.values().find(|a| {
-            if let Some(aid) = a.account_id {
-                aid == id
+            if let Some(a_id) = a.account_id {
+                a_id == id
             } else {
                 false
             }
@@ -43,12 +49,11 @@ impl NetworkContext {
         let client_ids: Vec<_> = account_ids
             .iter()
             .map(|a| {
-                *self
-                    .clients
-                    .iter()
-                    .find(|(k, v)| v.is_authenticated() && v.account_id.unwrap() == *a)
+                self.clients
+                    .values()
+                    .find(|v| v.is_authenticated() && v.account_id.unwrap() == *a)
                     .unwrap()
-                    .0
+                    .client_id
             })
             .collect();
 

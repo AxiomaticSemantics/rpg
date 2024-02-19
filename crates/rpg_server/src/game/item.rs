@@ -1,7 +1,6 @@
 use super::plugin::{AabbResources, GameSessionCleanup};
-use crate::assets::MetadataResources;
 
-use rpg_core::{item::Item, metadata::Metadata, uid::Uid};
+use rpg_core::{item::Item, uid::Uid};
 use rpg_util::{item::GroundItemDrops, unit::Unit};
 
 use util::{cleanup::CleanupStrategy, math::AabbComponent};
@@ -20,7 +19,6 @@ pub(crate) struct GroundItem(pub(crate) Uid);
 
 pub(crate) fn spawn_ground_items(
     mut commands: Commands,
-    metadata: Res<MetadataResources>,
     aabbs: Res<AabbResources>,
     mut ground_drop_items: ResMut<GroundItemDrops>,
     mut unit_q: Query<(&Transform, &Unit)>,
@@ -34,7 +32,6 @@ pub(crate) fn spawn_ground_items(
             for item in &items.items {
                 spawn_item(
                     &mut commands,
-                    &metadata.rpg,
                     &aabbs,
                     source_transform.translation,
                     item.clone(),
@@ -44,16 +41,8 @@ pub(crate) fn spawn_ground_items(
     }
 }
 
-fn spawn_item(
-    commands: &mut Commands,
-    metadata: &Metadata,
-    aabbs: &AabbResources,
-    position: Vec3,
-    item: Item,
-) {
+fn spawn_item(commands: &mut Commands, aabbs: &AabbResources, position: Vec3, item: Item) {
     // info!("spawning ground item at {position:?}");
-    let item_info = &metadata.item.items[&item.id];
-
     let aabb = AabbComponent(aabbs.aabbs["item_normal"]);
 
     let transform = Transform::from_xyz(position.x, 0.8, position.z);

@@ -1,12 +1,25 @@
 {
   "size_info": {
-    "room": [8, 8],
-    "tile": [1, 1]
+    "room": [
+      8,
+      8
+    ],
+    "tile": [
+      1,
+      1
+    ]
   },
   "towns": {
     "0": {
       "name": "Fjotinheim",
       "kind": "OverworldTown",
+      "biome": "Temperate",
+      "waypoint": {
+        "position": [
+          2,
+          5
+        ]
+      },
       "spawn_position": [
         1,
         2
@@ -16,31 +29,47 @@
         4
       ],
       "props": [
-	{
-	  "position": [13, 0],
-	  "key": "ground_lamp_1"
-	},
         {
-	  "position": [16, 9],
-	  "key": "ground_lamp_1"
-	},
+          "position": [
+            13,
+            0
+          ],
+          "key": "ground_lamp_1"
+        },
         {
-	  "position": [8, 16],
-	  "key": "ground_lamp_1"
-	},
+          "position": [
+            16,
+            9
+          ],
+          "key": "ground_lamp_1"
+        },
         {
-	  "position": [0, 9],
-	  "key": "ground_lamp_1"
-	},
+          "position": [
+            8,
+            16
+          ],
+          "key": "ground_lamp_1"
+        },
         {
-	  "position": [3, 0],
-	  "key": "ground_lamp_1"
-	}
+          "position": [
+            0,
+            9
+          ],
+          "key": "ground_lamp_1"
+        },
+        {
+          "position": [
+            3,
+            0
+          ],
+          "key": "ground_lamp_1"
+        }
       ]
     },
     "7": {
       "name": "Hiemdalsfard",
       "kind": "OverworldTown",
+      "biome": "Temperate",
       "spawn_position": [
         2,
         8
@@ -54,6 +83,7 @@
     "14": {
       "name": "Skalavik",
       "kind": "OverworldTown",
+      "biome": "Temperate",
       "spawn_position": [
         2,
         4
@@ -67,6 +97,7 @@
     "21": {
       "name": "Langadalr",
       "kind": "OverworldTown",
+      "biome": "Temperate",
       "spawn_position": [
         4,
         6
@@ -80,6 +111,7 @@
     "28": {
       "name": "Myrr",
       "kind": "UnderworldTown",
+      "biome": "Savana",
       "spawn_position": [
         4,
         4

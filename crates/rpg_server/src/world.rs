@@ -8,34 +8,28 @@ use bevy::{
         system::{Res, ResMut, Resource},
     },
     log::info,
-    math::uvec2,
 };
 
 use rpg_network_protocol::protocol::*;
-use rpg_world::{
-    zone::{Kind, Zone, ZoneId, ZoneSize},
-    zone_path::ZonePath,
-};
+use rpg_world::zone::{Kind, Zone, ZoneId};
 
 use std::collections::HashMap;
 
 #[derive(Event)]
 pub(crate) struct LoadZone(pub(crate) ZoneId);
 
+#[derive(Default)]
 pub(crate) enum ZoneLoadStatus {
+    #[default]
     Unloaded,
     Loading,
     Loaded,
     Unloading,
 }
 
-pub(crate) struct ZoneState {
-    pub(crate) load_status: ZoneLoadStatus,
-}
-
 pub(crate) struct RpgZone {
     pub(crate) zone: Option<Zone>,
-    pub(crate) state: ZoneState,
+    pub(crate) status: ZoneLoadStatus,
 }
 
 #[derive(Default, Resource)]
@@ -87,9 +81,7 @@ pub(crate) fn spawn_world(
 
         let zone = RpgZone {
             zone: Some(zone),
-            state: ZoneState {
-                load_status: ZoneLoadStatus::Loading,
-            },
+            status: ZoneLoadStatus::Loading,
         };
 
         net_params

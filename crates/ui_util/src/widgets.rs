@@ -12,7 +12,7 @@ use bevy::{
     hierarchy::{BuildChildren, ChildBuilder, Parent},
     input::{
         keyboard::KeyCode,
-        mouse::{MouseMotion, MouseScrollUnit, MouseWheel},
+        mouse::{MouseScrollUnit, MouseWheel},
         ButtonInput,
     },
     log::{debug, info},
@@ -21,9 +21,9 @@ use bevy::{
     text::{Text, TextStyle},
     transform::components::GlobalTransform,
     ui::{
-        node_bundles::{ImageBundle, NodeBundle, TextBundle},
-        AlignContent, AlignItems, AlignSelf, BackgroundColor, Display, FlexDirection, Interaction,
-        JustifyContent, Node, Overflow, OverflowAxis, Style, UiRect, Val,
+        node_bundles::{ButtonBundle, NodeBundle, TextBundle},
+        AlignItems, AlignSelf, BackgroundColor, Display, FlexDirection, Interaction,
+        JustifyContent, Node, Overflow, Style, UiRect, Val,
     },
     utils::default,
     window::{PrimaryWindow, ReceivedCharacter, Window},
@@ -49,8 +49,7 @@ pub struct ImageButton;
 #[derive(Bundle, Default)]
 pub struct ImageButtonBundle {
     pub marker: ImageButton,
-    pub image: ImageBundle,
-    pub interaction: Interaction,
+    pub image: ButtonBundle,
 }
 
 #[derive(Default, Debug)]

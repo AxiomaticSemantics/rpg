@@ -2,7 +2,7 @@ use rpg_account::account::AccountId;
 use rpg_chat::chat::MessageId;
 use rpg_core::uid::NextUid;
 
-use util::fs::open_read;
+use util::fs::{open_read, open_write};
 
 use bevy::ecs::{
     system::Resource,
@@ -25,12 +25,24 @@ pub(crate) struct ServerMetadata {
 pub(crate) struct ServerMetadataResource(pub(crate) ServerMetadata);
 
 impl FromWorld for ServerMetadataResource {
-    fn from_world(world: &mut World) -> Self {
-        let file_path = format!("{}/server/meta.json", env::var("RPG_SAVE_ROOT").unwrap());
+    fn from_world(_world: &mut World) -> Self {
+        let file_path = format!("{}/server/meta.bin", env::var("RPG_SAVE_ROOT").unwrap());
         let path = Path::new(file_path.as_str());
-        let file = open_read(path).unwrap();
 
-        let metadata = serde_json::from_reader(file).unwrap();
-        Self(metadata)
+        if let Ok(file) = open_read(path) {
+            Self(bincode::deserialize_from(file).unwrap())
+        } else {
+            let meta = ServerMetadata {
+                next_account_id: AccountId(0),
+                next_message_id: MessageId(0),
+                next_uid: NextUid::default(),
+                rng_seed: 0,
+            };
+
+            let file = open_write(path).unwrap();
+            bincode::serialize_into(file, &meta).unwrap();
+
+            Self(meta)
+        }
     }
 }

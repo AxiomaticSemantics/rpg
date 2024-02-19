@@ -25,4 +25,4 @@ glam = { version = "0.25", features = ["serde"] }
 
 renet = { version = "0.0.14", git = "https://github.com/AxiomaticSemantics/renet", features = ["serde", "transport"] }
 
-bevy_ecs = { version = "0.12", git = "https://github.com/AxiomaticSemantics/bevy", optional = false, default-features = false }
+bevy_ecs = { version = "0.13", git = "https://github.com/AxiomaticSemantics/bevy", optional = false, default-features = false }

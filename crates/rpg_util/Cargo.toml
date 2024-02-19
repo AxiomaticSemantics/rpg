@@ -12,13 +12,13 @@ workspace = true
 
 [dependencies]
 rpg_core = { path = "../rpg_core" }
+rpg_world = { path = "../rpg_world" }
+
 util = { path = "../util" }
 
 [dependencies.bevy]
+version = "0.13.0"
 git = "https://github.com/AxiomaticSemantics/bevy"
 features = [ ]
 optional = false
 default-features = false
-
-#serde = { workspace = true }
-#serde_derive = { workspace = true }

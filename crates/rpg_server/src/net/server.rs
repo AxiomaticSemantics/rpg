@@ -148,15 +148,14 @@ fn handle_connections(
     for event in connect_reader.read() {
         match event {
             ServerEvent::ClientConnected { client_id } => {
+                info!("client joined: {client_id}");
+
                 net_params.context.add_client(*client_id);
 
-                let message = ServerMessage::SCHello(SCHello);
-                let message = bincode::serialize(&message).unwrap();
+                let message = bincode::serialize(&ServerMessage::SCHello(SCHello)).unwrap();
                 net_params
                     .server
                     .send_message(*client_id, ServerChannel::Message, message);
-
-                info!("sending hello to {client_id}");
             }
             ServerEvent::ClientDisconnected { client_id, reason } => {
                 info!("client disconnected: {reason:?}");

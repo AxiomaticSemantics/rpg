@@ -13,6 +13,6 @@ workspace = true
 [dependencies]
 serde = { workspace = true }
 serde_derive = { workspace = true }
-bevy_math = { git = "https://github.com/AxiomaticSemantics/bevy", "features" = ["serialize"], version = "0.12.0" }
+bevy_math = { git = "https://github.com/AxiomaticSemantics/bevy", "features" = ["serialize"], version = "0.13.0" }
 num_enum = "0.7.1"
 fastrand = "2.0.1"

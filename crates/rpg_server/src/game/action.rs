@@ -52,7 +52,7 @@ pub(crate) fn action(
             &mut Actions,
             Option<&AccountInstance>,
         ),
-        (Changed<Actions>, Without<Corpse>),
+        Without<Corpse>,
     >,
 ) {
     use std::f32::consts;
@@ -64,6 +64,10 @@ pub(crate) fn action(
     for (entity, mut unit, mut skills, skill_slots, mut transform, _, mut actions, account) in
         &mut unit_q
     {
+        if actions.is_inactive() {
+            continue;
+        }
+
         // All of the following action handlers are in a strict order
 
         // First react to any knockback events, this blocks all other actions
@@ -140,9 +144,8 @@ pub(crate) fn action(
                         (attack.user.distance(attack.skill_target.target) * 100.).round() as u32;
                     let skill_use_result =
                         unit.use_skill(&mut skills, &metadata.rpg, attack.skill_id, distance);
-                    match skill_use_result {
-                        SkillUseResult::Ok => {}
-                        _ => panic!("This should never happen. {skill_use_result:?}"),
+                    if skill_use_result != SkillUseResult::Ok {
+                        panic!("This should never happen. {skill_use_result:?}")
                     }
 
                     let Some(skill) = skills.iter().find(|s| s.id == attack.skill_id) else {
@@ -167,7 +170,6 @@ pub(crate) fn action(
                         skill_info,
                         skill,
                         &unit,
-                        &transform,
                         instance_uid,
                     );
 
@@ -331,7 +333,6 @@ pub(crate) fn try_move_units(
             }
         }
         if *entity == Entity::PLACEHOLDER {
-            // FIXME changing the entity in-situ precludes handling this correctly
             // TODO The action has been denied, if not already in progress, send a message to connected clients
         }
     }

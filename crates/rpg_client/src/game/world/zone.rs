@@ -4,7 +4,7 @@ use crate::game::{
     assets::RenderResources, metadata::MetadataResources, plugin::GameSessionCleanup, prop,
 };
 
-use rpg_world::{metadata::Metadata as WorldMetadata, zone::Zone, zone_path::ZonePath};
+use rpg_world::zone::Zone;
 use util::cleanup::CleanupStrategy;
 
 use bevy::{
@@ -25,7 +25,7 @@ use bevy::{
 
 use fastrand::Rng;
 
-use std::f32::consts::{FRAC_PI_2, PI};
+use std::f32::consts::FRAC_PI_2;
 
 #[derive(Component)]
 pub struct Ground;
@@ -54,12 +54,12 @@ pub fn load_zone(
         zone.create_rooms(&metadata.world);
 
         build_zone(
-            &mut zone,
-            &mut rpg_world.rng,
             &mut commands,
+            &metadata,
             &renderables,
             &mut meshes,
-            &metadata.world,
+            &mut zone,
+            &mut rpg_world.rng,
         );
         rpg_world.active_zone = Some(zone_id);
         rpg_world.zones.insert(zone_id, zone);
@@ -67,22 +67,20 @@ pub fn load_zone(
     /*
     let path = ZonePath::generate();
     let size_info = SizeInfo::new(uvec2(8, 8), uvec2(4, 4), uvec2(4, 4));
-    let mut zone = zone::Zone::new(ZoneId(0), 1234, size_info, Kind::Overworld, path);
-    zone.create_rooms();
     zone.set_tile_path();
     */
 }
 
 fn build_zone(
-    zone: &mut Zone,
-    rng: &mut Rng,
     commands: &mut Commands,
+    metadata: &MetadataResources,
     renderables: &RenderResources,
     meshes: &mut Assets<Mesh>,
-    metadata: &WorldMetadata,
+    zone: &mut Zone,
+    rng: &mut Rng,
 ) {
-    let room_world_size = zone.size.room_world_size(metadata);
-    let world_offset = zone.size.zone_world_offset(metadata);
+    let room_world_size = zone.size.room_world_size(&metadata.world);
+    let world_offset = zone.size.zone_world_offset(&metadata.world);
 
     /*
     let tile_edge_debug_mesh = meshes.add(
@@ -118,7 +116,6 @@ fn build_zone(
     Kind::UnderworldTown => {}
     Kind::Underworld => {}*/
     // Hedge = 4m
-    let mut count = 0;
 
     zone.rooms.iter().for_each(|room| {
         let room_world_offset = room.position * room_world_size;
@@ -139,7 +136,7 @@ fn build_zone(
                 material: renderables.materials["tile"].clone_weak(),
                 transform: Transform::from_translation(Vec3::new(
                     room_world_float.x,
-                    0.001,
+                    0.0,
                     room_world_float.y,
                 ))
                 .with_rotation(Quat::from_rotation_x(-FRAC_PI_2)),
@@ -156,7 +153,18 @@ fn build_zone(
     );
     */
 
-    let zone_info = &metadata.zone.towns[&zone.id];
+    let zone_info = &metadata.world.zone.towns[&zone.id];
+    if let Some(waypoint) = &zone_info.waypoint {
+        prop::spawn(
+            commands,
+            metadata,
+            renderables,
+            "waypoint",
+            Vec3::new(waypoint.position.x as f32, 0.0, waypoint.position.y as f32),
+            None,
+        );
+    }
+
     for prop in &zone_info.props {
         use std::f32::consts;
 
@@ -166,6 +174,7 @@ fn build_zone(
 
         let id = prop::spawn(
             commands,
+            metadata,
             renderables,
             prop.key.as_str(),
             Vec3::new(position.x as f32, 0.5, position.y as f32),
@@ -191,18 +200,10 @@ fn build_zone(
     }
 
     for room in zone.rooms.iter() {
-        //    for _ in 0..zone_info.props {
-        //        room.spawn_random_prop(commands, renderables, zone, rng, metadata);
-        //    }
         for tile in &room.tiles {
-            count += room.spawn_wall_section(commands, zone, metadata, renderables, tile.index);
+            room.spawn_wall_section(commands, metadata, renderables, zone, tile.index);
         }
     }
-    /*}
-    Kind::OverworldTown => {}
-    Kind::UnderworldTown => {}
-    Kind::Underworld => {}*/
-    //}
 }
 
 /*

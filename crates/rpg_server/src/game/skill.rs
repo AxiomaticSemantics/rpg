@@ -69,43 +69,17 @@ pub fn update_invulnerability(
     }
 }
 
-/*
-fn get_target_info(
-    caster_transform: &Transform,
-    skill_meta: &SkillTableEntry,
-    attack_data: &AttackData,
-) -> SkillTarget {
-    let origin = match &skill_meta.origin_kind {
-        OriginKind::Direct => {
-            caster_transform.translation
-                + skill_meta.origin
-                + caster_transform.forward() * (skill_meta.use_range as f32 / 100. / 2.)
-        }
-        OriginKind::Remote => skill_meta.origin + attack_data.skill_target.target,
-        OriginKind::Locked => caster_transform.translation + skill_meta.origin,
-    };
-
-    SkillTarget {
-        origin,
-        target: attack_data.skill_target.target,
-    }
-}*/
-
 pub(crate) fn prepare_skill(
     attack_data: &AttackData,
     aabbs: &mut AabbResources,
     skill_meta: &SkillTableEntry,
     skill: &Skill,
     unit: &Unit,
-    unit_transform: &Transform,
     instance_uid: InstanceUid,
 ) -> (Aabb3d, Transform, SkillUse, Option<SkillTimer>) {
-    //let target = get_target_info(unit_transform, skill_meta, attack_data);
+    debug!("prepare skill: {attack_data:?}");
 
-    // debug!("{:?}", &skill_info.origin);
-
-    /* FIXME
-    let effects = skill
+    let effects: Vec<_> = skill
         .effects
         .iter()
         .map(|e| {
@@ -119,7 +93,7 @@ pub(crate) fn prepare_skill(
 
             EffectInstance::new(e.clone(), data)
         })
-        .collect(); */
+        .collect();
 
     let timer = if let Some(timer) = &skill_meta.timer {
         match timer {
@@ -150,7 +124,11 @@ pub(crate) fn prepare_skill(
             });
 
             let transform = Transform::from_translation(attack_data.skill_target.origin)
-                .looking_to(attack_data.skill_target.target, Vec3::Y);
+                .looking_to(
+                    attack_data.skill_target.target
+                        + Vec3::new(0., attack_data.skill_target.origin.y, 0.),
+                    Vec3::Y,
+                );
 
             (aabb, instance, transform)
         }
@@ -180,14 +158,13 @@ pub(crate) fn prepare_skill(
                 aabb
             };
 
-            let transform = Transform::from_translation(attack_data.skill_target.origin)
-                .looking_at(attack_data.skill_target.target, Vec3::Y);
+            let transform = Transform::from_translation(attack_data.skill_target.target); //.looking_at(attack_data.skill_target.target, Vec3::Y);
 
             let instance_info = SkillInstance::Projectile(ProjectileInstance {
                 info: info.clone(),
                 orbit: if info.orbit.is_some() {
                     Some(OrbitData {
-                        origin: transform.translation,
+                        origin: attack_data.skill_target.origin,
                     })
                 } else {
                     None
@@ -229,7 +206,7 @@ pub(crate) fn prepare_skill(
         skill.id,
         skill.damage.clone(),
         skill_use,
-        vec![], // FIXME effects,
+        effects,
     );
 
     (aabb, transform, instance, timer)
@@ -473,7 +450,7 @@ pub fn handle_contacts(
 
                 commands.entity(event.defender).insert((Corpse,));
             }
-            CombatResult::VillainDeath(death) => {
+            CombatResult::VillainDeath(_) => {
                 debug!("villain death");
 
                 d_actions.reset();

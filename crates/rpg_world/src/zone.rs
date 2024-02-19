@@ -13,7 +13,13 @@ use serde_derive::{Deserialize as De, Serialize as Ser};
 
 use std::collections::VecDeque;
 
-#[derive(Ser, De, Copy, Clone, PartialEq, Eq, Debug, Hash)]
+#[derive(Ser, De, Debug, Copy, Clone, PartialEq)]
+pub enum Biome {
+    Temperate,
+    Savana,
+}
+
+#[derive(Ser, De, Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ZoneId(pub u16);
 
 #[derive(Ser, De, Debug, Clone, PartialEq)]
@@ -38,8 +44,10 @@ pub enum ZoneInfo {
 #[derive(Debug)]
 pub struct Zone {
     pub id: ZoneId,
+    pub seed: u64,
     pub size: ZoneSize,
     pub kind: Kind,
+    pub biome: Biome,
     pub info: ZoneInfo,
     pub connections: Vec<Connection>,
     pub room_route: Vec<UVec2>,
@@ -54,9 +62,9 @@ impl Zone {
         seed: u64,
         size: ZoneSize,
         kind: Kind,
+        biome: Biome,
         path: ZonePath,
         metadata: &Metadata,
-        rng: &mut Rng,
     ) -> Self {
         let mut room_route = vec![];
         let mut tile_route = vec![];
@@ -75,54 +83,22 @@ impl Zone {
                 room_route.push(room_position);
             }
 
-            let Some(back): Option<&UVec2> = tile_route.iter().last() else {
+            let Some(last): Option<&UVec2> = tile_route.iter().last() else {
                 tile_route.push(tile_position);
                 continue;
             };
 
             if !tile_route.iter().any(|v| *v == tile_position) {
-                if !tile_position.cmpeq(*back).any() {
-                    tile_route.push(if back.x > tile_position.x {
-                        *back - uvec2(1, 0)
+                if !tile_position.cmpeq(*last).any() {
+                    tile_route.push(if last.x > tile_position.x {
+                        *last - uvec2(1, 0)
                     } else {
-                        *back + uvec2(1, 0)
+                        *last + uvec2(1, 0)
                     });
                 }
                 tile_route.push(tile_position);
             }
         }
-
-        /*
-        for &position in path.back().unwrap().iter() {
-            let tile_position = uvec2(
-                ((position.x).floor() as u32).clamp(0, 31),
-                ((position.z).floor() as u32).clamp(0, 31),
-            );
-
-            let room_position = tile_position / 4;
-
-            //println!("position {position} {x} {y} {i_position} to route");
-            if !room_route.iter().any(|v| *v == room_position) {
-                //println!("pushing {room_position} to route");
-                room_route.push(room_position);
-            }
-
-            let Some(back): Option<&UVec2> = tile_route.iter().last() else {
-                tile_route.push(tile_position);
-                continue;
-            };
-
-            if !tile_route.iter().any(|v| *v == tile_position) {
-                if !tile_position.cmpeq(*back).any() {
-                    tile_route.push(if back.x > tile_position.x {
-                        *back - uvec2(1, 0)
-                    } else {
-                        *back + uvec2(1, 0)
-                    });
-                }
-                tile_route.push(tile_position);
-            }
-        }*/
 
         let room_size_vec = size.extent;
 
@@ -145,8 +121,10 @@ impl Zone {
 
         Self {
             id,
+            seed,
             size,
             kind,
+            biome,
             info,
             connections,
             room_route,
@@ -170,7 +148,9 @@ impl Zone {
 
         Self {
             id,
+            seed,
             size: ZoneSize::new(town_meta.size),
+            biome: town_meta.biome,
             kind: town_meta.kind,
             info: zone_info,
             connections: vec![],
@@ -185,7 +165,7 @@ impl Zone {
         let room_size_vec = self.size.extent;
         for y in 0..room_size_vec.y {
             for x in 0..room_size_vec.x {
-                let room = Room::new(metadata, self, uvec2(x, y), 2);
+                let room = Room::new(metadata, uvec2(x, y), 2);
                 self.rooms.push(room);
             }
         }
@@ -220,74 +200,34 @@ impl Zone {
             .find(|v| v.position == room_position)
             .expect("OOB");
 
-        &mut room.tiles[(room_inner.y * 4 + room_inner.x) as usize]
+        let index = (room_inner.y * metadata.zone.size_info.tile.x + room_inner.x) as usize;
+        assert!(index < room.tiles.len());
+
+        &mut room.tiles[index]
     }
 
     pub fn make_tile_barriers(&mut self, metadata: &Metadata, next_edge: Edge, position: &UVec2) {
         let tile = self.get_tile_from_position_mut(metadata, position);
         match next_edge {
             Edge::Top => {
-                let bottom = tile.get_edge_mut(Edge::Bottom);
-                if bottom.edge_flags_empty() {
-                    bottom.set_edge_flag(EdgeFlags::Barrier);
-                }
-                let left = tile.get_edge_mut(Edge::Left);
-                if left.edge_flags_empty() {
-                    left.set_edge_flag(EdgeFlags::Barrier);
-                }
-
-                let right = tile.get_edge_mut(Edge::Right);
-                if right.edge_flags_empty() {
-                    right.set_edge_flag(EdgeFlags::Barrier);
-                }
+                tile.set_edge_flag_if_empty(Edge::Bottom, EdgeFlags::Barrier);
+                tile.set_edge_flag_if_empty(Edge::Left, EdgeFlags::Barrier);
+                tile.set_edge_flag_if_empty(Edge::Right, EdgeFlags::Barrier);
             }
             Edge::Bottom => {
-                let top = tile.get_edge_mut(Edge::Top);
-                if top.edge_flags_empty() {
-                    top.set_edge_flag(EdgeFlags::Barrier);
-                }
-
-                let left = tile.get_edge_mut(Edge::Left);
-                if left.edge_flags_empty() {
-                    left.set_edge_flag(EdgeFlags::Barrier);
-                }
-
-                let right = tile.get_edge_mut(Edge::Right);
-                if right.edge_flags_empty() {
-                    right.set_edge_flag(EdgeFlags::Barrier);
-                }
+                tile.set_edge_flag_if_empty(Edge::Top, EdgeFlags::Barrier);
+                tile.set_edge_flag_if_empty(Edge::Left, EdgeFlags::Barrier);
+                tile.set_edge_flag_if_empty(Edge::Right, EdgeFlags::Barrier);
             }
             Edge::Left => {
-                let right = tile.get_edge_mut(Edge::Right);
-                if right.edge_flags_empty() {
-                    right.set_edge_flag(EdgeFlags::Barrier);
-                }
-
-                let top = tile.get_edge_mut(Edge::Top);
-                if top.edge_flags_empty() {
-                    top.set_edge_flag(EdgeFlags::Barrier);
-                }
-
-                let bottom = tile.get_edge_mut(Edge::Bottom);
-                if bottom.edge_flags_empty() {
-                    bottom.set_edge_flag(EdgeFlags::Barrier);
-                }
+                tile.set_edge_flag_if_empty(Edge::Top, EdgeFlags::Barrier);
+                tile.set_edge_flag_if_empty(Edge::Bottom, EdgeFlags::Barrier);
+                tile.set_edge_flag_if_empty(Edge::Right, EdgeFlags::Barrier);
             }
             Edge::Right => {
-                let left = tile.get_edge_mut(Edge::Left);
-                if left.edge_flags_empty() {
-                    left.set_edge_flag(EdgeFlags::Barrier);
-                }
-
-                let top = tile.get_edge_mut(Edge::Top);
-                if top.edge_flags_empty() {
-                    top.set_edge_flag(EdgeFlags::Barrier);
-                }
-
-                let bottom = tile.get_edge_mut(Edge::Bottom);
-                if bottom.edge_flags_empty() {
-                    bottom.set_edge_flag(EdgeFlags::Barrier);
-                }
+                tile.set_edge_flag_if_empty(Edge::Top, EdgeFlags::Barrier);
+                tile.set_edge_flag_if_empty(Edge::Bottom, EdgeFlags::Barrier);
+                tile.set_edge_flag_if_empty(Edge::Left, EdgeFlags::Barrier);
             }
         }
     }
@@ -412,14 +352,17 @@ impl ZoneSize {
         }
     }
 
+    #[inline(always)]
     pub fn zone_world_offset(&self, metadata: &Metadata) -> Vec2 {
         -(self.half_extent.as_vec2()) * self.room_world_size(metadata).as_vec2()
     }
 
+    #[inline(always)]
     pub fn zone_world_size(&self, metadata: &Metadata) -> UVec2 {
         self.extent * self.room_world_size(metadata)
     }
 
+    #[inline(always)]
     pub fn room_world_size(&self, metadata: &Metadata) -> UVec2 {
         metadata.zone.size_info.room * metadata.zone.size_info.tile
     }
