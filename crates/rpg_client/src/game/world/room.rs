@@ -1,4 +1,4 @@
-use crate::game::{assets::RenderResources, prop};
+use crate::game::{assets::RenderResources, metadata::MetadataResources, prop};
 
 use bevy::{
     ecs::system::Commands,
@@ -12,7 +12,6 @@ use bevy::{
 
 use rpg_world::{
     edge::{Edge, EdgeFlags},
-    metadata::Metadata as WorldMetadata,
     room::Room,
     zone::Zone,
 };
@@ -23,19 +22,19 @@ pub trait RoomSpawn {
     fn spawn_wall_section(
         &self,
         commands: &mut Commands,
-        zone: &Zone,
-        metadata: &WorldMetadata,
+        metadata: &MetadataResources,
         renderables: &RenderResources,
+        zone: &Zone,
         tile: u8,
     ) -> usize;
 
     fn spawn_random_prop(
         &self,
         commands: &mut Commands,
+        metadata: &MetadataResources,
         renderables: &RenderResources,
         zone: &Zone,
         rng: &mut Rng,
-        metadata: &WorldMetadata,
     );
 }
 
@@ -43,18 +42,18 @@ impl RoomSpawn for Room {
     fn spawn_wall_section(
         &self,
         commands: &mut Commands,
-        zone: &Zone,
-        metadata: &WorldMetadata,
+        metadata: &MetadataResources,
         renderables: &RenderResources,
+        zone: &Zone,
         tile: u8,
     ) -> usize {
         let tile = &self.tiles[tile as usize];
         let tile_position = tile.position();
 
-        let room_world_size = zone.size.room_world_size(metadata);
+        let room_world_size = zone.size.room_world_size(&metadata.world);
         let tile_offset =
-            self.position * room_world_size + metadata.zone.size_info.tile * tile_position;
-        let world_offset = zone.size.zone_world_offset(metadata);
+            self.position * room_world_size + metadata.world.zone.size_info.tile * tile_position;
+        let world_offset = zone.size.zone_world_offset(&metadata.world);
 
         // debug!("room pos {} world_off {world_offset} room_world_size {room_world_size} tile_off {tile_offset}", self.position);
 
@@ -72,6 +71,7 @@ impl RoomSpawn for Room {
                 // debug!("spawn wall at {x} {y}");
                 prop::spawn(
                     commands,
+                    metadata,
                     renderables,
                     "wall_hedge_1",
                     Vec3::new(pos.x, 0., pos.y),
@@ -86,10 +86,10 @@ impl RoomSpawn for Room {
     fn spawn_random_prop(
         &self,
         commands: &mut Commands,
+        metadata: &MetadataResources,
         renderables: &RenderResources,
         zone: &Zone,
         rng: &mut Rng,
-        metadata: &WorldMetadata,
     ) {
         use std::f32::consts;
 
@@ -99,10 +99,11 @@ impl RoomSpawn for Room {
         };
         let rot_y = consts::TAU * (0.5 - rng.f32());
 
-        let position = zone.generate_position(rng, metadata, self);
+        let position = zone.generate_position(rng, &metadata.world, self);
 
         let id = prop::spawn(
             commands,
+            metadata,
             renderables,
             key,
             position,

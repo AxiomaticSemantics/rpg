@@ -20,7 +20,7 @@ pub(crate) fn receive_chat_join(
     account_q: Query<&AccountInstance>,
 ) {
     for event in join_reader.read() {
-        let ClientMessage::CSChatJoin(msg) = &event.message else {
+        let ClientMessage::CSChatJoin(_) = &event.message else {
             continue;
         };
 
@@ -59,7 +59,7 @@ pub(crate) fn receive_chat_leave(
     mut net_params: NetworkParamsRW,
 ) {
     for event in leave_reader.read() {
-        let ClientMessage::CSChatLeave(msg) = &event.message else {
+        let ClientMessage::CSChatLeave(_) = &event.message else {
             continue;
         };
 

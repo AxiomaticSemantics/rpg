@@ -110,7 +110,7 @@ pub(crate) fn day_night_cycle(
     let (mut light, mut transform) = light_q.single_mut();
     let mut spot_light = spot_light_q.single_mut();
 
-    transform.translate_around(Vec3::ZERO, Quat::from_rotation_z(rot));
+    transform.translate_around(Vec3::ZERO, Quat::from_rotation_z(-rot));
 
     let back = transform.back();
     let y_sin = back.y.sin();
@@ -119,17 +119,17 @@ pub(crate) fn day_night_cycle(
     if y_sin < 0.0 {
         // night-time
         ambient_light.brightness = 0.02;
-        light.illuminance = 0.;
-        spot_light.intensity = 2000. + y_sin.abs() * 48000.;
+        light.illuminance = 80. - y_sin.abs();
+        spot_light.intensity = 2000. + y_sin.abs() * 180000.;
     } else {
         // day-time
         ambient_light.brightness = 0.02 + y_sin * 0.25;
-        light.illuminance = 80. + y_sin * 1000.;
+        light.illuminance = 80. + y_sin * 10000.;
         spot_light.intensity = 0. + (1. - y_sin) * 2000.;
     }
 
-    light.illuminance = light.illuminance.clamp(0., 1000.);
-    spot_light.intensity = spot_light.intensity.clamp(100., 80000.);
+    light.illuminance = light.illuminance.clamp(0., 10000.);
+    spot_light.intensity = spot_light.intensity.clamp(100., 180000.);
     ambient_light.brightness = ambient_light.brightness.clamp(0.00, 0.00);
 
     transform.look_at(Vec3::ZERO, Vec3::Y);

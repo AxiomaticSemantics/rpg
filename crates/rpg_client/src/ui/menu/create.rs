@@ -329,11 +329,7 @@ pub fn create_button(
             return;
         };
 
-        info!("selected class: {selected_class:?}");
-
         let game_mode = game_mode_q.single();
-
-        player_name_text.sections[0].value.clear();
 
         let message = bincode::serialize(&ClientMessage::CSCreateCharacter(CSCreateCharacter {
             name: player_name_text.sections[0].value.clone(),
@@ -344,5 +340,7 @@ pub fn create_button(
         .unwrap();
 
         net_client.send_message(ClientChannel::Message, message);
+
+        player_name_text.sections[0].value.clear();
     }
 }

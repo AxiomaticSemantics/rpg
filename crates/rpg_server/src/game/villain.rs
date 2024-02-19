@@ -32,66 +32,66 @@ use bevy::{
     transform::{components::Transform, TransformBundle},
 };
 
+use std::f32::consts::TAU;
+
 #[derive(Component, Default, Debug, Deref, DerefMut)]
 pub(crate) struct ThinkTimer(pub(crate) Timer);
 
-#[derive(Debug, Default, PartialEq, Eq, Copy, Clone)]
-pub(crate) enum VillainState {
+#[derive(Default, Debug, Clone, PartialEq)]
+pub(crate) struct RoamInfo {
+    pub(crate) target: Vec3,
+}
+
+#[derive(Default, Debug, Clone, PartialEq)]
+pub(crate) struct TargetInfo(pub(crate) Option<Entity>);
+
+#[derive(Default, Debug, PartialEq, Clone)]
+pub(crate) enum GoalInfo {
     #[default]
-    Deactivated,
-    Idle,
-    Roaming,
-    Tracking,
+    Inactive,
+    Roam(RoamInfo),
+    Target(TargetInfo),
 }
 
-#[derive(Debug, Component)]
-pub(crate) struct VillainController {
-    pub(crate) state: VillainState,
-    pub(crate) spawned_on: Vec<Entity>,
-    target: Entity,
-}
-
-impl Default for VillainController {
-    fn default() -> Self {
-        Self {
-            state: VillainState::default(),
-            spawned_on: vec![],
-            target: Entity::PLACEHOLDER,
-        }
+impl GoalInfo {
+    pub(crate) fn is_target(&self) -> bool {
+        matches!(self, Self::Target(_))
     }
+
+    pub(crate) fn is_roaming(&self) -> bool {
+        matches!(self, Self::Roam(_))
+    }
+}
+
+#[derive(Default, Debug)]
+pub(crate) struct Goal {
+    info: GoalInfo,
+}
+
+impl Goal {
+    pub(crate) fn has_goal(&self) -> bool {
+        self.info != GoalInfo::Inactive
+    }
+}
+
+#[derive(Default, Debug, Component)]
+pub(crate) struct VillainController {
+    pub(crate) goal: Goal,
+    pub(crate) spawned_on: Vec<Entity>,
+    pub(crate) origin: Vec3,
 }
 
 impl VillainController {
-    fn new(state: VillainState) -> Self {
+    fn new(origin: Vec3) -> Self {
         Self {
-            state,
+            origin,
             spawned_on: vec![],
-            target: Entity::PLACEHOLDER,
+            goal: Goal::default(),
         }
-    }
-
-    fn has_target(&self) -> bool {
-        self.target != Entity::PLACEHOLDER
     }
 
     fn think(&self, actions: &mut Actions, position: &Vec3, target: &Vec3) {
-        if !self.is_activated() {
-            return;
-        }
-    }
-
-    fn is_activated(&self) -> bool {
-        self.state != VillainState::Deactivated
-    }
-
-    fn activate(&mut self) -> bool {
-        if !self.is_activated() {
-            self.state = VillainState::Idle;
-
-            true
-        } else {
-            false
-        }
+        //
     }
 }
 
@@ -124,14 +124,6 @@ pub(crate) fn spawn(
 
     let transform = Transform::from_translation(*origin);
 
-    #[cfg(feature = "not_now")]
-    debug!(
-        "spawning villain uid {:?} {?} at {:?}",
-        unit.uid,
-        unit.info.vaillain(),
-        transform.translation
-    );
-
     // spawn
     commands.spawn((
         CleanupStrategy::DespawnRecursive,
@@ -142,7 +134,7 @@ pub(crate) fn spawn(
             unit: UnitBundle::new(Unit(unit), Skills(skills), skill_slots),
         },
         ThinkTimer(Timer::from_seconds(4.0, TimerMode::Repeating)),
-        VillainController::new(VillainState::Idle),
+        VillainController::new(transform.translation),
         TransformBundle::from(transform),
     ));
 }
@@ -212,10 +204,9 @@ pub(crate) fn find_target(
     >,
 ) {
     for (transform, unit, mut villain, actions) in &mut villain_q {
-        if !villain.is_activated() {
-            info!("not activated");
+        let GoalInfo::Target(info) = &mut villain.goal.info else {
             continue;
-        }
+        };
 
         if actions.attack.is_some() || actions.knockback.is_some() {
             continue;
@@ -223,41 +214,42 @@ pub(crate) fn find_target(
 
         let max_distance =
             (metadata.rpg.unit.villains[&unit.info.villain().id].max_vision * 100.).round() as u32;
-        if villain.has_target() {
-            if let Ok((_, hero_transform)) = hero_q.get(villain.target) {
-                let distance = (transform.translation.distance(hero_transform.translation) * 100.)
-                    .round() as u32;
-                if distance > max_distance {
-                    // The targeted entity is out of range, unset the target
-                    villain.target = Entity::PLACEHOLDER;
-                } else {
-                    // The targeted entity is in range, keep the current target
-                    continue;
-                }
+
+        // Check if the current target is out of range and if so invalidate it
+        if let Ok((_, hero_transform)) = hero_q.get(info.0.unwrap()) {
+            let distance =
+                (transform.translation.distance(hero_transform.translation) * 100.).round() as u32;
+            if distance > max_distance {
+                // The targeted entity is out of range, unset the target
+                info.0 = None;
             } else {
-                villain.target = Entity::PLACEHOLDER;
+                // The targeted entity is in range, keep the current target
+                continue;
             }
+        } else {
+            info.0 = None;
         }
 
-        if villain.has_target() {
-            // The villain already has a valid target
+        if info.0.is_some() {
             continue;
         }
 
-        let mut nearest = Entity::PLACEHOLDER;
+        // There is no current target, attempt to find one
+        let mut nearest = None::<Entity>;
         let mut nearest_distance = max_distance;
 
         for (hero_entity, hero_transform) in &hero_q {
+            // TODO check villain and hero `ZoneId` to avoid needless computations
             let distance =
                 (transform.translation.distance(hero_transform.translation) * 100.).round() as u32;
             if distance < nearest_distance {
                 nearest_distance = distance;
-                nearest = hero_entity;
+                nearest = Some(hero_entity);
             }
         }
 
-        if nearest != Entity::PLACEHOLDER {
-            villain.target = nearest;
+        if nearest.is_some() {
+            info.0 = nearest;
         }
     }
 }
@@ -280,102 +272,132 @@ pub(crate) fn villain_think(
         (With<Villain>, Without<Corpse>),
     >,
 ) {
-    // TODO each villian needs advance in it's current target or select a new target at most once
-    // per turn
     for (transform, unit, skills, skill_slots, mut villain, mut actions, mut think_timer) in
         &mut villain_q
     {
-        if !villain.is_activated() {
-            continue;
-        }
-
         think_timer.tick(time.delta());
 
-        if !villain.has_target() {
-            continue;
+        let villain_id = unit.info.villain().id;
+        let villain_meta = &metadata.rpg.unit.villains[&villain_id];
+
+        if let GoalInfo::Inactive = &villain.goal.info {
+            assert!(actions.is_inactive());
+
+            if think_timer.finished() {
+                // debug!("selecting roam target");
+                let target = if villain.origin.abs_diff_eq(transform.translation, 0.5) {
+                    let (s_x, s_y) = (0.5 - rng.f32(), 0.5 - rng.f32());
+                    let s_x = if s_x > 0. {
+                        4. + s_x * 8.
+                    } else {
+                        -4. + s_x * 8.
+                    };
+                    let s_y = if s_y > 0. {
+                        4. + s_y * 8.
+                    } else {
+                        -4. + s_y * 8.
+                    };
+
+                    transform.translation + Vec3::new(s_x, 0.0, s_y)
+                } else {
+                    villain.origin
+                };
+
+                villain.goal.info = GoalInfo::Roam(RoamInfo { target });
+            } else {
+                continue;
+            }
         }
 
-        let Ok(hero_transform) = &hero_q.get(villain.target) else {
-            villain.target = Entity::PLACEHOLDER;
-            continue;
-        };
+        if let GoalInfo::Roam(info) = &mut villain.goal.info {
+            if info.target.abs_diff_eq(transform.translation, 0.01) {
+                // debug!("goal reached");
+
+                actions.movement.as_mut().unwrap().state = State::Finalize;
+                villain.goal.info = GoalInfo::Inactive;
+                think_timer.reset();
+            } else {
+                // TODO add a time limit, ensure progression is made
+                actions.request(Action::new(ActionData::LookPoint(info.target), None, true));
+                if actions.movement.is_none() {
+                    actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
+                }
+            }
+        } else if let GoalInfo::Target(info) = &mut villain.goal.info {
+            // Hero liveness should be checked in find_target
+            let Some(target) = &info.0 else {
+                panic!("a valid target is expected");
+            };
+
+            let Ok(hero_transform) = &hero_q.get(*target) else {
+                villain.goal.info = GoalInfo::Inactive;
+                continue;
+            };
+            let distance =
+                (transform.translation.distance(hero_transform.translation) * 100.).round() as u32;
+            if distance > (villain_meta.max_vision * 100.).floor() as u32 {
+                info.0 = None;
+                villain.goal.info = GoalInfo::Inactive;
+                continue;
+            }
+
+            let target_dir =
+                (hero_transform.translation - transform.translation).normalize_or_zero();
+            let rot_diff = transform.forward().dot(target_dir) - 1.;
+            let want_look = rot_diff.abs() > 0.01;
+            if want_look {
+                actions.request(Action::new(
+                    ActionData::LookPoint(hero_transform.translation),
+                    None,
+                    true,
+                ));
+            }
+            let skill_id = skill_slots.slots[0].skill_id.unwrap();
+            let skill_info = &metadata.rpg.skill.skills[&skill_id];
+
+            let wanted_range = (skill_info.use_range as f32 * 0.5) as u32;
+            let wanted_range = wanted_range.clamp(150, wanted_range.max(150));
+            let in_range = skill_info.use_range > 0 && distance < wanted_range;
+            if !in_range {
+                if actions.movement.is_none() {
+                    // info!("move request");
+                    actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
+                }
+                continue;
+            }
+            if let Some(action) = &mut actions.movement {
+                if action.state == State::Active {
+                    action.state = State::Finalize;
+                }
+                continue;
+            }
+
+            assert!(actions.movement.is_none());
+            if actions.attack.is_none() {
+                // debug!("distance {distance} use range {}", skill_info.use_range);
+
+                let skill_target = get_skill_origin(
+                    &metadata.rpg,
+                    transform,
+                    hero_transform.translation,
+                    skill_id,
+                );
+
+                actions.request(Action::new(
+                    ActionData::Attack(AttackData {
+                        skill_id,
+                        user: transform.translation,
+                        skill_target,
+                    }),
+                    None,
+                    true,
+                ));
+            }
+            villain.goal.info = GoalInfo::Inactive;
+        }
 
         // TODO
         // - ensure unit is in the same zone
         // - ensure the zone is a combat zone
-
-        villain.think(
-            &mut actions,
-            &transform.translation,
-            &hero_transform.translation,
-        );
-
-        let distance =
-            (transform.translation.distance(hero_transform.translation) * 100.).round() as u32;
-        let villain_id = unit.info.villain().id;
-        let villain_meta = &metadata.rpg.unit.villains[&villain_id];
-        if distance > (villain_meta.max_vision * 100.).floor() as u32 {
-            // this should be handled elsewhere
-            villain.target = Entity::PLACEHOLDER;
-            villain.state = VillainState::Idle;
-            continue;
-        }
-
-        let target_dir = (hero_transform.translation - transform.translation).normalize_or_zero();
-        let rot_diff = transform.forward().dot(target_dir) - 1.;
-        let want_look = rot_diff.abs() > 0.01;
-        if want_look {
-            actions.request(Action::new(
-                ActionData::LookPoint(hero_transform.translation),
-                None,
-                true,
-            ));
-        }
-
-        let skill_id = skill_slots.slots[0].skill_id.unwrap();
-        let skill_info = &metadata.rpg.skill.skills[&skill_id];
-
-        let wanted_range = (skill_info.use_range as f32 * 0.5) as u32;
-        let wanted_range = wanted_range.clamp(150, wanted_range.max(150));
-        let in_range = skill_info.use_range > 0 && distance < wanted_range;
-        if !in_range {
-            if actions.movement.is_none() {
-                // info!("move request");
-                actions.request(Action::new(ActionData::Move(Vec3::NEG_Z), None, true));
-                villain.state = VillainState::Tracking;
-            }
-            continue;
-        }
-
-        if let Some(action) = &mut actions.movement {
-            if action.state == State::Active {
-                action.state = State::Finalize;
-            }
-            continue;
-        }
-
-        assert!(actions.movement.is_none());
-
-        if think_timer.finished() && actions.attack.is_none() {
-            // debug!("distance {distance} use range {}", skill_info.use_range);
-
-            let skill_target = get_skill_origin(
-                &metadata.rpg,
-                transform,
-                hero_transform.translation,
-                skill_id,
-            );
-
-            actions.request(Action::new(
-                ActionData::Attack(AttackData {
-                    skill_id,
-                    user: transform.translation,
-                    skill_target,
-                }),
-                None,
-                true,
-            ));
-            think_timer.reset();
-        }
     }
 }

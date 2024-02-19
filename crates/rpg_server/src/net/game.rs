@@ -25,24 +25,23 @@ use bevy::{
     transform::components::Transform,
 };
 
-use rpg_core::{game_mode::GameMode, storage::Storage};
+use rpg_core::{game_mode::GameMode, item::ItemDrops, storage::*};
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
     actions::{Action, ActionData, Actions, AttackData, State},
-    item::UnitStorage,
+    item::{GroundItemDrops, UnitStorage},
     skill::{get_skill_origin, SkillSlots, SkillUse, Skills},
-    unit::{Corpse, Hero, HeroBundle, Unit, UnitBundle},
+    unit::{Corpse, Hero, HeroBundle, Unit, UnitBundle, Waypoints},
 };
 use rpg_world::zone::{ZoneId, ZoneInfo};
 use util::math::AabbComponent;
 
 pub(crate) fn receive_player_join(
-    mut server_state: ResMut<GameState>,
     mut join_reader: EventReader<ClientMessageEvent>,
     net_params: NetworkParamsRO,
 ) {
     for event in join_reader.read() {
-        let ClientMessage::CSPlayerJoin(msg) = &event.message else {
+        let ClientMessage::CSPlayerJoin(_) = &event.message else {
             continue;
         };
 
@@ -66,7 +65,7 @@ pub(crate) fn receive_player_leave(
     skill_q: Query<(Entity, &SkillOwner), With<SkillUse>>,
 ) {
     for event in leave_reader.read() {
-        let ClientMessage::CSPlayerLeave(msg) = &event.message else {
+        let ClientMessage::CSPlayerLeave(_) = &event.message else {
             continue;
         };
 
@@ -119,7 +118,7 @@ pub(crate) fn receive_player_loaded(
     hero_q: Query<&Transform, With<Unit>>,
 ) {
     for event in ready_reader.read() {
-        let ClientMessage::CSClientReady(msg) = &event.message else {
+        let ClientMessage::CSClientReady(_) = &event.message else {
             continue;
         };
 
@@ -227,6 +226,7 @@ pub(crate) fn receive_player_loaded(
                     SkillSlots::new(character.character.skill_slots.clone()),
                 ),
                 hero: Hero,
+                waypoints: Waypoints(character.character.waypoints.clone()),
             },
         ));
         // TODO ensure the player is spawned in a town
@@ -241,7 +241,7 @@ pub(crate) fn receive_player_revive(
     mut player_q: Query<(&mut Unit, &mut Transform), (With<Hero>, With<Corpse>)>,
 ) {
     for event in join_reader.read() {
-        let ClientMessage::CSPlayerRevice(msg) = &event.message else {
+        let ClientMessage::CSPlayerRevice(_) = &event.message else {
             continue;
         };
 
@@ -310,7 +310,7 @@ pub(crate) fn receive_movement(
     mut player_q: Query<&mut Actions, With<Hero>>,
 ) {
     for event in movement_reader.read() {
-        let ClientMessage::CSMovePlayer(msg) = &event.message else {
+        let ClientMessage::CSMovePlayer(_) = &event.message else {
             continue;
         };
 
@@ -332,7 +332,7 @@ pub(crate) fn receive_movement_end(
     mut player_q: Query<&mut Actions, With<Hero>>,
 ) {
     for event in movement_reader.read() {
-        let ClientMessage::CSMovePlayerEnd(msg) = &event.message else {
+        let ClientMessage::CSMovePlayerEnd(_) = &event.message else {
             continue;
         };
 
@@ -431,14 +431,9 @@ pub(crate) fn receive_skill_use_targeted(
         };
 
         let (transform, mut actions) = player_q.get_mut(client.entity).unwrap();
-        // info!("skill use targeted: {msg:?}");
+        // debug!("skill use targeted: {msg:?}");
 
-        let skill_target = get_skill_origin(
-            &metadata.rpg,
-            &transform,
-            msg.target, // FIXMEcursor_position.ground,
-            msg.skill_id,
-        );
+        let skill_target = get_skill_origin(&metadata.rpg, &transform, msg.target, msg.skill_id);
 
         if actions.attack.is_none() && actions.knockback.is_none() {
             actions.request(Action::new(
@@ -456,8 +451,9 @@ pub(crate) fn receive_skill_use_targeted(
 
 pub(crate) fn receive_item_drop(
     mut drop_reader: EventReader<ClientMessageEvent>,
-    mut net_params: NetworkParamsRW,
-    mut hero_q: Query<(&Transform, &Unit), With<Hero>>,
+    net_params: NetworkParamsRO,
+    mut ground_items: ResMut<GroundItemDrops>,
+    mut hero_q: Query<(&Unit, &mut UnitStorage), With<Hero>>,
 ) {
     for event in drop_reader.read() {
         let ClientMessage::CSItemDrop(msg) = &event.message else {
@@ -469,6 +465,17 @@ pub(crate) fn receive_item_drop(
         if !client.is_authenticated_player() {
             continue;
         };
+
+        let (hero, mut storage) = hero_q.get_mut(client.entity).unwrap();
+        if let Some(slot) = storage.slot_from_uid_mut(STORAGE_ID_CURSOR, msg.0) {
+            // the slot is knownn to contain an item because the result is not `None`
+            let item = slot.item.take().unwrap();
+
+            ground_items.0.push(ItemDrops {
+                source: hero.uid,
+                items: vec![item],
+            });
+        }
     }
 }
 
@@ -502,9 +509,7 @@ pub(crate) fn receive_item_pickup(
                     break;
                 };
 
-                /* FIXME
-                slot.item = i_item.0;
-                */
+                // FIXME slot.item = i_item.0;
 
                 let message =
                     bincode::serialize(&ServerMessage::SCDespawnItem(SCDespawnItem(msg.0)))

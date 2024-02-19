@@ -533,7 +533,7 @@ pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, textures: Re
                         col_style.clone(),
                         HERO_INVENTORY_ROWS * 2,
                         HERO_INVENTORY_COLUMNS,
-                        StorageIndex(storage::STORAGE_STASH),
+                        storage::STORAGE_ID_STASH,
                     );
                 });
 
@@ -564,7 +564,7 @@ pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, textures: Re
                                 col_style.clone(),
                                 3,
                                 2,
-                                StorageIndex(storage::STORAGE_LEFT_ARM),
+                                storage::STORAGE_ID_LEFT_ARM,
                             );
 
                             p.spawn(vertical_spacing.clone());
@@ -579,7 +579,7 @@ pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, textures: Re
                                 col_style.clone(),
                                 2,
                                 2,
-                                StorageIndex(storage::STORAGE_GLOVES),
+                                storage::STORAGE_ID_GLOVES,
                             );
                         });
 
@@ -600,7 +600,7 @@ pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, textures: Re
                                 col_style.clone(),
                                 2,
                                 2,
-                                StorageIndex(storage::STORAGE_HELMET),
+                                storage::STORAGE_ID_HELMET,
                             );
 
                             p.spawn(vertical_spacing.clone());
@@ -615,7 +615,7 @@ pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, textures: Re
                                 col_style.clone(),
                                 3,
                                 2,
-                                StorageIndex(storage::STORAGE_BODY),
+                                storage::STORAGE_ID_BODY,
                             );
 
                             p.spawn(vertical_spacing.clone());
@@ -630,7 +630,7 @@ pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, textures: Re
                                 col_style.clone(),
                                 1,
                                 2,
-                                StorageIndex(storage::STORAGE_BELT),
+                                storage::STORAGE_ID_BELT,
                             );
                         });
 
@@ -651,7 +651,7 @@ pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, textures: Re
                                 col_style.clone(),
                                 3,
                                 2,
-                                StorageIndex(storage::STORAGE_RIGHT_ARM),
+                                storage::STORAGE_ID_RIGHT_ARM,
                             );
 
                             p.spawn(vertical_spacing.clone());
@@ -666,7 +666,7 @@ pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, textures: Re
                                 col_style.clone(),
                                 2,
                                 2,
-                                StorageIndex(storage::STORAGE_BOOTS),
+                                storage::STORAGE_ID_BOOTS,
                             );
                         });
                     });
@@ -689,7 +689,7 @@ pub(crate) fn setup(mut commands: Commands, ui_theme: Res<UiTheme>, textures: Re
                             col_style.clone(),
                             HERO_INVENTORY_ROWS,
                             HERO_INVENTORY_COLUMNS,
-                            StorageIndex(storage::STORAGE_INVENTORY),
+                            storage::STORAGE_ID_INVENTORY,
                         );
                     });
                 });
@@ -723,7 +723,7 @@ fn spawn_storage(
                     })
                     .with_children(|p| {
                         for column in 0..columns {
-                            let index = (column + (columns * row)) as u32;
+                            let index = (column + (columns * row)) as u16;
 
                             let storage_slot = StorageSlot(RpgStorageSlot {
                                 storage_index,

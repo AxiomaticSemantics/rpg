@@ -10,7 +10,7 @@ use rpg_core::{
     uid::Uid,
 };
 use rpg_util::{
-    item::{GroundItem, GroundItemDrops, StorageSlot},
+    item::{GroundItem, GroundItemDrops},
     unit::Unit,
 };
 use util::{cleanup::CleanupStrategy, math::AabbComponent, random::SharedRng};
@@ -18,11 +18,11 @@ use util::{cleanup::CleanupStrategy, math::AabbComponent, random::SharedRng};
 use bevy::{
     ecs::{
         component::Component,
-        entity::Entity,
         query::With,
         system::{Commands, Query, Res, ResMut, Resource},
     },
     input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
+    log::debug,
     math::Vec3,
     prelude::{default, Deref, DerefMut},
     scene::SceneBundle,
@@ -103,17 +103,15 @@ pub(crate) fn spawn_ground_items(
     renderables: Res<RenderResources>,
     mut rng: ResMut<SharedRng>,
     mut ground_drop_items: ResMut<GroundItemDrops>,
-    mut unit_q: Query<(Entity, &mut AudioActions, &Transform, &Unit)>,
+    mut unit_q: Query<(&mut AudioActions, &Transform, &Unit)>,
 ) {
     while let Some(items) = ground_drop_items.0.pop() {
-        for (source, mut source_audio, source_transform, source_unit) in &mut unit_q {
+        for (mut source_audio, source_transform, source_unit) in &mut unit_q {
             if source_unit.uid != items.source {
                 continue;
             }
 
             for item in &items.items {
-                //let (mut source_audio, source_transform) = unit_q.get_mut(item.source).unwrap();
-
                 let item_info = &metadata.rpg.item.items[&item.id];
                 match item_info.kind {
                     ItemKind::Gem => source_audio.push("item_drop_gem".into()),
@@ -137,7 +135,7 @@ pub(crate) fn spawn_ground_items(
 // TODO this needs to be driven by prop metadata
 pub(crate) fn get_prop_key(metadata: &Metadata, item_info: &ItemInfo) -> Cow<'static, str> {
     match &item_info {
-        ItemInfo::Gem(_) => Cow::Borrowed("fragment_xp"),
+        ItemInfo::Gem(_) => Cow::Borrowed("item_gem"),
         ItemInfo::Potion(info) => {
             let (id_str, descriptor) = &metadata
                 .stat
@@ -148,14 +146,13 @@ pub(crate) fn get_prop_key(metadata: &Metadata, item_info: &ItemInfo) -> Cow<'st
 
             // debug!("id {id_str} {:?}", descriptor);
             match descriptor.id {
-                _ if id_str == &"Hp" => Cow::Borrowed("potion_hp"),
-                _ if id_str == &"Ep" => Cow::Borrowed("potion_ep"),
-                _ if id_str == &"Mp" => Cow::Borrowed("potion_mp"),
-                _ if id_str == &"Xp" => Cow::Borrowed("fragment_xp"),
+                _ if id_str == &"Hp" => Cow::Borrowed("item_potion_hp"),
+                _ if id_str == &"Ep" => Cow::Borrowed("item_potion_ep"),
+                _ if id_str == &"Mp" => Cow::Borrowed("item_potion_mp"),
                 _ => unreachable!("Should not get here. {id_str}"),
             }
         }
-        ItemInfo::Currency(_) => Cow::Borrowed("fragment_xp"),
+        ItemInfo::Currency(_) => Cow::Borrowed("item_gem"),
     }
 }
 
@@ -163,9 +160,13 @@ pub(crate) fn make_item_stat_string(item: &Item, metadata: &Metadata) -> String 
     let mut value = String::new();
 
     if let ItemInfo::Gem(info) = &item.info {
-        for modifier in &info.modifiers {
-            let modifier_meta = &metadata.modifier.modifiers[&modifier.modifier.id];
-            value = format!("{}{modifier} to {}\n", value, modifier_meta.name);
+        if info.identified {
+            for modifier in &info.modifiers {
+                let modifier_meta = &metadata.modifier.modifiers[&modifier.modifier.id];
+                value = format!("{}{modifier} to {}\n", value, modifier_meta.name);
+            }
+        } else {
+            value = "Unidentified Gem\n".into();
         }
     }
 
@@ -180,10 +181,8 @@ fn spawn_item(
     position: Vec3,
     item: Item,
 ) {
-    // println!("Spawning item at {position:?}");
-    let item_info = &metadata.item.items[&item.id];
-
     let key = get_prop_key(metadata, &item.info);
+    // debug!("key: {key} position: {position:?}");
 
     let PropHandle::Scene(handle) = &renderables.props[&*key].handle else {
         panic!("bad handle");

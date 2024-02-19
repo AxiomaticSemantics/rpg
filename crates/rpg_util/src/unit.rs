@@ -3,10 +3,15 @@ use crate::{
     skill::{SkillSlots, Skills},
 };
 
+use rpg_world::zone::ZoneId;
+
 use bevy::{
     ecs::{bundle::Bundle, component::Component},
     prelude::{Deref, DerefMut},
 };
+
+#[derive(Default, Component)]
+pub struct Waypoints(pub Vec<ZoneId>);
 
 #[derive(Component)]
 pub struct Corpse;
@@ -43,6 +48,7 @@ impl UnitBundle {
 pub struct HeroBundle {
     pub hero: Hero,
     pub unit: UnitBundle,
+    pub waypoints: Waypoints,
 }
 
 #[derive(Bundle)]

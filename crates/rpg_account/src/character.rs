@@ -9,6 +9,8 @@ use rpg_core::{
     unit::Unit,
 };
 
+use rpg_world::zone::ZoneId;
+
 use serde_derive::{Deserialize as De, Serialize as Ser};
 
 #[derive(Debug, Copy, Clone, PartialEq, Ser, De)]
@@ -42,4 +44,5 @@ pub struct Character {
     pub skill_slots: Vec<SkillSlot>,
     pub storage: UnitStorage,
     pub passive_tree: UnitPassiveSkills,
+    pub waypoints: Vec<ZoneId>,
 }

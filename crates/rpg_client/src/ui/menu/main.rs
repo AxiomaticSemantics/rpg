@@ -22,9 +22,11 @@ use bevy::{
     },
     hierarchy::{BuildChildren, ChildBuilder},
     render::color::Color,
+    sprite::{BorderRect, ImageScaleMode, SliceScaleMode, TextureSlicer},
     ui::{
-        node_bundles::{ButtonBundle, ImageBundle, NodeBundle, TextBundle},
-        Display, Interaction, Style, UiImage, UiRect, Val,
+        node_bundles::{AtlasImageBundle, ButtonBundle, ImageBundle, NodeBundle, TextBundle},
+        AlignItems, AlignSelf, BackgroundColor, Display, Interaction, JustifyContent, Style,
+        UiImage, UiRect, Val,
     },
     utils::default,
 };
@@ -54,8 +56,24 @@ pub fn spawn(
     button: &ButtonBundle,
     frame: &Style,
 ) {
+    let slicer = TextureSlicer {
+        border: BorderRect::square(22.0),
+        center_scale_mode: SliceScaleMode::Stretch,
+        sides_scale_mode: SliceScaleMode::Stretch,
+        max_corner_scale: 1.0,
+    };
+
     let frame_image = UiImage {
-        texture: textures.icons["frame"].clone_weak(),
+        texture: textures.icons["border_patch1"].clone_weak(),
+        ..default()
+    };
+
+    let slice_style = Style {
+        align_items: AlignItems::Center,
+        align_self: AlignSelf::Center,
+        justify_content: JustifyContent::Center,
+        padding: UiRect::all(Val::Px(4.)),
+        width: Val::Percent(100.),
         ..default()
     };
 
@@ -79,9 +97,13 @@ pub fn spawn(
                 ..default()
             });
 
-            p.spawn(ImageBundle {
-                image: frame_image.clone(),
-                background_color: Color::rgb(0.2, 0.05, 0.05).into(),
+            p.spawn(NodeBundle {
+                style: Style {
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
+                    ..default()
+                },
+                background_color: Color::rgb(0.3, 0.25, 0.25).into(),
                 ..default()
             })
             .with_children(|p| {
@@ -115,17 +137,15 @@ pub fn spawn(
                 AccountCreateButton,
                 ImageButtonBundle {
                     marker: ImageButton,
-                    image: ImageBundle {
+                    image: ButtonBundle {
                         image: frame_image.clone(),
                         background_color: Color::rgb(0.7, 0.0, 0.0).into(),
-                        style: Style {
-                            padding: UiRect::all(Val::Px(4.)),
-                            ..default()
-                        },
+                        style: slice_style.clone(),
                         ..default()
                     },
-                    interaction: Interaction::None,
+                    ..default()
                 },
+                ImageScaleMode::Sliced(slicer.clone()),
             ))
             .with_children(|p| {
                 p.spawn(
@@ -143,17 +163,15 @@ pub fn spawn(
                 AccountLoginButton,
                 ImageButtonBundle {
                     marker: ImageButton,
-                    image: ImageBundle {
+                    image: ButtonBundle {
                         image: frame_image.clone(),
                         background_color: Color::rgb(0.7, 0.0, 0.0).into(),
-                        style: Style {
-                            padding: UiRect::all(Val::Px(4.)),
-                            ..default()
-                        },
+                        style: slice_style.clone(),
                         ..default()
                     },
-                    interaction: Interaction::None,
+                    ..default()
                 },
+                ImageScaleMode::Sliced(slicer.clone()),
             ))
             .with_children(|p| {
                 p.spawn(
@@ -171,17 +189,15 @@ pub fn spawn(
                 SettingsButton,
                 ImageButtonBundle {
                     marker: ImageButton,
-                    image: ImageBundle {
+                    image: ButtonBundle {
                         image: frame_image.clone(),
                         background_color: Color::rgb(0.7, 0.0, 0.0).into(),
-                        style: Style {
-                            padding: UiRect::all(Val::Px(4.)),
-                            ..default()
-                        },
+                        style: slice_style.clone(),
                         ..default()
                     },
-                    interaction: Interaction::None,
+                    ..default()
                 },
+                ImageScaleMode::Sliced(slicer.clone()),
             ))
             .with_children(|p| {
                 p.spawn(
@@ -199,17 +215,15 @@ pub fn spawn(
                 CreditsButton,
                 ImageButtonBundle {
                     marker: ImageButton,
-                    image: ImageBundle {
+                    image: ButtonBundle {
                         image: frame_image.clone(),
                         background_color: Color::rgb(0.7, 0.0, 0.0).into(),
-                        style: Style {
-                            padding: UiRect::all(Val::Px(4.)),
-                            ..default()
-                        },
+                        style: slice_style.clone(),
                         ..default()
                     },
-                    interaction: Interaction::None,
+                    ..default()
                 },
+                ImageScaleMode::Sliced(slicer.clone()),
             ))
             .with_children(|p| {
                 p.spawn(
@@ -232,17 +246,15 @@ pub fn spawn(
                 ExitButton,
                 ImageButtonBundle {
                     marker: ImageButton,
-                    image: ImageBundle {
+                    image: ButtonBundle {
                         image: frame_image.clone(),
                         background_color: Color::rgb(0.7, 0.0, 0.0).into(),
-                        style: Style {
-                            padding: UiRect::all(Val::Px(4.)),
-                            ..default()
-                        },
+                        style: slice_style.clone(),
                         ..default()
                     },
-                    interaction: Interaction::None,
+                    ..default()
                 },
+                ImageScaleMode::Sliced(slicer.clone()),
             ))
             .with_children(|p| {
                 p.spawn(

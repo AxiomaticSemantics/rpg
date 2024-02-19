@@ -10,7 +10,7 @@ use crate::{
     game::plugin::{GameState, PlayerIdInfo},
     server_state::ServerMetadataResource,
     state::AppState,
-    world::{LoadZone, RpgWorld},
+    world::LoadZone,
 };
 
 use bevy::{
@@ -40,8 +40,6 @@ use rpg_world::zone::ZoneId;
 
 use util::fs::{open_read, open_write};
 
-use serde_json;
-
 use std::{env, path::Path};
 
 pub(crate) fn receive_account_create(
@@ -70,7 +68,7 @@ pub(crate) fn receive_account_create(
         }
 
         let account_file_path = format!(
-            "{}/server/accounts/{}.json",
+            "{}/server/accounts/{}.bin",
             std::env::var("RPG_SAVE_ROOT").unwrap(),
             msg.name
         );
@@ -78,7 +76,7 @@ pub(crate) fn receive_account_create(
         let account_file = open_read(account_path);
 
         let meta_file_path = format!(
-            "{}/server/meta.json",
+            "{}/server/meta.bin",
             std::env::var("RPG_SAVE_ROOT").unwrap(),
         );
         let meta_path = Path::new(meta_file_path.as_str());
@@ -112,8 +110,9 @@ pub(crate) fn receive_account_create(
             server_metadata.0.next_account_id.0 += 1;
 
             info!("writing account file to {account_file_path}");
-            serde_json::to_writer(meta_file, &server_metadata.0).unwrap();
-            serde_json::to_writer(account_file, &account).unwrap();
+
+            bincode::serialize_into(meta_file, &server_metadata.0).unwrap();
+            bincode::serialize_into(account_file, &account).unwrap();
 
             // Set the newly created account to be autenticated
             client.client_type = ClientType::Player;
@@ -161,7 +160,7 @@ pub(crate) fn receive_admin_login(
         }
 
         let file_path = format!(
-            "{}/server/admin_accounts/{}.json",
+            "{}/server/admin_accounts/{}.bin",
             env::var("RPG_SAVE_ROOT").unwrap(),
             msg.name
         );
@@ -173,7 +172,7 @@ pub(crate) fn receive_admin_login(
             continue;
         };
 
-        let account: Result<AdminAccount, _> = serde_json::from_reader(file);
+        let account: Result<AdminAccount, _> = bincode::deserialize_from(file);
         if let Ok(account) = account {
             // FIXME assign a client id and send it to the client
             client.client_type = ClientType::Player;
@@ -220,7 +219,7 @@ pub(crate) fn receive_account_login(
         }
 
         let file_path = format!(
-            "{}/server/accounts/{}.json",
+            "{}/server/accounts/{}.bin",
             env::var("RPG_SAVE_ROOT").unwrap(),
             msg.name
         );
@@ -228,7 +227,7 @@ pub(crate) fn receive_account_login(
         let file = open_read(path);
 
         if let Ok(file) = file {
-            let account: Result<Account, _> = serde_json::from_reader(file);
+            let account: Result<Account, _> = bincode::deserialize_from(file);
             if let Ok(account) = account {
                 // FIXME assign a client id and send it to the client
                 client.client_type = ClientType::Player;
@@ -270,8 +269,9 @@ pub(crate) fn receive_character_create(
         let ClientMessage::CSCreateCharacter(msg) = &event.message else {
             continue;
         };
+
         let client_id = event.client_id;
-        let client = net_params.context.clients.get(&client_id).unwrap();
+        let client = net_params.context.get_client_from_id(client_id).unwrap();
         if !client.is_authenticated_player() {
             info!("unauthenticated client attempted to create character {client:?}");
             continue;
@@ -320,6 +320,7 @@ pub(crate) fn receive_character_create(
                         skill_slots,
                         passive_tree: UnitPassiveSkills::new(msg.class),
                         storage: UnitStorage::default(),
+                        waypoints: vec![ZoneId(0)],
                     },
                 };
 
@@ -335,7 +336,7 @@ pub(crate) fn receive_character_create(
                 account.0.characters.push(character);
 
                 let file_path = format!(
-                    "{}/server/accounts/{}.json",
+                    "{}/server/accounts/{}.bin",
                     env::var("RPG_SAVE_ROOT").unwrap(),
                     account.0.info.name
                 );
@@ -346,7 +347,7 @@ pub(crate) fn receive_character_create(
                 };
 
                 let meta_file_path = format!(
-                    "{}/server/meta.json",
+                    "{}/server/meta.bin",
                     std::env::var("RPG_SAVE_ROOT").unwrap(),
                 );
                 let meta_path = Path::new(meta_file_path.as_str());
@@ -357,8 +358,8 @@ pub(crate) fn receive_character_create(
                     return;
                 };
 
-                serde_json::to_writer(file, &account.0).unwrap();
-                serde_json::to_writer(meta_file, &server_metadata.0).unwrap();
+                bincode::serialize_into(file, &account.0).unwrap();
+                bincode::serialize_into(meta_file, &server_metadata.0).unwrap();
             }
         }
     }

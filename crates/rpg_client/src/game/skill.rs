@@ -55,7 +55,7 @@ pub(crate) fn prepare_skill(
     // debug!("{:?}", &skill_info.origin);
 
     /* FIXME
-    let effects = skill
+    let effects: Vec<_> = skill
         .effects
         .iter()
         .map(|e| {
@@ -117,7 +117,7 @@ pub(crate) fn prepare_skill(
                 let radius = info.size as f32 / 100. / 2.;
                 let key = format!("orb_radius_{}", info.size);
 
-                let (handle, aabb) = if renderables.props.contains_key(key.as_str()) {
+                if renderables.props.contains_key(key.as_str()) {
                     let handle = renderables.props[key.as_str()].handle.clone();
                     let aabb = renderables.aabbs[key.as_str()];
 
@@ -141,18 +141,17 @@ pub(crate) fn prepare_skill(
                         .insert(Cow::Owned(key.as_str().into()), aabb);
 
                     let handle = PropHandle::Mesh(handle);
-                    renderables
-                        .props
-                        .insert(key.into(), PropInfo::new(handle.clone()));
+                    renderables.props.insert(
+                        Cow::Owned(key.as_str().into()),
+                        PropInfo::new(key.as_str(), handle.clone()),
+                    );
 
                     (handle, aabb)
-                };
-
-                (handle, aabb)
+                }
             };
 
             let spawn_transform = if info.orbit.is_some() {
-                Transform::from_translation(target.origin)
+                Transform::from_translation(target.target)
             } else if info.aerial.is_some() {
                 Transform::from_translation(target.origin).looking_at(target.target, Vec3::Y)
             } else {
@@ -163,7 +162,7 @@ pub(crate) fn prepare_skill(
                 info: info.clone(),
                 orbit: if info.orbit.is_some() {
                     Some(OrbitData {
-                        origin: spawn_transform.translation,
+                        origin: target.origin,
                     })
                 } else {
                     None

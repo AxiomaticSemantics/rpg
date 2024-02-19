@@ -1,8 +1,11 @@
-use crate::game::{assets::RenderResources, plugin::GameSessionCleanup};
+use crate::game::{
+    assets::RenderResources, metadata::MetadataResources, plugin::GameSessionCleanup,
+};
 
 use bevy::{
     asset::Handle,
     ecs::{bundle::Bundle, component::Component, entity::Entity, system::Commands},
+    log::debug,
     math::{Quat, Vec3},
     render::mesh::Mesh,
     scene::{Scene, SceneBundle},
@@ -11,6 +14,8 @@ use bevy::{
 };
 
 use util::cleanup::CleanupStrategy;
+
+use std::borrow::Cow;
 
 #[derive(Component)]
 pub(crate) struct StaticProp;
@@ -30,34 +35,48 @@ pub(crate) enum PropHandle {
     Mesh(Handle<Mesh>),
 }
 
-#[derive(Hash, PartialEq)]
+#[derive(Debug, Hash, PartialEq)]
 pub(crate) struct PropInfo {
     pub handle: PropHandle,
+    pub key: Cow<'static, str>,
 }
 
 impl PropInfo {
-    pub fn new(handle: PropHandle) -> Self {
-        Self { handle }
+    pub fn new(key: &str, handle: PropHandle) -> Self {
+        Self {
+            key: Cow::Owned(key.into()),
+            handle,
+        }
     }
 }
 
 pub(crate) fn spawn(
     commands: &mut Commands,
+    metadata: &MetadataResources,
     renderables: &RenderResources,
     key: &str,
     position: Vec3,
     rotation: Option<Quat>,
 ) -> Entity {
-    let PropHandle::Scene(handle) = &renderables.props[key].handle else {
+    let prop_info = &renderables.props[key];
+    let PropHandle::Scene(handle) = &prop_info.handle else {
         panic!("bad handle");
     };
 
-    // debug!("prop pos: {position}");
+    debug!("prop pos: {prop_info:?}");
 
-    let mut transform = Transform::from_translation(position + Vec3::Y * 0.25);
-    if let Some(rotation) = rotation {
-        transform.rotation = rotation;
-    }
+    let prop_meta = &metadata.prop.prop.prop[key];
+    let position = if let Some(offset) = prop_meta.offset {
+        position + offset
+    } else {
+        position
+    };
+
+    let transform = if let Some(rotation) = rotation {
+        Transform::from_translation(position).with_rotation(rotation)
+    } else {
+        Transform::from_translation(position)
+    };
 
     commands
         .spawn((

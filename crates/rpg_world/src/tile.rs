@@ -41,6 +41,12 @@ impl TileEdge {
         self.edge_flags |= edge_flag as u8;
     }
 
+    pub fn set_edge_flag_if_empty(&mut self, edge_flag: EdgeFlags) {
+        if self.edge_flags_empty() {
+            self.set_edge_flag(edge_flag);
+        }
+    }
+
     pub fn has_edge_flag(&self, edge_flag: EdgeFlags) -> bool {
         self.edge_flags & edge_flag as u8 != 0
     }
@@ -119,6 +125,11 @@ impl Tile {
             self.set_edge_flag(edge, edge_flag);
         }
     }
+
+    pub fn set_edge_flag_if_empty(&mut self, edge: Edge, edge_flag: EdgeFlags) {
+        self.edges[edge as usize].set_edge_flag_if_empty(edge_flag);
+    }
+
     pub fn set_edge_flag(&mut self, edge: Edge, edge_flag: EdgeFlags) {
         self.edges[edge as usize].edge_flags |= edge_flag as u8;
     }

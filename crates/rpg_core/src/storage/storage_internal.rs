@@ -1,27 +1,31 @@
 use super::{equipment::*, inventory::*};
-use crate::item::Item;
+use crate::{item::Item, uid::Uid};
 
 use serde_derive::{Deserialize as De, Serialize as Ser};
 
-pub const STORAGE_HELMET: u32 = 0;
-pub const STORAGE_BODY: u32 = 1;
-pub const STORAGE_GLOVES: u32 = 2;
-pub const STORAGE_BOOTS: u32 = 3;
-pub const STORAGE_BELT: u32 = 4;
-pub const STORAGE_LEFT_ARM: u32 = 5;
-pub const STORAGE_RIGHT_ARM: u32 = 6;
-pub const STORAGE_INVENTORY: u32 = 7;
-pub const STORAGE_STASH: u32 = 8;
+pub const STORAGE_ID_CURSOR: StorageIndex = StorageIndex(0);
+pub const STORAGE_ID_HELMET: StorageIndex = StorageIndex(1);
+pub const STORAGE_ID_BODY: StorageIndex = StorageIndex(2);
+pub const STORAGE_ID_GLOVES: StorageIndex = StorageIndex(3);
+pub const STORAGE_ID_BOOTS: StorageIndex = StorageIndex(4);
+pub const STORAGE_ID_BELT: StorageIndex = StorageIndex(5);
+pub const STORAGE_ID_LEFT_ARM: StorageIndex = StorageIndex(6);
+pub const STORAGE_ID_RIGHT_ARM: StorageIndex = StorageIndex(7);
+pub const STORAGE_ID_INVENTORY: StorageIndex = StorageIndex(8);
+pub const STORAGE_ID_STASH: StorageIndex = StorageIndex(9);
+
+// NOTE this must be kept in sync with the above nodes
+pub const STORAGE_NODES: usize = 10;
 
 pub const HERO_STASH_SLOTS: usize = 12 * 24;
 
 /// A storage slot index
 #[derive(Ser, De, Copy, Clone, Debug, Default, PartialEq, Eq)]
-pub struct StorageIndex(pub u32);
+pub struct StorageIndex(pub u8);
 
 /// An inventory slot index
 #[derive(Ser, De, Copy, Clone, Debug, Default, PartialEq, Eq)]
-pub struct SlotIndex(pub u32);
+pub struct SlotIndex(pub u16);
 
 /// An item storage slot
 #[derive(Ser, De, Clone, Debug, Default)]
@@ -48,6 +52,8 @@ pub trait Storage {
     fn set_slot_item(&mut self, storage_index: StorageIndex, slot_index: SlotIndex, item: Item);
     fn swap_slot(&mut self, source: StorageSlot, target: StorageSlot);
     fn slot_has_item(&self, slot: StorageSlot) -> bool;
+    fn slot_from_uid(&self, storage_index: StorageIndex, uid: Uid) -> Option<&Slot>;
+    fn slot_from_uid_mut(&mut self, storage_index: StorageIndex, uid: Uid) -> Option<&mut Slot>;
     fn slot_from_index(&self, storage_index: StorageIndex, slot_index: SlotIndex) -> Option<&Slot>;
     fn slot_from_index_mut(
         &mut self,
@@ -137,6 +143,29 @@ impl Storage for UnitStorage {
         storage.node.iter_mut().find(|s| s.index == slot_index)
     }
 
+    fn slot_from_uid(&self, storage_index: StorageIndex, uid: Uid) -> Option<&Slot> {
+        let Some(storage) = self.storage.iter().find(|s| s.index == storage_index) else {
+            println!("no storage {:?}", self.storage);
+            return None;
+        };
+
+        storage
+            .node
+            .iter()
+            .find(|s| s.item.as_ref().is_some_and(|s| s.uid == uid))
+    }
+
+    fn slot_from_uid_mut(&mut self, storage_index: StorageIndex, uid: Uid) -> Option<&mut Slot> {
+        let Some(storage) = self.storage.iter_mut().find(|s| s.index == storage_index) else {
+            return None;
+        };
+
+        storage
+            .node
+            .iter_mut()
+            .find(|s| s.item.as_ref().is_some_and(|s| s.uid == uid))
+    }
+
     fn get_empty_slot(&self) -> Option<&Slot> {
         let inventory = &self.storage[7];
 
@@ -152,26 +181,27 @@ impl Storage for UnitStorage {
 
 impl UnitStorage {
     pub fn new() -> Self {
-        let mut storage = Vec::with_capacity(9);
+        let mut storage = Vec::with_capacity(STORAGE_NODES);
 
-        for i in 0..9 {
+        for i in 0..STORAGE_NODES as u8 {
             let slots = match i {
-                STORAGE_HELMET => EQUIPMENT_HELMET_SLOTS,
-                STORAGE_BODY => EQUIPMENT_BODY_SLOTS,
-                STORAGE_GLOVES => EQUIPMENT_GLOVE_SLOTS,
-                STORAGE_BOOTS => EQUIPMENT_BOOT_SLOTS,
-                STORAGE_BELT => EQUIPMENT_BELT_SLOTS,
-                STORAGE_LEFT_ARM => EQUIPMENT_LEFT_ARM_SLOTS,
-                STORAGE_RIGHT_ARM => EQUIPMENT_RIGHT_ARM_SLOTS,
-                STORAGE_INVENTORY => HERO_INVENTORY_SLOTS,
-                STORAGE_STASH => HERO_STASH_SLOTS,
+                _ if STORAGE_ID_CURSOR.0 == i => 1,
+                _ if STORAGE_ID_HELMET.0 == i => EQUIPMENT_HELMET_SLOTS,
+                _ if STORAGE_ID_BODY.0 == i => EQUIPMENT_BODY_SLOTS,
+                _ if STORAGE_ID_GLOVES.0 == i => EQUIPMENT_GLOVE_SLOTS,
+                _ if STORAGE_ID_BOOTS.0 == i => EQUIPMENT_BOOT_SLOTS,
+                _ if STORAGE_ID_BELT.0 == i => EQUIPMENT_BELT_SLOTS,
+                _ if STORAGE_ID_LEFT_ARM.0 == i => EQUIPMENT_LEFT_ARM_SLOTS,
+                _ if STORAGE_ID_RIGHT_ARM.0 == i => EQUIPMENT_RIGHT_ARM_SLOTS,
+                _ if STORAGE_ID_INVENTORY.0 == i => HERO_INVENTORY_SLOTS,
+                _ if STORAGE_ID_STASH.0 == i => HERO_STASH_SLOTS,
                 _ => unreachable!(),
             };
 
             let mut node = Vec::with_capacity(slots);
             for n in 0..slots {
                 node.push(Slot {
-                    index: SlotIndex(n as u32),
+                    index: SlotIndex(n as u16),
                     item: None,
                 });
             }
@@ -185,19 +215,3 @@ impl UnitStorage {
         Self { storage }
     }
 }
-
-/*
-    pub fn slot_from_uid(&self, uid: ItemUid) -> Option<&Slot> {
-        self.slots.iter().find(|s| match &s.item {
-            Some(item) => item.uid == uid,
-            _ => false,
-        })
-    }
-
-    pub fn slot_from_uid_mut(&mut self, uid: ItemUid) -> Option<&mut Slot> {
-        self.slots.iter_mut().find(|s| match &s.item {
-            Some(item) => item.uid == uid,
-            None => false,
-        })
-    }
-}*/

@@ -42,12 +42,20 @@ impl FromWorld for RenderResources {
 
         let mut aabbs = HashMap::new();
         aabbs.insert(
+            Cow::Owned("actor".into()),
+            Aabb3d {
+                min: Vec3::new(-0.3, 0.0, -0.25),
+                max: Vec3::new(0.3, 1.8, 0.25),
+            },
+        );
+        aabbs.insert(
             Cow::Owned("direct_attack".into()),
             Aabb3d {
                 min: Vec3::new(-0.1, -0.1, -0.5),
                 max: Vec3::new(0.1, 0.1, 0.5),
             },
         );
+
         aabbs.insert(
             Cow::Owned("bolt_01".into()),
             Aabb3d {
@@ -298,47 +306,70 @@ impl FromWorld for RenderResources {
         // Combat props
         props.insert(
             "bolt_01".into(),
-            PropInfo::new(PropHandle::Scene(asset_server.load("bolt_01.glb#Scene0"))),
+            PropInfo::new(
+                "bolt_01",
+                PropHandle::Scene(asset_server.load("bolt_01.glb#Scene0")),
+            ),
         );
 
         // Environment props
         props.insert(
+            "waypoint".into(),
+            PropInfo::new(
+                "waypoint",
+                PropHandle::Scene(asset_server.load("waypoint.glb#Scene0")),
+            ),
+        );
+        props.insert(
             "rock_1".into(),
-            PropInfo::new(PropHandle::Scene(asset_server.load("rock_1.glb#Scene0"))),
+            PropInfo::new(
+                "rock_1",
+                PropHandle::Scene(asset_server.load("rock_1.glb#Scene0")),
+            ),
         );
         props.insert(
             "ground_lamp_1".into(),
-            PropInfo::new(PropHandle::Scene(
-                asset_server.load("ground_lamp_1.glb#Scene0"),
-            )),
+            PropInfo::new(
+                "ground_lamp_1",
+                PropHandle::Scene(asset_server.load("ground_lamp_1.glb#Scene0")),
+            ),
         );
         props.insert(
             "wall_hedge_1".into(),
-            PropInfo::new(PropHandle::Scene(
-                asset_server.load("wall_hedge_1.glb#Scene0"),
-            )),
+            PropInfo::new(
+                "wall_hedge_1",
+                PropHandle::Scene(asset_server.load("wall_hedge_1.glb#Scene0")),
+            ),
         );
 
         // Item props
         props.insert(
-            "fragment_xp".into(),
-            PropInfo::new(PropHandle::Scene(
-                asset_server.load("fragment_xp.glb#Scene0"),
-            )),
+            "item_gem".into(),
+            PropInfo::new(
+                "item_gem",
+                PropHandle::Scene(asset_server.load("fragment_xp.glb#Scene0")),
+            ),
         );
         props.insert(
-            "potion_hp".into(),
-            PropInfo::new(PropHandle::Scene(
-                asset_server.load("potion_m_hp.glb#Scene0"),
-            )),
+            "item_potion_hp".into(),
+            PropInfo::new(
+                "item_potion_hp",
+                PropHandle::Scene(asset_server.load("potion_m_hp.glb#Scene0")),
+            ),
         );
         props.insert(
-            "potion_ep".into(),
-            PropInfo::new(PropHandle::Scene(asset_server.load("potion_ep.glb#Scene0"))),
+            "item_potion_ep".into(),
+            PropInfo::new(
+                "item_potion_ep",
+                PropHandle::Scene(asset_server.load("potion_ep.glb#Scene0")),
+            ),
         );
         props.insert(
-            "potion_mp".into(),
-            PropInfo::new(PropHandle::Scene(asset_server.load("potion_mp.glb#Scene0"))),
+            "item_potion_mp".into(),
+            PropInfo::new(
+                "item_potion_mp",
+                PropHandle::Scene(asset_server.load("potion_mp.glb#Scene0")),
+            ),
         );
 
         Self {

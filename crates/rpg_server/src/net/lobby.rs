@@ -121,12 +121,16 @@ pub(crate) fn receive_lobby_leave(
             continue;
         }
 
-        let Some(lobby) = lobby_manager.get_lobby_mut(LobbyId(0)) else {
-            info!("client attemped to leave a lobby that does not exist: {client:?}");
-            continue;
-        };
+        lobby_manager.remove_player(LobbyId(0), client.account_id.unwrap());
 
-        lobby.remove_player(client.account_id.unwrap());
+        if lobby_manager
+            .get_lobby(LobbyId(0))
+            .unwrap()
+            .players
+            .is_empty()
+        {
+            lobby_manager.remove_lobby(LobbyId(0));
+        }
 
         info!("client left lobby");
 
