@@ -1,8 +1,11 @@
 use super::{action, item, skill, unit, villain};
 
 use crate::{
-    assets::MetadataResources, net::server::NetworkParamsRW, server_state::ServerMetadataResource,
-    state::AppState, world, world::WorldPlugin,
+    assets::MetadataResources,
+    net::server::NetworkParamsRW,
+    server_state::ServerMetadataResource,
+    state::AppState,
+    world::{self, WorldPlugin},
 };
 
 use bevy::{
@@ -104,7 +107,7 @@ impl Plugin for GamePlugin {
             .add_systems(OnEnter(AppState::Simulation), join_clients)
             .add_systems(
                 OnEnter(AppState::CleanupSimulation),
-                util::cleanup::cleanup::<GameSessionCleanup>,
+                (util::cleanup::cleanup::<GameSessionCleanup>, world::cleanup),
             )
             .add_systems(
                 Update,

@@ -91,3 +91,7 @@ pub(crate) fn spawn_world(
         rpg_world.zones.insert(zone_id, zone);
     }
 }
+
+pub(crate) fn cleanup(mut rpg_world: ResMut<RpgWorld>) {
+    rpg_world.zones.clear();
+}
