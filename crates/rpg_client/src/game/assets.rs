@@ -10,8 +10,8 @@ use bevy::{
         world::{FromWorld, World},
     },
     math::{bounding::Aabb3d, primitives::Rectangle, Vec3},
-    pbr::{AlphaMode, StandardMaterial},
-    render::{color::Color, mesh::Mesh, texture::Image},
+    pbr::StandardMaterial,
+    render::{alpha::AlphaMode, color::Color, mesh::Mesh, texture::Image},
     sprite::ColorMaterial,
     utils::default,
 };

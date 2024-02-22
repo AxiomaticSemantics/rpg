@@ -1,5 +1,5 @@
 use crate::{
-    actions::Actions,
+    actions::UnitActions,
     skill::{SkillSlots, Skills},
 };
 
@@ -30,14 +30,14 @@ pub struct UnitBundle {
     pub unit: Unit,
     pub skills: Skills,
     pub skill_slots: SkillSlots,
-    pub actions: Actions,
+    pub actions: UnitActions,
 }
 
 impl UnitBundle {
     pub fn new(unit: Unit, skills: Skills, skill_slots: SkillSlots) -> Self {
         Self {
             unit,
-            actions: Actions::default(),
+            actions: UnitActions::default(),
             skills,
             skill_slots,
         }

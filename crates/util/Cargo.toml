@@ -18,7 +18,7 @@ fastrand = "2.0.1"
 thiserror = "1.0.50"
 
 [dependencies.bevy]
-version = "0.13.0"
+version = "0.14.0-dev"
 git = "https://github.com/AxiomaticSemantics/bevy"
 features = [ "bevy_asset" ]
 optional = false

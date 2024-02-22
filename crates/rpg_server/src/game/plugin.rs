@@ -120,7 +120,6 @@ impl Plugin for GamePlugin {
                     skill::update_invulnerability,
                     unit::remove_corpses,
                     clean_skills,
-                    rpg_util::actions::action_tick,
                     unit::upkeep,
                     item::spawn_ground_items,
                 )
@@ -137,6 +136,7 @@ impl Plugin for GamePlugin {
                     action::action,
                     action::try_move_units,
                     action::move_units,
+                    rpg_util::actions::action_tick,
                     //unit::collide_units,
                 )
                     .chain()

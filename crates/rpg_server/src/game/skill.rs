@@ -18,7 +18,7 @@ use rpg_core::{
 };
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
-    actions::{Action, ActionData, Actions, AttackData, KnockbackData as KnockbackActionData},
+    actions::{Action, ActionData, AttackData, KnockbackData as KnockbackActionData, UnitActions},
     item::GroundItemDrops,
     skill::{
         Invulnerability, InvulnerabilityTimer, SkillContactEvent, SkillTimer, SkillUse,
@@ -326,7 +326,13 @@ pub fn handle_contacts(
         Option<&mut SkillTimer>,
     )>,
     mut unit_q: Query<
-        (Entity, &mut Unit, &mut Actions, &Transform, Option<&Corpse>),
+        (
+            Entity,
+            &mut Unit,
+            &mut UnitActions,
+            &Transform,
+            Option<&Corpse>,
+        ),
         Without<SkillUse>,
     >,
 ) {
@@ -536,7 +542,7 @@ fn handle_effects(
     rng: &mut Rng,
     skill_use: &mut SkillUse,
     skill_transform: &mut Transform,
-    defender_actions: &mut Actions,
+    defender_actions: &mut UnitActions,
 ) -> bool {
     // debug!("info {:?}", skill_use.effects);
 

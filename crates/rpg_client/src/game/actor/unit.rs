@@ -17,7 +17,7 @@ use audio_manager::plugin::AudioActions;
 use rpg_core::skill::{SkillInfo, SkillUseResult};
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
-    actions::{ActionData, Actions, State},
+    actions::{ActionData, ActionKind, State, UnitActions},
     item::GroundItem,
     skill::{SkillSlots, Skills},
     unit::{Corpse, Hero, Unit},
@@ -26,14 +26,19 @@ use rpg_util::{
 use util::random::SharedRng;
 
 use bevy::{
-    audio::{AudioBundle, PlaybackSettings},
+    asset::{Asset, Assets, Handle},
+    audio::{
+        AudioBundle, AudioSink, AudioSinkPlayback, AudioSource, Decodable, GlobalVolume,
+        PlaybackSettings,
+    },
     ecs::{
         entity::Entity,
         query::{Added, Changed, With, Without},
         system::{Commands, ParamSet, Query, Res, ResMut},
     },
-    hierarchy::{BuildChildren, Children},
+    hierarchy::Children,
     input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
+    log::warn,
     math::Vec3,
     render::view::Visibility,
     time::{Time, Timer, TimerMode},
@@ -44,17 +49,46 @@ use bevy_renet::renet::RenetClient;
 
 pub(crate) fn unit_audio(
     mut commands: Commands,
+    global_volume: Res<GlobalVolume>,
+    audio_sources: Res<Assets<AudioSource>>,
     tracks: Res<AudioAssets>,
-    mut unit_q: Query<(Entity, &mut AudioActions), (With<Unit>, Changed<AudioActions>)>,
+    mut unit_q: Query<
+        (
+            Entity,
+            &mut AudioActions,
+            Option<&Handle<AudioSource>>,
+            Option<&mut AudioSink>,
+            Option<&PlaybackSettings>,
+        ),
+        (With<Unit>, Changed<AudioActions>),
+    >,
 ) {
-    for (entity, mut audio_actions) in &mut unit_q {
+    for (entity, mut audio_actions, source, mut sink, settings) in &mut unit_q {
         for action in audio_actions.iter() {
-            commands
-                .spawn(AudioBundle {
+            if let Some(_) = source {
+                let source = tracks.foreground_tracks[action.as_str()].clone_weak();
+                let Some(audio_source) = audio_sources.get(source) else {
+                    continue;
+                };
+
+                {
+                    let sink = sink.as_mut().unwrap();
+                    let settings = settings.as_ref().unwrap();
+                    sink.set_speed(settings.speed);
+                    sink.set_volume(settings.volume.get() * global_volume.volume.get());
+
+                    if settings.paused {
+                        sink.pause();
+                    }
+                }
+
+                sink.as_ref().unwrap().sink.append(audio_source.decoder());
+            } else {
+                commands.entity(entity).insert(AudioBundle {
                     source: tracks.foreground_tracks[action.as_str()].clone_weak(),
-                    settings: PlaybackSettings::REMOVE,
-                })
-                .set_parent(entity);
+                    settings: PlaybackSettings::ONCE,
+                });
+            }
         }
         audio_actions.clear();
     }
@@ -187,7 +221,7 @@ pub fn action(
             &Skills,
             &SkillSlots,
             &mut Transform,
-            &mut Actions,
+            &mut UnitActions,
             &mut AnimationState,
             &mut AudioActions,
         ),
@@ -210,7 +244,7 @@ pub fn action(
     {
         // debug!("action request {:?}", action.request);
 
-        if let Some(action) = &mut actions.knockback {
+        if let Some(action) = actions.get_mut(ActionKind::Knockback) {
             let ActionData::Knockback(knockback) = &action.data else {
                 panic!("expected knockback data");
             };
@@ -226,13 +260,22 @@ pub fn action(
             continue;
         }
 
-        if let Some(action) = &mut actions.attack {
+        if let Some(action) = actions.get_mut(ActionKind::Attack) {
             let ActionData::Attack(attack) = &action.data else {
                 panic!("expected attack data");
             };
 
             match &mut action.state {
                 State::Pending => {
+                    if let Some(timer) = &action.timer.as_ref() {
+                        if !timer.finished() {
+                            continue;
+                        } else {
+                            action.state = State::Active;
+                            action.timer = None;
+                        }
+                    }
+
                     let distance =
                         (attack.user.distance(attack.skill_target.target) * 100.).round() as u32;
                     match unit.can_use_skill(&skills, &metadata.rpg, attack.skill_id, distance) {
@@ -274,13 +317,8 @@ pub fn action(
                     audio_actions.push(sound_key.into());
 
                     action.timer = Some(Timer::from_seconds(duration, TimerMode::Once));
-                    action.state = State::Timer;
                 }
                 State::Active => {
-                    action.state = State::Finalize;
-                    action.timer = None;
-                }
-                State::Finalize => {
                     *anim_state = ANIM_IDLE;
                     action.state = State::Completed;
                 }
@@ -288,7 +326,7 @@ pub fn action(
             }
         }
 
-        if let Some(action) = &mut actions.look {
+        if let Some(action) = actions.get_mut(ActionKind::Look) {
             let wanted = if let ActionData::LookPoint(target) = action.data {
                 transform.looking_at(target, Vec3::Y)
             } else if let ActionData::LookDir(dir) = action.data {

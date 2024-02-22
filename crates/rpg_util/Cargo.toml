@@ -17,8 +17,8 @@ rpg_world = { path = "../rpg_world" }
 util = { path = "../util" }
 
 [dependencies.bevy]
-version = "0.13.0"
+version = "0.14.0-dev"
 git = "https://github.com/AxiomaticSemantics/bevy"
-features = [ ]
+features = []
 optional = false
 default-features = false

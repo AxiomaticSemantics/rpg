@@ -90,7 +90,7 @@ pub(crate) fn setup(
     mut materials: ResMut<Assets<ColorMaterial>>,
     textures: Res<TextureAssets>,
 ) {
-    let first_pass_layer = RenderLayers::layer(1);
+    let first_pass_layer = RenderLayers::layer(2);
 
     let node_info = &metadata.rpg.passive_tree.node_info;
 
@@ -298,7 +298,7 @@ pub(crate) fn setup(
 }
 
 pub(crate) fn setup_ui(mut commands: Commands, ui_theme: Res<UiTheme>) {
-    let first_pass_layer = RenderLayers::layer(1);
+    let first_pass_layer = RenderLayers::layer(2);
 
     commands.spawn((
         GameSessionCleanup,

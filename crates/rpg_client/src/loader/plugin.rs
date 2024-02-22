@@ -1,6 +1,7 @@
 use crate::{
     assets::{AudioAssets, JsonAssets, TextureAssets},
     game::{self, plugin::GamePlugin, state_saver},
+    inspector::inspector_plugin,
     net::{
         chat::Chat,
         lobby::Lobby,
@@ -111,6 +112,7 @@ impl Plugin for LoaderPlugin {
                     .set(ImagePlugin::default_nearest()),
             )
             .add_systems(Startup, set_window_icon)
+            .add_plugins(inspector_plugin)
             .add_plugins(UtilityPlugin)
             .init_resource::<JsonAssets>()
             .init_resource::<TextureAssets>()
