@@ -8,7 +8,7 @@ use crate::{account::AccountInstance, assets::MetadataResources, net::server::Ne
 use rpg_core::{skill::SkillUseResult, unit::UnitKind};
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
-    actions::{ActionData, Actions, State},
+    actions::{ActionData, ActionKind, State, UnitActions},
     skill::{SkillSlots, Skills},
     unit::{Corpse, Unit},
 };
@@ -49,7 +49,7 @@ pub(crate) fn action(
             &SkillSlots,
             &mut Transform,
             &AabbComponent,
-            &mut Actions,
+            &mut UnitActions,
             Option<&AccountInstance>,
         ),
         Without<Corpse>,
@@ -72,7 +72,7 @@ pub(crate) fn action(
 
         // First react to any knockback events, this blocks all other actions
         // TODO this needs to be handled in the same manner as movement
-        if let Some(action) = &mut actions.knockback {
+        if let Some(action) = actions.get_mut(ActionKind::Knockback) {
             let ActionData::Knockback(knockback) = &action.data else {
                 panic!("expected knockback data");
             };
@@ -89,13 +89,21 @@ pub(crate) fn action(
         }
 
         // Next if the user is able to initiate an attack do so
-        if let Some(action) = &mut actions.attack {
+        if let Some(action) = actions.get_mut(ActionKind::Attack) {
             let ActionData::Attack(attack) = &mut action.data else {
                 panic!("expected attack data");
             };
 
             match &mut action.state {
                 State::Pending => {
+                    if let Some(timer) = &action.timer.as_ref() {
+                        if !timer.finished() {
+                            continue;
+                        } else {
+                            action.state = State::Active;
+                            action.timer = None;
+                        }
+                    }
                     let distance =
                         (attack.user.distance(attack.skill_target.target) * 100.).round() as u32;
                     let skill_id = skill_slots.slots[0].skill_id.unwrap();
@@ -137,7 +145,6 @@ pub(crate) fn action(
                         * unit.stats.vitals.stats["Cooldown"].value.f32();
 
                     action.timer = Some(Timer::from_seconds(duration, TimerMode::Once));
-                    action.state = State::Timer;
                 }
                 State::Active => {
                     let distance =
@@ -200,14 +207,13 @@ pub(crate) fn action(
 
                     // The action is completed at this point
                     action.state = State::Completed;
-                    action.timer = None;
                 }
                 _ => {}
             }
             continue;
         }
 
-        if let Some(action) = &mut actions.look {
+        if let Some(action) = actions.get_mut(ActionKind::Look) {
             let wanted = if let ActionData::LookPoint(target) = action.data {
                 transform.looking_at(target, Vec3::Y)
             } else if let ActionData::LookDir(dir) = action.data {
@@ -266,11 +272,8 @@ pub(crate) fn action(
             action.state = State::Completed;
         }
 
-        if let Some(action) = &actions.movement {
-            if action.state == State::Pending
-                || action.state == State::Active
-                || action.state == State::Finalize
-            {
+        if let Some(action) = actions.get(ActionKind::Move) {
+            if action.state == State::Pending || action.state == State::Active {
                 //info!("adding unit to move list");
                 want_move_units.push(entity);
             }
@@ -284,7 +287,10 @@ pub(crate) fn action(
 pub(crate) fn try_move_units(
     mut moving_units: ResMut<MovingUnits>,
     time: Res<Time>,
-    mut move_q: Query<(Entity, &Unit, &Transform, &AabbComponent, &mut Actions), Without<Corpse>>,
+    mut move_q: Query<
+        (Entity, &Unit, &Transform, &AabbComponent, &mut UnitActions),
+        Without<Corpse>,
+    >,
 ) {
     let dt = time.delta_seconds();
 
@@ -305,7 +311,7 @@ pub(crate) fn try_move_units(
             let is_l = *entity == l_entity;
 
             if is_l {
-                let action = l_a.movement.as_mut().unwrap();
+                let action = l_a.get_mut(ActionKind::Move).unwrap();
                 let movespeed = l_u.get_effective_movement_speed() as f32 / 100. * dt;
                 let wanted_translation = l_t.translation + *l_t.forward() * movespeed;
 
@@ -318,7 +324,7 @@ pub(crate) fn try_move_units(
                     break 'combos;
                 }
             } else {
-                let action = r_a.movement.as_mut().unwrap();
+                let action = r_a.get_mut(ActionKind::Move).unwrap();
                 let movespeed = r_u.get_effective_movement_speed() as f32 / 100. * dt;
                 let wanted_translation = r_t.translation + *r_t.forward() * movespeed;
 
@@ -348,7 +354,7 @@ pub(crate) fn move_units(
         (
             &mut Unit,
             &mut Transform,
-            &mut Actions,
+            &mut UnitActions,
             Option<&mut AccountInstance>,
         ),
         Without<Corpse>,
@@ -358,7 +364,7 @@ pub(crate) fn move_units(
 
     for entity in moving_units.0.iter() {
         let (mut m_unit, mut m_t, mut m_action, m_acc) = move_q.get_mut(*entity).unwrap();
-        let action = m_action.movement.as_mut().unwrap();
+        let action = m_action.get_mut(ActionKind::Move).unwrap();
 
         let movespeed = m_unit.get_effective_movement_speed() as f32 / 100. * dt;
         if m_unit.can_run() {
@@ -373,7 +379,7 @@ pub(crate) fn move_units(
                 .get_client_from_account_id(m_acc.as_ref().unwrap().0.info.id)
                 .unwrap();
 
-            if action.state == State::Finalize {
+            if action.state == State::Completed {
                 let message = bincode::serialize(&ServerMessage::SCMovePlayerEnd(SCMovePlayerEnd(
                     m_t.translation,
                 )))
@@ -413,7 +419,7 @@ pub(crate) fn move_units(
                 );
             }
         } else {
-            if action.state == State::Finalize {
+            if action.state == State::Completed {
                 let message = bincode::serialize(&ServerMessage::SCMoveUnitEnd(SCMoveUnitEnd {
                     uid: m_unit.uid,
                     position: m_t.translation,
@@ -436,8 +442,6 @@ pub(crate) fn move_units(
 
         if action.state == State::Pending {
             action.state = State::Active;
-        } else if action.state == State::Finalize {
-            action.state = State::Completed;
         }
     }
 

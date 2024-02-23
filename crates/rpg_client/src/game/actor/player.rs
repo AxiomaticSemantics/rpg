@@ -9,7 +9,7 @@ use crate::game::{
 use rpg_core::skill::SkillInfo;
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
-    actions::{Action, ActionData, Actions},
+    actions::{Action, ActionData, UnitActions},
     skill::*,
     unit::{Hero, Villain},
 };
@@ -101,7 +101,7 @@ pub fn input_actions(
     controls: Res<Controls>,
     cursor_position: Res<CursorPosition>,
     metadata: Res<MetadataResources>,
-    mut player_q: Query<(&Transform, &mut Actions, &SkillSlots), With<Player>>,
+    mut player_q: Query<(&Transform, &mut UnitActions, &SkillSlots), With<Player>>,
 ) {
     if controls.is_inhibited() {
         return;

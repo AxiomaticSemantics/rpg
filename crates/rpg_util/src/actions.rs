@@ -29,11 +29,11 @@ pub struct KnockbackData {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Kind {
-    Move = 0x0000_0001,
-    Look = 0x0000_0002,
-    Knockback = 0x0000_0008,
-    Attack = 0x0000_00010,
+pub enum ActionKind {
+    Move,
+    Look,
+    Knockback,
+    Attack,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -49,16 +49,14 @@ pub enum ActionData {
 pub enum State {
     #[default]
     Pending,
-    Timer,
     Active,
-    Finalize,
     Completed,
 }
 
 #[derive(Clone, Debug)]
 pub struct Action {
     pub state: State,
-    pub kind: Kind,
+    pub kind: ActionKind,
     pub data: ActionData,
     pub interruptible: bool,
     pub timer: Option<Timer>,
@@ -67,10 +65,10 @@ pub struct Action {
 impl Action {
     pub fn new(data: ActionData, timer: Option<Timer>, interruptible: bool) -> Self {
         let kind = match data {
-            ActionData::Move(_) => Kind::Move,
-            ActionData::LookDir(_) | ActionData::LookPoint(_) => Kind::Look,
-            ActionData::Attack(_) => Kind::Attack,
-            ActionData::Knockback(_) => Kind::Knockback,
+            ActionData::Move(_) => ActionKind::Move,
+            ActionData::LookDir(_) | ActionData::LookPoint(_) => ActionKind::Look,
+            ActionData::Attack(_) => ActionKind::Attack,
+            ActionData::Knockback(_) => ActionKind::Knockback,
         };
 
         Self {
@@ -91,65 +89,100 @@ impl Action {
     }
 
     pub fn update(&mut self, dt: Duration) {
-        if self.state != State::Timer {
-            return;
-        }
-
         if let Some(timer) = &mut self.timer {
             timer.tick(dt);
-            if timer.just_finished() {
-                self.state = State::Active;
+            if timer.finished() {
+                // TODO advance to the next state
+                self.timer = None;
+                match self.state {
+                    State::Pending => self.state = State::Active,
+                    State::Active => self.state = State::Completed,
+                    _ => {
+                        panic!("unexpected action timer")
+                    }
+                }
             }
-        } else {
-            self.state = State::Completed;
         }
 
-        //println!("remaining: {:?}", self.timer);
+        // debug!("remaining: {:?}", self.timer);
     }
 }
 
 #[derive(Default, Debug, Component)]
-pub struct Actions {
-    pub movement: Option<Action>,
-    pub look: Option<Action>,
-    pub knockback: Option<Action>,
-    pub attack: Option<Action>,
+pub struct UnitActions {
+    movement: Option<Action>,
+    look: Option<Action>,
+    knockback: Option<Action>,
+    attack: Option<Action>,
 }
 
-impl Actions {
-    pub fn is_set(&self, kind: Kind) -> bool {
+impl UnitActions {
+    pub fn is_set(&self, kind: ActionKind) -> bool {
         match kind {
-            Kind::Look => self.look.is_some(),
-            Kind::Move => self.movement.is_some(),
-            Kind::Knockback => self.knockback.is_some(),
-            Kind::Attack => self.attack.is_some(),
+            ActionKind::Look => self.look.is_some(),
+            ActionKind::Move => self.movement.is_some(),
+            ActionKind::Knockback => self.knockback.is_some(),
+            ActionKind::Attack => self.attack.is_some(),
+        }
+    }
+
+    pub fn get(&self, kind: ActionKind) -> Option<&Action> {
+        match kind {
+            ActionKind::Move => self.movement.as_ref(),
+            ActionKind::Look => self.look.as_ref(),
+            ActionKind::Knockback => self.knockback.as_ref(),
+            ActionKind::Attack => self.attack.as_ref(),
+        }
+    }
+
+    pub fn get_mut(&mut self, kind: ActionKind) -> Option<&mut Action> {
+        match kind {
+            ActionKind::Move => self.movement.as_mut(),
+            ActionKind::Look => self.look.as_mut(),
+            ActionKind::Knockback => self.knockback.as_mut(),
+            ActionKind::Attack => self.attack.as_mut(),
         }
     }
 
     pub fn set(&mut self, action: Action) {
         match action.kind {
-            Kind::Look => self.look = Some(action),
-            Kind::Move => self.movement = Some(action),
-            Kind::Knockback => self.knockback = Some(action),
-            Kind::Attack => self.attack = Some(action),
+            ActionKind::Look => self.look = Some(action),
+            ActionKind::Move => self.movement = Some(action),
+            ActionKind::Knockback => self.knockback = Some(action),
+            ActionKind::Attack => self.attack = Some(action),
         }
     }
 
-    pub fn request(&mut self, action: Action) {
-        if self.knockback.is_some() {
-            //println!("action blocked");
-            return;
+    pub fn request(&mut self, action: Action) -> bool {
+        if self.knockback.is_some() || self.attack.is_some() {
+            // debug!("action blocked");
+            return false;
         }
 
         match action.kind {
-            Kind::Look => self.look = Some(action),
-            Kind::Move => self.movement = Some(action),
-            Kind::Knockback => self.knockback = Some(action),
-            Kind::Attack => {
+            ActionKind::Look => {
+                self.look = Some(action);
+                true
+            }
+            ActionKind::Move => {
+                if self.movement.is_none() {
+                    self.movement = Some(action);
+                    true
+                } else {
+                    false
+                }
+            }
+            // Knockback may be overridden
+            ActionKind::Knockback => {
+                self.knockback = Some(action);
+                true
+            }
+            ActionKind::Attack => {
                 if self.attack.is_none() {
                     self.attack = Some(action);
+                    true
                 } else {
-                    println!("attack in progress rejected");
+                    false
                 }
             }
         }
@@ -189,27 +222,34 @@ impl Actions {
     }
 
     pub fn reset(&mut self) {
-        //println!("resetting actions");
+        // debug!("resetting actions");
 
         self.look = None;
         self.movement = None;
         self.knockback = None;
         self.attack = None;
     }
+
+    pub fn update(&mut self, dt: Duration) {
+        if let Some(action) = &mut self.look {
+            action.update(dt);
+        } else if let Some(action) = &mut self.movement {
+            action.update(dt);
+        } else if let Some(action) = &mut self.knockback {
+            action.update(dt);
+        } else if let Some(action) = &mut self.attack {
+            action.update(dt);
+        }
+    }
 }
 
-pub fn action_tick(time: Res<Time>, mut unit_q: Query<(&Unit, &mut Actions)>) {
-    for (unit, mut actions) in &mut unit_q {
-        if !unit.is_alive() && !actions.is_inactive() {
-            actions.reset();
+pub fn action_tick(time: Res<Time>, mut unit_q: Query<&mut UnitActions>) {
+    for mut actions in &mut unit_q {
+        if actions.is_inactive() {
             continue;
         }
 
-        if let Some(action) = &mut actions.attack {
-            if action.state == State::Timer {
-                action.update(time.delta());
-            }
-        }
+        actions.update(time.delta());
 
         actions.clear_completed();
     }

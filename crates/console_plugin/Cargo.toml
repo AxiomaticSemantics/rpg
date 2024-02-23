@@ -16,7 +16,7 @@ ab_glyph = "0.2.21"
 #smallvec = "1.10.0"
 
 [dependencies.bevy]
-version = "0.13.0"
+version = "0.14.0-dev"
 git = "https://github.com/AxiomaticSemantics/bevy"
 features = [
   "bevy_input",

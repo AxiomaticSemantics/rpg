@@ -28,7 +28,7 @@ use bevy::{
 use rpg_core::{game_mode::GameMode, item::ItemDrops, storage::*};
 use rpg_network_protocol::protocol::*;
 use rpg_util::{
-    actions::{Action, ActionData, Actions, AttackData, State},
+    actions::{Action, ActionData, ActionKind, AttackData, State, UnitActions},
     item::{GroundItemDrops, UnitStorage},
     skill::{get_skill_origin, SkillSlots, SkillUse, Skills},
     unit::{Corpse, Hero, HeroBundle, Unit, UnitBundle, Waypoints},
@@ -307,7 +307,7 @@ pub(crate) fn receive_player_revive(
 pub(crate) fn receive_movement(
     mut movement_reader: EventReader<ClientMessageEvent>,
     net_params: NetworkParamsRO,
-    mut player_q: Query<&mut Actions, With<Hero>>,
+    mut player_q: Query<&mut UnitActions, With<Hero>>,
 ) {
     for event in movement_reader.read() {
         let ClientMessage::CSMovePlayer(_) = &event.message else {
@@ -329,7 +329,7 @@ pub(crate) fn receive_movement(
 pub(crate) fn receive_movement_end(
     mut movement_reader: EventReader<ClientMessageEvent>,
     net_params: NetworkParamsRO,
-    mut player_q: Query<&mut Actions, With<Hero>>,
+    mut player_q: Query<&mut UnitActions, With<Hero>>,
 ) {
     for event in movement_reader.read() {
         let ClientMessage::CSMovePlayerEnd(_) = &event.message else {
@@ -343,8 +343,8 @@ pub(crate) fn receive_movement_end(
         };
 
         let mut actions = player_q.get_mut(client.entity).unwrap();
-        if let Some(action) = &mut actions.movement {
-            action.state = State::Finalize;
+        if let Some(action) = actions.get_mut(ActionKind::Move) {
+            action.state = State::Completed;
             //info!("end player move request");
         }
     }
@@ -354,7 +354,7 @@ pub(crate) fn receive_movement_end(
 pub(crate) fn receive_rotation(
     mut rotation_reader: EventReader<ClientMessageEvent>,
     net_params: NetworkParamsRO,
-    mut player_q: Query<&mut Actions, With<Hero>>,
+    mut player_q: Query<&mut UnitActions, With<Hero>>,
 ) {
     for event in rotation_reader.read() {
         let ClientMessage::CSRotPlayer(msg) = &event.message else {
@@ -376,7 +376,7 @@ pub(crate) fn receive_skill_use_direct(
     mut skill_use_reader: EventReader<ClientMessageEvent>,
     net_params: NetworkParamsRO,
     metadata: Res<MetadataResources>,
-    mut player_q: Query<(&Transform, &mut Actions), With<Hero>>,
+    mut player_q: Query<(&Transform, &mut UnitActions), With<Hero>>,
 ) {
     for event in skill_use_reader.read() {
         let ClientMessage::CSSkillUseDirect(msg) = &event.message else {
@@ -399,16 +399,16 @@ pub(crate) fn receive_skill_use_direct(
             msg.0,
         );
 
-        if actions.attack.is_none() && actions.knockback.is_none() {
-            actions.request(Action::new(
-                ActionData::Attack(AttackData {
-                    skill_id: msg.0,
-                    user: transform.translation,
-                    skill_target,
-                }),
-                None,
-                true,
-            ));
+        if !actions.request(Action::new(
+            ActionData::Attack(AttackData {
+                skill_id: msg.0,
+                user: transform.translation,
+                skill_target,
+            }),
+            None,
+            true,
+        )) {
+            //
         }
     }
 }
@@ -417,7 +417,7 @@ pub(crate) fn receive_skill_use_targeted(
     mut skill_use_reader: EventReader<ClientMessageEvent>,
     net_params: NetworkParamsRO,
     metadata: Res<MetadataResources>,
-    mut player_q: Query<(&Transform, &mut Actions), With<Hero>>,
+    mut player_q: Query<(&Transform, &mut UnitActions), With<Hero>>,
 ) {
     for event in skill_use_reader.read() {
         let ClientMessage::CSSkillUseTargeted(msg) = &event.message else {
@@ -435,7 +435,7 @@ pub(crate) fn receive_skill_use_targeted(
 
         let skill_target = get_skill_origin(&metadata.rpg, &transform, msg.target, msg.skill_id);
 
-        if actions.attack.is_none() && actions.knockback.is_none() {
+        if !actions.is_set(ActionKind::Attack) && !actions.is_set(ActionKind::Knockback) {
             actions.request(Action::new(
                 ActionData::Attack(AttackData {
                     skill_id: msg.skill_id,

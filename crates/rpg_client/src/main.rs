@@ -19,6 +19,8 @@ mod splash;
 mod state;
 mod ui;
 
+mod inspector;
+
 use bevy::app::App;
 
 use loader::plugin::LoaderPlugin;

@@ -42,7 +42,7 @@ use bevy::{
     hierarchy::DespawnRecursiveExt,
     log::{debug, info},
     math::Vec3,
-    pbr::{AmbientLight, DirectionalLightShadowMap},
+    pbr::{AmbientLight, DirectionalLightShadowMap, FogFalloff, FogSettings},
     reflect::Reflect,
     render::{
         camera::{Camera, ClearColorConfig},
@@ -350,6 +350,7 @@ fn setup(mut commands: Commands, camera_q: Query<Entity, With<OutOfGameCamera>>)
             camera: Camera {
                 clear_color: ClearColorConfig::Custom(Color::BLACK),
                 hdr: true,
+                order: -1,
                 ..default()
             },
             tonemapping: Tonemapping::TonyMcMapface,
@@ -359,7 +360,7 @@ fn setup(mut commands: Commands, camera_q: Query<Entity, With<OutOfGameCamera>>)
             intensity: 0.25,
             ..default()
         },
-        /*FogSettings {
+        FogSettings {
             color: Color::rgba(0.2, 0.2, 0.2, 1.0),
             directional_light_color: Color::rgba(0.98, 0.98, 0.95, 0.5),
             directional_light_exponent: 40.0,
@@ -368,7 +369,7 @@ fn setup(mut commands: Commands, camera_q: Query<Entity, With<OutOfGameCamera>>)
                 Color::rgb(0.15, 0.15, 0.15), // atmospheric extinction color
                 Color::rgb(0.25, 0.25, 0.25), // atmospheric inscattering color
             ),
-        },*/
+        },
     ));
 }
 

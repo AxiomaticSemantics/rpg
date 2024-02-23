@@ -22,11 +22,11 @@ pub struct UiRoot(pub Option<TargetCamera>);
 #[derive(Debug, Default)]
 pub struct ButtonTheme {
     pub normal_background_color: BackgroundColor,
-    pub normal_text_color: Color,
+    pub normal_border_color: Color,
     pub pressed_background_color: BackgroundColor,
-    pub pressed_text_color: Color,
+    pub pressed_border_color: Color,
     pub hovered_background_color: BackgroundColor,
-    pub hovered_text_color: Color,
+    pub hovered_border_color: Color,
     pub style: Style,
 }
 
@@ -166,21 +166,21 @@ pub fn insert_theme(mut ui_theme: ResMut<UiTheme>, ui_font: Res<UiFont>) {
         vertical_spacer,
         horizontal_spacer,
         button_theme: ButtonTheme {
-            hovered_background_color: Color::rgb(0.5, 0.15, 0.15).into(),
+            hovered_border_color: Color::rgb(0.4, 0.14, 0.15).into(),
+            hovered_background_color: Color::rgb(0.5, 0.45, 0.45).into(),
             pressed_background_color: Color::rgb(0.4, 0.15, 0.15).into(),
+            pressed_border_color: Color::rgb(0.4, 0.15, 0.15).into(),
             normal_background_color: Color::rgb(0.3, 0.10, 0.10).into(),
-            hovered_text_color: Color::rgb(1. - 0.15, 1. - 0.15, 1. - 0.15),
-            pressed_text_color: Color::rgb(1. - 0.2, 1. - 0.2, 1. - 0.2),
-            normal_text_color: Color::rgb(1. - 0.25, 1. - 0.25, 1. - 0.25),
+            normal_border_color: Color::rgb(1. - 0.25, 1. - 0.25, 1. - 0.25).into(),
             style: Style {
                 justify_content: JustifyContent::Center,
                 ..default()
             },
         },
-        background_color: Color::rgb_u8(15, 15, 20).into(),
-        menu_background_color: Color::rgb_u8(20, 20, 25).into(),
+        background_color: Color::rgb_u8(15, 10, 10).into(),
+        menu_background_color: Color::rgb_u8(25, 20, 20).into(),
         frame_background_color: Color::rgb_u8(25, 25, 30).into(),
-        frame_border_color: Color::rgb_u8(40, 40, 45).into(),
+        frame_border_color: Color::rgb_u8(40, 20, 20).into(),
         border_color,
         border,
         padding,
