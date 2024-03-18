@@ -33,7 +33,7 @@ version = "0.6"
 features = ["serde-1"]
 
 [workspace.dependencies.glam]
-version = "0.25"
+version = "0.26"
 
 [profile.release]
 lto = "thin"
